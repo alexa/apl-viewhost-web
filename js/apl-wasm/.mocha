@@ -1,0 +1,4 @@
+--renderer
+--require ts-node/register 
+--compilers ts:ts-node/register
+tests/index.ts

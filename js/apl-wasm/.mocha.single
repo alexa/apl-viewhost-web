@@ -1,0 +1,6 @@
+--reporter list
+--recursive
+--renderer
+--require ts-node/register
+--compilers ts:ts-node/register
+tests/test-init.ts
