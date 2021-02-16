@@ -1,0 +1,7 @@
+/node_modules
+yarn-error.log
+build.sh
+/docs
+/lib
+/tst-web/static/index.js
+/coverage
