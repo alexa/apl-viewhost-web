@@ -1,0 +1,13 @@
+{
+    "name": "APL",
+    "mode": "file",
+    "out": "docs",
+    "excludePrivate": true,
+    "excludeProtected": true,
+    "excludeNotExported": true,
+    "excludeExternals": true,
+    "includeDeclarations": true,
+    "logger": "console",
+    "tsconfig": "tsconfig.json",
+    "exclude": "**/lib/enums/*.d.ts"
+}

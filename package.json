@@ -1,11 +1,14 @@
 {
-   "name": "apl-viewhost-web",
-   "version": "1.5.0",
-   "description": "This is a Web-assembly version (WASM) of apl viewhost web.",
-   "license": "Apache 2.0",
-   "repository": {
-     "type": "git",
-     "url": "git://github.com/alexa/apl-viewhost-web"
-   },
-   "main": "./index.js"
- }
+  "name": "apl-viewhost-web",
+  "version": "1.5.1",
+  "description": "This is a Web-assembly version (WASM) of apl viewhost web.",
+  "license": "Apache 2.0",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/alexa/apl-viewhost-web"
+  },
+  "main": "./index.js",
+  "scripts": {
+    "preinstall": "sh -c ./scripts/wasm-build.sh && sh -c ./scripts/wasm-bundle.sh"
+  }
+}

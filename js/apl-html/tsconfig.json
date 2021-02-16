@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "outDir": "lib",
+    "module": "commonjs",
+    "target": "es6",
+    "lib": ["es6", "dom"],
+    "sourceMap": true,
+    "rootDir": "src",
+    "noImplicitReturns": true,
+    "noImplicitThis": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "declaration": true,
+    "stripInternal": true,
+    "noUnusedLocals": true
+  },
+  "exclude": [
+    "build",
+    "scripts"
+  ],
+  "types": [
+    "typePatches"
+  ],
+  "files": [
+    "lib/dts/Module.d.ts"
+  ]
+}

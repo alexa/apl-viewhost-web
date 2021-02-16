@@ -1,0 +1,411 @@
+/**
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ */
+
+#include "wasm/context.h"
+#include "wasm/wasmmetrics.h"
+#include "apl/apl.h"
+#include "apl/dynamicdata.h"
+#include "wasm/textmeasurement.h"
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+#include "wasm/embindutils.h"
+#include "wasm/session.h"
+
+namespace apl {
+namespace wasm {
+
+namespace internal {
+
+static const size_t DEFAULT_DATA_SOURCE_CACHE_CHUNK_SIZE = 10;
+static const std::string DYNAMIC_INDEX_LIST = "dynamicIndexList";
+static const std::vector<std::string> KNOWN_DATA_SOURCES = { DYNAMIC_INDEX_LIST };
+static emscripten::val background = emscripten::val::object();
+
+apl::ComponentPtr
+ContextMethods::topComponent(const apl::RootContextPtr& context) {
+    // pass along the metrics user data
+    auto top = context->topComponent();
+    top->setUserData(context->getUserData());
+    return top;
+}
+
+std::string
+ContextMethods::getTheme(const apl::RootContextPtr& context) {
+    std::string theme = "";
+    if (context) {
+        theme = context->getTheme();
+    }
+    return theme;
+}
+
+emscripten::val
+ContextMethods::getBackground(const apl::RootContextPtr& context) {
+    return background;
+}
+
+void
+ContextMethods::setBackground(const apl::RootContextPtr& context, emscripten::val bg) {
+    background = bg;
+}
+
+std::string
+ContextMethods::getVisualContext(const apl::RootContextPtr& context) {
+    rapidjson::Document state(rapidjson::kObjectType);
+    rapidjson::StringBuffer buffer;
+    rapidjson::Document::AllocatorType& allocator = state.GetAllocator();
+    auto visualContext = context->topComponent()->serializeVisualContext(allocator);
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    visualContext.Accept(writer);
+    return buffer.GetString();
+}
+
+void
+ContextMethods::clearPending(const apl::RootContextPtr& context) {
+    context->clearPending();
+}
+
+bool
+ContextMethods::isDirty(const apl::RootContextPtr& context) {
+    return context->isDirty();
+}
+
+void
+ContextMethods::clearDirty(const apl::RootContextPtr& context) {
+    context->clearDirty();
+}
+
+emscripten::val
+ContextMethods::getDirty(const apl::RootContextPtr& context) {
+    emscripten::val dirtyComponentIds = emscripten::val::array();
+    auto& dirty = context->getDirty();
+    for (auto& component : dirty) {
+        dirtyComponentIds.call<void>("push", component->getUniqueId());
+    }
+    return dirtyComponentIds;
+}
+
+void
+ContextMethods::scrollToRectInComponent(const apl::RootContextPtr& context, const apl::ComponentPtr& component,
+                                        int x, int y, int width, int height, int align) {
+    auto t = context->getUserData<WASMMetrics>();
+    float scale = t->toCore(1.0f);
+    Rect rect(x * scale, y * scale, width * scale, height * scale);
+    context->scrollToRectInComponent(component, rect, static_cast<CommandScrollAlign>(align));
+}
+
+apl::ActionPtr
+ContextMethods::executeCommands(const apl::RootContextPtr& context, const std::string& commands) {
+    auto* doc = new rapidjson::Document();
+    doc->Parse(commands.c_str());
+    apl::Object obj = apl::Object(*doc);
+    auto action = context->executeCommands(obj, false);
+    action->setUserData(doc);
+    // The consumer is not required to add a "then" or "terminate" callback,
+    // so add them here to clean up the document
+    action->then([doc](const ActionPtr& action) {
+        if (action->getUserData() != nullptr) {
+            delete doc;
+            action->setUserData(nullptr);
+        }
+    });
+    action->addTerminateCallback([doc, action](const std::shared_ptr<Timers>&) {
+        if (action->getUserData() != nullptr) {
+            delete doc;
+            action->setUserData(nullptr);
+        }
+    });
+    return action;
+}
+
+apl::ActionPtr
+ContextMethods::invokeExtensionEventHandler(const apl::RootContextPtr& context, const std::string& uri, const std::string& name, const std::string& data, bool fastMode) {
+    auto* doc = new rapidjson::Document();
+    doc->Parse(data.c_str());
+    apl::Object obj = apl::Object(*doc);
+    auto action = context->invokeExtensionEventHandler(uri, name, obj.getMap(), false);
+    action->setUserData(doc);
+    // The consumer is not required to add a "then" or "terminate" callback,
+    // so add them here to clean up the document
+    action->then([doc](const ActionPtr& action) {
+        if (action->getUserData() != nullptr) {
+            delete doc;
+            action->setUserData(nullptr);
+        }
+    });
+    action->addTerminateCallback([doc, action](const std::shared_ptr<Timers>&) {
+        if (action->getUserData() != nullptr) {
+            delete doc;
+            action->setUserData(nullptr);
+        }
+    });
+    return action;
+}
+
+void
+ContextMethods::cancelExecution(const apl::RootContextPtr& context) {
+    context->cancelExecution();
+}
+
+apl::RootContextPtr
+ContextMethods::create(emscripten::val options, emscripten::val text, emscripten::val metrics, emscripten::val content, emscripten::val config, emscripten::val scalingOptions) {
+
+    try {
+        auto coreMetrics = *(metrics.as<std::shared_ptr<Metrics>>());
+        auto rootConfig = *(config.as<std::shared_ptr<RootConfig>>());
+
+        // Add Data Sources
+        rootConfig.dataSourceProvider(DYNAMIC_INDEX_LIST, std::make_shared<DynamicIndexListDataSourceProvider>(DYNAMIC_INDEX_LIST,
+            DEFAULT_DATA_SOURCE_CACHE_CHUNK_SIZE));
+
+        // Other options
+        auto contentPtr = content.as<ContentPtr>();
+        bool shapeOverridesCost = true;
+        double k = 0;
+        std::vector<ViewportSpecification> specs;
+
+        if (!scalingOptions.isUndefined()) {
+                k = scalingOptions["biasConstant"].as<double>();
+                auto specifications = scalingOptions["specifications"];
+                int length = specifications["length"].as<int>();
+                for (int i = 0; i < length; i++) {
+                    auto spec = specifications[i];
+                    bool isSpecRound = coreMetrics.getScreenShape() == ScreenShape::ROUND;
+                    auto mode = kViewportModeHub;
+                    auto stringMode = spec["mode"].as<std::string>();
+                    if(modeMap.find(stringMode) != modeMap.end()) {
+                        mode = modeMap[stringMode];
+                    }
+                    specs.push_back({spec["minWidth"].as<double>(), spec["maxWidth"].as<double>(),
+                                     spec["minHeight"].as<double>(), spec["maxHeight"].as<double>(),
+                                     mode,
+                                     isSpecRound});
+                }
+                if(!scalingOptions["shapeOverridesCost"].isUndefined()) {
+                    shapeOverridesCost = scalingOptions["shapeOverridesCost"].as<bool>();
+                }
+        }
+
+        apl::RootContextPtr root;
+        WASMMetrics* m;
+        do {
+            if (!scalingOptions.isUndefined()) {
+                ScalingOptions so(specs, k, shapeOverridesCost);
+                m = new WASMMetrics(coreMetrics, so);
+            }
+            else {
+                m = new WASMMetrics(coreMetrics);
+            }
+
+            // set apl renderer callbacks
+            if (!text.isUndefined()) {
+                auto onMeasure = text["onMeasure"].call<emscripten::val>("bind", text);
+                auto onBaseline = text["onBaseline"].call<emscripten::val>("bind", text);
+                auto textMeasure = std::make_shared<WasmTextMeasurement>(onMeasure, onBaseline, m);
+                auto onPEGTLError = text["onPEGTLError"].call<emscripten::val>("bind", text);
+                auto wasmSession = std::make_shared<WasmSession>(onPEGTLError);
+                rootConfig.measure(textMeasure);
+                rootConfig.session(wasmSession);
+            }
+            root = RootContext::create(m->getMetrics(), contentPtr, rootConfig);
+            if(root) break;
+            else {
+                LOG(LogLevel::WARN) << "Failed to inflate document with spec: " << (specs.empty() ? "standard" : m->getChosenSpec().toDebugString());
+            }
+
+            // If context is null, then remove the chosen specification and try again
+            auto it = specs.begin();
+            for(; it != specs.end(); it++) {
+                if(*it == m->getChosenSpec()) {
+                    specs.erase(it);
+                    break;
+                }
+            }
+
+            if (it == specs.end()) {
+                // Core returned specification that is not in list. Something went wrong. Prevent infinite loop.
+                break;
+            }
+        } while(!specs.empty());
+
+        // get document background, color or gradient
+        background.set("color", emscripten::val(Color().asString())); // Transparent
+        background.set("gradient", emscripten::val::null());
+        if (contentPtr->getBackground(coreMetrics, rootConfig).isColor()) {
+            background.set("color", emscripten::val(contentPtr->getBackground(coreMetrics, rootConfig).asColor().asString()));
+        } else if (contentPtr->getBackground(coreMetrics, rootConfig).isGradient()) {
+            background.set("gradient", emscripten::getValFromObject(contentPtr->getBackground(coreMetrics, rootConfig).getGradient(), m));
+        }
+
+        // add metrics to the root context so we can connect our viewport to any events, components,
+        // or graphic elements for scaling.
+        root->setUserData(m);
+        // this has to be called to set mCore->top
+        root->topComponent();
+        return root;
+    }
+    catch (const std::exception& e) {
+        LOG(LogLevel::ERROR) << "Cannot create root context";
+        LOG(LogLevel::ERROR) << e.what();
+        return nullptr;
+    }
+}
+
+emscripten::val
+ContextMethods::getPendingErrors(const apl::RootContextPtr& context) {
+    auto provider = std::static_pointer_cast<DynamicIndexListDataSourceProvider>(context->getRootConfig().getDataSourceProvider(DYNAMIC_INDEX_LIST));
+    auto m = context->getUserData<WASMMetrics>();
+    if (provider) {
+        auto errors = provider->getPendingErrors();
+        return emscripten::getValFromObject(errors, m);
+    }
+    return emscripten::val::undefined();
+}
+
+bool
+ContextMethods::hasEvent(const apl::RootContextPtr& context) {
+    return context->hasEvent();
+}
+
+apl::Event
+ContextMethods::popEvent(const apl::RootContextPtr& context) {
+    auto event = context->popEvent();
+    event.setUserData(context->getUserData());
+    return event;
+}
+
+bool
+ContextMethods::screenLock(const apl::RootContextPtr& context) {
+    return context->screenLock();
+}
+
+apl_time_t
+ContextMethods::currentTime(const apl::RootContextPtr& context) {
+    return context->currentTime();
+}
+
+apl_time_t
+ContextMethods::nextTime(const apl::RootContextPtr& context) {
+    return context->nextTime();
+}
+
+void
+ContextMethods::updateTime(const apl::RootContextPtr& context, apl_time_t currentTime, apl_time_t utcTime) {
+    return context->updateTime(currentTime, utcTime);
+}
+
+void
+ContextMethods::setLocalTimeAdjustment(const apl::RootContextPtr& context, apl::apl_duration_t offset) {
+    context->setLocalTimeAdjustment(offset);
+}
+
+int
+ContextMethods::getViewportWidth(const apl::RootContextPtr& context) {
+    auto m = context->getUserData<WASMMetrics>();
+    return m->getViewhostWidth();
+}
+
+int
+ContextMethods::getViewportHeight(const apl::RootContextPtr& context) {
+    auto m = context->getUserData<WASMMetrics>();
+    return m->getViewhostHeight();
+}
+
+double
+ContextMethods::getScaleFactor(const apl::RootContextPtr& context) {
+    auto m = context->getUserData<WASMMetrics>();
+    return m->toViewhost(1.0f);
+}
+
+void
+ContextMethods::updateCursorPosition(const apl::RootContextPtr& context, float x, float y) {
+    auto m = context->getUserData<WASMMetrics>();
+    apl::Point cursorPosition(m->toCore(x), m->toCore(y));
+    context->updateCursorPosition(cursorPosition);
+}
+
+bool
+ContextMethods::handlePointerEvent(const apl::RootContextPtr& context,
+                                   int pointerEventType,
+                                   float x,
+                                   float y,
+                                   int pointerId,
+                                   int pointerType) {
+    auto m = context->getUserData<WASMMetrics>();
+    apl::Point cursorPosition(m->toCore(x), m->toCore(y));
+    apl::PointerEvent pointerEvent(static_cast<apl::PointerEventType>(pointerEventType), cursorPosition, static_cast<apl::id_type>(pointerId), static_cast<apl::PointerType>(pointerType));
+    return context->handlePointerEvent(pointerEvent);
+}
+
+bool
+ContextMethods::handleKeyboard(const apl::RootContextPtr& context, int type, const emscripten::val& keyboard) {
+    if (!keyboard.hasOwnProperty("code") || !keyboard.hasOwnProperty("key") || !keyboard.hasOwnProperty("repeat") ||
+        !keyboard.hasOwnProperty("altKey") || !keyboard.hasOwnProperty("ctrlKey") ||
+        !keyboard.hasOwnProperty("metaKey") || !keyboard.hasOwnProperty("shiftKey")) {
+        LOG(LogLevel::ERROR) << "Can't handle keyboard event. Keybaord data structure is wrong.";
+        return false;
+    }
+
+    apl::Keyboard kbd(keyboard["code"].as<std::string>(), keyboard["key"].as<std::string>());
+    kbd.repeat(keyboard["repeat"].as<bool>());
+    kbd.alt(keyboard["altKey"].as<bool>());
+    kbd.ctrl(keyboard["ctrlKey"].as<bool>());
+    kbd.meta(keyboard["metaKey"].as<bool>());
+    kbd.shift(keyboard["shiftKey"].as<bool>());
+    return context->handleKeyboard(static_cast<apl::KeyHandlerType>(type), kbd);
+}
+
+bool
+ContextMethods::processDataSourceUpdate(const apl::RootContextPtr& context, const std::string& payload, const std::string& type) {
+
+    auto provider = std::static_pointer_cast<DynamicIndexListDataSourceProvider>(context->getRootConfig().getDataSourceProvider(DYNAMIC_INDEX_LIST));
+    if (!provider)
+        return false;
+
+    return provider->processUpdate(payload);
+}
+
+void
+ContextMethods::handleDisplayMetrics(const apl::RootContextPtr& context, emscripten::val metrics) {
+    // To Be Implemented
+}
+} // namespace internal
+
+EMSCRIPTEN_BINDINGS(apl_wasm_context) {
+
+    emscripten::class_<apl::RootContext>("Context")
+        .smart_ptr<apl::RootContextPtr>("ContextPtr")
+        .function("topComponent", &internal::ContextMethods::topComponent)
+        .function("getTheme", &internal::ContextMethods::getTheme)
+        .function("getBackground", &internal::ContextMethods::getBackground)
+        .function("setBackground", &internal::ContextMethods::setBackground)
+        .function("getVisualContext", &internal::ContextMethods::getVisualContext)
+        .function("clearPending", &internal::ContextMethods::clearPending)
+        .function("isDirty", &internal::ContextMethods::isDirty)
+        .function("clearDirty", &internal::ContextMethods::clearDirty)
+        .function("getDirty", &internal::ContextMethods::getDirty)
+        .function("getPendingErrors", &internal::ContextMethods::getPendingErrors)
+        .function("hasEvent", &internal::ContextMethods::hasEvent)
+        .function("popEvent", &internal::ContextMethods::popEvent)
+        .function("screenLock", &internal::ContextMethods::screenLock)
+        .function("scrollToRectInComponent", &internal::ContextMethods::scrollToRectInComponent)
+        .function("executeCommands", &internal::ContextMethods::executeCommands)
+        .function("invokeExtensionEventHandler", &internal::ContextMethods::invokeExtensionEventHandler)
+        .function("cancelExecution", &internal::ContextMethods::cancelExecution)
+        .function("currentTime", &internal::ContextMethods::currentTime)
+        .function("nextTime", &internal::ContextMethods::nextTime)
+        .function("updateTime", &internal::ContextMethods::updateTime)
+        .function("setLocalTimeAdjustment", &internal::ContextMethods::setLocalTimeAdjustment)
+        .function("getViewportWidth", &internal::ContextMethods::getViewportWidth)
+        .function("getViewportHeight", &internal::ContextMethods::getViewportHeight)
+        .function("getScaleFactor", &internal::ContextMethods::getScaleFactor)
+        .function("updateCursorPosition", &internal::ContextMethods::updateCursorPosition)
+        .function("handlePointerEvent", &internal::ContextMethods::handlePointerEvent)
+        .function("handleKeyboard", &internal::ContextMethods::handleKeyboard)
+        .function("processDataSourceUpdate", &internal::ContextMethods::processDataSourceUpdate)
+        .function("handleDisplayMetrics", &internal::ContextMethods::handleDisplayMetrics)
+        .class_function("create", &internal::ContextMethods::create);
+}
+
+} // namespace wasm
+} // namespace apl
