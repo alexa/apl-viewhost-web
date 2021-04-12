@@ -37,7 +37,6 @@ else()
     set(WASM_FLAGS "${WASM_FLAGS} -s DEMANGLE_SUPPORT=0")
     # turn off run-time type identification to reduce size
     # set(WASM_FLAGS "${WASM_FLAGS} -fno-rtti")
-
     # set(WASM_FLAGS "${WASM_FLAGS} -fno-exceptions")
 endif()
 

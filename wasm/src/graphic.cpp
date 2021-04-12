@@ -1,5 +1,6 @@
 /**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #include "wasm/graphic.h"
@@ -49,9 +50,9 @@ GraphicMethods::clearDirty(GraphicPtr graphic) {
 
 emscripten::val
 GraphicMethods::getDirty(const GraphicPtr& graphic) {
-    emscripten::val dirty = emscripten::val::array();
+    emscripten::val dirty = emscripten::val::object();
     for (auto& element : graphic->getDirty()) {
-        dirty.call<void>("push", element);
+        dirty.set(static_cast<int>(element->getId()), element);
     }
     return dirty;
 }
@@ -59,6 +60,8 @@ GraphicMethods::getDirty(const GraphicPtr& graphic) {
 } // namespace internal
 
 EMSCRIPTEN_BINDINGS(apl_wasm_graphic) {
+    emscripten::register_set<GraphicElementPtr>("GraphicElementSet");
+
     emscripten::class_<apl::Graphic>("Graphic")
         .smart_ptr<GraphicPtr>("GraphicPtr")
         .function("isValid", &internal::GraphicMethods::isValid)

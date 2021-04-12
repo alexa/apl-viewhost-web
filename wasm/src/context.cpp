@@ -1,5 +1,6 @@
 /**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #include "wasm/context.h"
@@ -19,7 +20,8 @@ namespace internal {
 
 static const size_t DEFAULT_DATA_SOURCE_CACHE_CHUNK_SIZE = 10;
 static const std::string DYNAMIC_INDEX_LIST = "dynamicIndexList";
-static const std::vector<std::string> KNOWN_DATA_SOURCES = { DYNAMIC_INDEX_LIST };
+static const std::string DYNAMIC_TOKEN_LIST = "dynamicTokenList";
+static const std::vector<std::string> KNOWN_DATA_SOURCES = { DYNAMIC_INDEX_LIST, DYNAMIC_TOKEN_LIST };
 static emscripten::val background = emscripten::val::object();
 
 apl::ComponentPtr
@@ -149,7 +151,6 @@ ContextMethods::cancelExecution(const apl::RootContextPtr& context) {
 
 apl::RootContextPtr
 ContextMethods::create(emscripten::val options, emscripten::val text, emscripten::val metrics, emscripten::val content, emscripten::val config, emscripten::val scalingOptions) {
-
     try {
         auto coreMetrics = *(metrics.as<std::shared_ptr<Metrics>>());
         auto rootConfig = *(config.as<std::shared_ptr<RootConfig>>());
@@ -157,6 +158,7 @@ ContextMethods::create(emscripten::val options, emscripten::val text, emscripten
         // Add Data Sources
         rootConfig.dataSourceProvider(DYNAMIC_INDEX_LIST, std::make_shared<DynamicIndexListDataSourceProvider>(DYNAMIC_INDEX_LIST,
             DEFAULT_DATA_SOURCE_CACHE_CHUNK_SIZE));
+        rootConfig.dataSourceProvider(DYNAMIC_TOKEN_LIST, std::make_shared<DynamicTokenListDataSourceProvider>());
 
         // Other options
         auto contentPtr = content.as<ContentPtr>();
@@ -253,13 +255,23 @@ ContextMethods::create(emscripten::val options, emscripten::val text, emscripten
 
 emscripten::val
 ContextMethods::getPendingErrors(const apl::RootContextPtr& context) {
-    auto provider = std::static_pointer_cast<DynamicIndexListDataSourceProvider>(context->getRootConfig().getDataSourceProvider(DYNAMIC_INDEX_LIST));
-    auto m = context->getUserData<WASMMetrics>();
-    if (provider) {
-        auto errors = provider->getPendingErrors();
-        return emscripten::getValFromObject(errors, m);
+    std::vector<apl::Object> errorArray;
+
+    for (auto& type : KNOWN_DATA_SOURCES) {
+        auto provider = context->getRootConfig().getDataSourceProvider(type);
+
+        if (provider) {
+            auto pendingErrors = provider->getPendingErrors();
+            if (!pendingErrors.empty() && pendingErrors.isArray()) {
+                errorArray.insert(errorArray.end(), pendingErrors.getArray().begin(), pendingErrors.getArray().end());
+            }
+        }
     }
-    return emscripten::val::undefined();
+
+    auto errors = apl::Object(std::make_shared<apl::ObjectArray>(errorArray));
+
+    auto m = context->getUserData<WASMMetrics>();
+    return emscripten::getValFromObject(errors, m);
 }
 
 bool
@@ -357,8 +369,10 @@ ContextMethods::handleKeyboard(const apl::RootContextPtr& context, int type, con
 
 bool
 ContextMethods::processDataSourceUpdate(const apl::RootContextPtr& context, const std::string& payload, const std::string& type) {
+    if (std::find(KNOWN_DATA_SOURCES.begin(), KNOWN_DATA_SOURCES.end(), type) == KNOWN_DATA_SOURCES.end())
+        return false;
 
-    auto provider = std::static_pointer_cast<DynamicIndexListDataSourceProvider>(context->getRootConfig().getDataSourceProvider(DYNAMIC_INDEX_LIST));
+    auto provider = std::static_pointer_cast<DynamicIndexListDataSourceProvider>(context->getRootConfig().getDataSourceProvider(type));
     if (!provider)
         return false;
 
@@ -368,6 +382,81 @@ ContextMethods::processDataSourceUpdate(const apl::RootContextPtr& context, cons
 void
 ContextMethods::handleDisplayMetrics(const apl::RootContextPtr& context, emscripten::val metrics) {
     // To Be Implemented
+}
+
+void
+ContextMethods::configurationChange(const apl::RootContextPtr& context, emscripten::val configurationChange, emscripten::val metrics, emscripten::val scalingOptions) {
+    auto configChange = *(configurationChange.as<std::shared_ptr<ConfigurationChange>>());
+    if (metrics.isUndefined()) {
+        context->configurationChange(configChange);
+    } else {
+        auto m = context->getUserData<WASMMetrics>();
+        auto coreMetrics = *(metrics.as<std::shared_ptr<Metrics>>());
+        std::vector<ViewportSpecification> specs;
+        bool shapeOverridesCost = true;
+        double k = 0;
+        if (!scalingOptions.isUndefined()) {
+                k = scalingOptions["biasConstant"].as<double>();
+                auto specifications = scalingOptions["specifications"];
+                int length = specifications["length"].as<int>();
+                for (int i = 0; i < length; i++) {
+                    auto spec = specifications[i];
+                    bool isSpecRound = coreMetrics.getScreenShape() == ScreenShape::ROUND;
+                    auto mode = kViewportModeHub;
+                    auto stringMode = spec["mode"].as<std::string>();
+                    if(modeMap.find(stringMode) != modeMap.end()) {
+                        mode = modeMap[stringMode];
+                    }
+                    specs.push_back({spec["minWidth"].as<double>(), spec["maxWidth"].as<double>(),
+                                     spec["minHeight"].as<double>(), spec["maxHeight"].as<double>(),
+                                     mode,
+                                     isSpecRound});
+                }
+                if(!scalingOptions["shapeOverridesCost"].isUndefined()) {
+                    shapeOverridesCost = scalingOptions["shapeOverridesCost"].as<bool>();
+                }
+        }
+
+        if (!scalingOptions.isUndefined()) {
+            ScalingOptions so(specs, k, shapeOverridesCost);
+            m = new WASMMetrics(coreMetrics, so);
+        }
+        else {
+            m = new WASMMetrics(coreMetrics);
+        }
+        float newWidth = m->toViewhost(coreMetrics.getWidth());
+        float newHeight = m->toViewhost(coreMetrics.getHeight());
+        configChange.size((int) m->toCorePixel(newWidth), (int) m->toCorePixel(newHeight));
+        context->configurationChange(configChange);
+        context->setUserData(m);
+    }
+}
+
+void
+ContextMethods::reInflate(const apl::RootContextPtr& context) {
+    context->reinflate();
+}
+
+void
+ContextMethods::setFocus(const apl::RootContextPtr& context, int direction, const apl::Rect& origin, const std::string& targetId) {
+    context->setFocus(static_cast<apl::FocusDirection>(direction), origin, targetId);
+}
+
+std::string
+ContextMethods::getFocused(const apl::RootContextPtr& context) {
+    return context->getFocused();
+}
+
+emscripten::val
+ContextMethods::getFocusableAreas(const apl::RootContextPtr& context) {
+    auto m = context->getUserData<WASMMetrics>();
+    auto focusable = context->getFocusableAreas();
+    emscripten::val propObject = emscripten::val::object();
+
+    for(auto const& area : focusable) {
+                    propObject.set(area.first, area.second);
+    }
+    return propObject;
 }
 } // namespace internal
 
@@ -404,6 +493,11 @@ EMSCRIPTEN_BINDINGS(apl_wasm_context) {
         .function("handleKeyboard", &internal::ContextMethods::handleKeyboard)
         .function("processDataSourceUpdate", &internal::ContextMethods::processDataSourceUpdate)
         .function("handleDisplayMetrics", &internal::ContextMethods::handleDisplayMetrics)
+        .function("configurationChange", &internal::ContextMethods::configurationChange)
+        .function("reInflate", &internal::ContextMethods::reInflate)
+        .function("setFocus", &internal::ContextMethods::setFocus)
+        .function("getFocused", &internal::ContextMethods::getFocused)
+        .function("getFocusableAreas", &internal::ContextMethods::getFocusableAreas)
         .class_function("create", &internal::ContextMethods::create);
 }
 

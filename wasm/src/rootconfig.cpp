@@ -1,9 +1,11 @@
 /**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #include "wasm/rootconfig.h"
 #include "wasm/embindutils.h"
+#include "wasm/localemethods.h"
 
 namespace apl {
 namespace wasm {
@@ -12,7 +14,6 @@ namespace internal {
 
 RootConfigPtr
 RootConfigMethods::create(emscripten::val environment) {
-
     // Create root config from options
     std::string agentName = environment["agentName"].as<std::string>();
     std::string agentVersion = environment["agentVersion"].as<std::string>();
@@ -25,16 +26,31 @@ RootConfigMethods::create(emscripten::val environment) {
         .allowOpenUrl(allowOpenUrl)
         .disallowVideo(disallowVideo)
         .animationQuality(animationQuality)
-        .enforceAPLVersion(apl::APLVersion::kAPLVersionIgnore);
+        .enforceAPLVersion(apl::APLVersion::kAPLVersionIgnore)
+        .enableExperimentalFeature(apl::RootConfig::ExperimentalFeature::kExperimentalFeatureHandleFocusInCore)
+        .enableExperimentalFeature(apl::RootConfig::ExperimentalFeature::kExperimentalFeatureNotifyChildrenChangedOnDisplayChange)
+        .enableExperimentalFeature(apl::RootConfig::kExperimentalFeatureHandleScrollingAndPagingInCore);
+
 
     return config;
 }
 
-RootConfigPtr& 
+RootConfigPtr&
 RootConfigMethods::utcTime(RootConfigPtr& rootConfig, apl_time_t utcTime) {
     rootConfig->utcTime(utcTime);
     return rootConfig;
 }
+
+RootConfigPtr&
+RootConfigMethods::localeMethods(RootConfigPtr& rootConfig, emscripten::val localeMethods) {
+    auto toUpperCase = localeMethods["toUpperCase"].call<emscripten::val>("bind", localeMethods);
+    auto toLowerCase = localeMethods["toLowerCase"].call<emscripten::val>("bind", localeMethods);
+    auto wasmLocaleMethods = std::make_shared<WasmLocaleMethods>(toUpperCase, toLowerCase);
+
+    rootConfig->localeMethods(wasmLocaleMethods);
+    return rootConfig;
+}
+
 
 RootConfigPtr& 
 RootConfigMethods::localTimeAdjustment(RootConfigPtr& rootConfig, apl_duration_t localTimeAdjustment) {
@@ -72,14 +88,14 @@ RootConfigMethods::registerExtension(RootConfigPtr& rootConfig, const std::strin
     return rootConfig;
 }
 
-RootConfigPtr& 
+RootConfigPtr&
 RootConfigMethods::liveMap(RootConfigPtr& rootConfig, const std::string& name, emscripten::val obj) {
     auto liveObj = obj.as<apl::LiveMapPtr>();
     rootConfig->liveData(name, liveObj);
     return rootConfig;
 }
 
-RootConfigPtr& 
+RootConfigPtr&
 RootConfigMethods::liveArray(RootConfigPtr& rootConfig, const std::string& name, emscripten::val obj) {
     auto liveObj = obj.as<apl::LiveArrayPtr>();
     rootConfig->liveData(name, liveObj);
@@ -89,11 +105,12 @@ RootConfigMethods::liveArray(RootConfigPtr& rootConfig, const std::string& name,
 } // namespace internal
 
 EMSCRIPTEN_BINDINGS(apl_wasm_rootconfig) {
-    
+
     emscripten::class_<apl::RootConfig>("RootConfig")
         .smart_ptr<internal::RootConfigPtr>("RootConfigPtr")
         .class_function("create", &internal::RootConfigMethods::create)
         .function("utcTime", &internal::RootConfigMethods::utcTime)
+        .function("localeMethods", &internal::RootConfigMethods::localeMethods)
         .function("localTimeAdjustment", &internal::RootConfigMethods::localTimeAdjustment)
         .function("registerExtension", &internal::RootConfigMethods::registerExtension)
         .function("registerExtensionEnvironment", &internal::RootConfigMethods::registerExtensionEnvironment)

@@ -1,15 +1,18 @@
 /**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import APLRenderer,
     {Content, DeviceMode, FontUtils, IAPLOptions, ILogger, JSLogLevel, LoggerFactory, LogLevel, LogTransport,
-        ViewportShape} from 'apl-html';
+        ViewportShape, commandFactory, LocaleMethods} from 'apl-html';
+import {ConfigurationChange} from './ConfigurationChange';
 import {LiveArray} from './LiveArray';
 import {LiveMap} from './LiveMap';
 import {PackageLoader} from './PackageLoader';
 import {ExtensionManager} from './extensions/ExtensionManager';
 import {IDocumentState} from './extensions/IDocumentState';
+import { IConfigurationChangeOptions } from 'apl-html';
 
 /**
  * This matches the schema sent from the server
@@ -73,6 +76,9 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
     /// APL Core config.
     private rootConfig : APL.RootConfig;
 
+    /// Current Configuration Change
+    private configurationChange : ConfigurationChange;
+
     /**
      * This constructor is private
      * @param options options passed in through `create`
@@ -92,6 +98,25 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
             .mode(this.options.mode as string);
         this.rootConfig = Module.RootConfig.create(this.options.environment);
         this.rootConfig.utcTime(this.options.utcTime).localTimeAdjustment(this.options.localTimeAdjustment);
+        this.rootConfig.localeMethods(LocaleMethods);
+        this.handleConfigurationChange = (configurationChangeOptions : IConfigurationChangeOptions) => {
+            if (this.context) {
+                const originalScaleFactor = this.context.getScaleFactor();
+                this.configurationChange = ConfigurationChange.create(configurationChangeOptions);
+                this.passConfigurationChangeToCore(this.configurationChange);
+                if (this.context.getScaleFactor() !== originalScaleFactor) {
+                    this.destroyRenderingComponents();
+                    this.reRenderComponents();
+                }
+            }
+        };
+    }
+
+    /**
+     * Returns current configuration change
+     */
+    public getConfigurationChange() {
+        return this.configurationChange;
     }
 
     /**
@@ -149,6 +174,8 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
         const content : Content = this.options.documentState ?
                                   this.options.documentState.content : this.options.content;
 
+        this.supportsResizing = content.getAPLSettings('supportsResizing');
+
         if (!this.options.documentState) {
             if (!await this.loadPackages() || !this.options.content.isReady()
                 || this.options.content.isError()) {
@@ -168,8 +195,7 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
         }
 
         if (this.options.documentState) {
-            this.context = this.options.documentState.context;
-            this.context.setBackground(this.options.documentState.background);
+            await this.restoreDocument(this.options.documentState);
             this.options.documentState = undefined;
         } else {
             this.context = Module.Context.create(this.options, this,
@@ -247,7 +273,7 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
      * @param type DataSource type. Optional, should be one of runtime registered.
      */
     public processDataSourceUpdate(payload : string, type? : string) : boolean {
-        return this.context.processDataSourceUpdate(payload, type ? type : '');
+        return this.context.processDataSourceUpdate(payload, type ? type : 'dynamicIndexList');
     }
 
     public destroy(preserveContext? : boolean) {
@@ -277,5 +303,33 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
             }
         }
         return true;
+    }
+
+    private async restoreDocument(documentState : IDocumentState) : Promise<void> {
+        if (!documentState) {
+            return;
+        }
+        this.context = documentState.context;
+        this.context.setBackground(documentState.background);
+        if (documentState.configurationChange) {
+            // apply config change and consume events against restoring document.
+            this.passConfigurationChangeToCore(documentState.configurationChange);
+            this.context.clearPending();
+            while (this.context && this.context.hasEvent()) {
+                const event = this.context.popEvent();
+                await commandFactory(event, (this as any));
+            }
+        }
+    }
+
+    private passConfigurationChangeToCore(configurationChange : ConfigurationChange) : void {
+        if (configurationChange.width && configurationChange.height) {
+            this.metrics.size(configurationChange.width, configurationChange.height);
+            this.context.configurationChange(configurationChange.getConfigurationChange(),
+                this.metrics, this.options.scaling);
+        } else {
+            this.context.configurationChange(configurationChange.getConfigurationChange(),
+                undefined, undefined);
+        }
     }
 }

@@ -1,5 +1,6 @@
 /**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #ifndef APL_WASM_ROOTCONFIG_H
@@ -19,6 +20,7 @@ struct RootConfigMethods {
 
     static RootConfigPtr& utcTime(RootConfigPtr& rootConfig, apl_time_t utcTime);
     static RootConfigPtr& localTimeAdjustment(RootConfigPtr& rootConfig, apl_duration_t localTimeAdjustment);
+    static RootConfigPtr& localeMethods(RootConfigPtr& rootConfig, emscripten::val localeMethods);
 
     static RootConfigPtr& registerExtensionEventHandler(RootConfigPtr& rootConfig, ExtensionEventHandler handler);
     static RootConfigPtr& registerExtensionCommand(RootConfigPtr& rootConfig, ExtensionCommandDefinition commandDef);

@@ -1,5 +1,6 @@
 /**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #ifndef APL_WASM_CONTEXT_H
@@ -12,7 +13,6 @@ namespace apl {
 namespace wasm {
 
 namespace internal {
-
 
 static std::map<std::string, ViewportMode> modeMap = {
         {"AUTO", kViewportModeAuto},
@@ -54,6 +54,11 @@ struct ContextMethods {
     static bool handleKeyboard(const apl::RootContextPtr& context, int type, const emscripten::val& keyboard);
     static bool processDataSourceUpdate(const apl::RootContextPtr& context, const std::string& payload, const std::string& type);
     static void handleDisplayMetrics(const apl::RootContextPtr& context, emscripten::val metrics);
+    static void configurationChange(const apl::RootContextPtr& context, emscripten::val configurationChange, emscripten::val metrics, emscripten::val scalingOptions);
+    static void reInflate(const apl::RootContextPtr& context);
+    static void setFocus(const apl::RootContextPtr& context, int direction, const apl::Rect& origin, const std::string& targetId);
+    static std::string getFocused(const apl::RootContextPtr& context);
+    static emscripten::val getFocusableAreas(const apl::RootContextPtr& context);
 };
 } // namespace internal
 

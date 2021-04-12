@@ -1,12 +1,12 @@
 /**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import * as $ from 'jquery';
-import PerfectScrollbar from 'perfect-scrollbar';
 import APLRenderer from '../APLRenderer';
 import { Component, FactoryFunction, IComponentProperties } from './Component';
-import { IScollOptions, Scrollable } from './Scrollable';
+import { Scrollable } from './Scrollable';
 import { PropertyKey } from '../enums/PropertyKey';
 
 /**
@@ -28,19 +28,7 @@ export class ScrollView extends Scrollable<IScrollViewProperties> {
 
     public init() {
         super.init();
-        const options : IScollOptions = {
-            handlers: ['drag-thumb', 'touch', 'wheel'],
-            suppressScrollX: true
-        };
-        this.scrollbar = new PerfectScrollbar(this.container, options);
         this.$container.css('overflow', 'hidden');
-        this.registerScrollHandler((relativePosition) => {
-            if (this.component) {
-                this.component.updateScrollPosition(relativePosition);
-            }
-        });
-        super.configureNavigation();
-
         // Override gap size to accomodate for padding
         if (this.children && this.children.length > 0) {
             const child = this.children[0];
@@ -93,9 +81,7 @@ export class ScrollView extends Scrollable<IScrollViewProperties> {
     }
 
     public destroy() {
-        super.destroy();
         $(this.container).off('scroll');
-        this.scrollbar.destroy();
-        (this.scrollbar as any) = undefined;
+        super.destroy();
     }
 }

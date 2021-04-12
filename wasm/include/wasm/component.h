@@ -1,5 +1,6 @@
 /**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #ifndef APL_WASM_COMPONENT_H
@@ -32,6 +33,9 @@ struct ComponentMethods {
 
     static size_t getChildCount(const apl::ComponentPtr& component);
     static apl::ComponentPtr getChildAt(const apl::ComponentPtr& component, size_t index);
+
+    static size_t getDisplayedChildCount(const apl::ComponentPtr& component);
+    static std::string getDisplayedChildId(const apl::ComponentPtr& component, size_t displayIndex);
 
     static bool appendChild(const apl::ComponentPtr& component, const apl::ComponentPtr& child);
     static bool insertChild(const apl::ComponentPtr& component, const apl::ComponentPtr& child, size_t index);

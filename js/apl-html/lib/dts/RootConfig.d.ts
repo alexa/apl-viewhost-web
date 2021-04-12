@@ -1,5 +1,6 @@
-/*!
+/**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 declare namespace APL {
@@ -7,6 +8,7 @@ declare namespace APL {
         public static create(environment : any) : RootConfig;
         public utcTime(utcTime : number) : RootConfig;
         public localTimeAdjustment(localTimeAdjustment : number) : RootConfig;
+        public localeMethods(localeMethods : any) : RootConfig;
         public registerExtensionEventHandler(handler : ExtensionEventHandler) : RootConfig;
         public registerExtensionCommand(commandDef : ExtensionCommandDefinition) : RootConfig;
         public registerExtensionFilter(commandDef : ExtensionFilterDefinition) : RootConfig;

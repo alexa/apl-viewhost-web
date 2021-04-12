@@ -1,5 +1,6 @@
 /*!
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 'use strict';
@@ -44,7 +45,6 @@ export abstract class AudioPlayer {
         promiseCancelled = true;
         return Promise.reject(undefined);
       }
-
       if (!response.ok) {
         throw new Error(`Provided URL download failed with status code ${response.status}`);
       }

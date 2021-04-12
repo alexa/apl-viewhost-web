@@ -1,5 +1,6 @@
 /**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #include "wasm/component.h"
@@ -118,6 +119,19 @@ ComponentMethods::getChildAt(const apl::ComponentPtr& component, size_t index) {
     return child;
 }
 
+size_t
+ComponentMethods::getDisplayedChildCount(const apl::ComponentPtr& component) {
+    return component->getDisplayedChildCount();
+}
+
+std::string
+ComponentMethods::getDisplayedChildId(const apl::ComponentPtr& component, size_t displayIndex) {
+    if (component->getDisplayedChildCount() > displayIndex) {
+        return component->getDisplayedChildAt(displayIndex)->getUniqueId().c_str();
+    }
+    return "";
+}
+
 bool
 ComponentMethods::appendChild(const apl::ComponentPtr& component, const apl::ComponentPtr& child) {
     return component->appendChild(child);
@@ -225,7 +239,9 @@ EMSCRIPTEN_BINDINGS(apl_wasm_component) {
         .function("getGlobalBounds", &internal::ComponentMethods::getGlobalBounds)
         .function("ensureLayout", &internal::ComponentMethods::ensureLayout)
         .function("isCharacterValid", &internal::ComponentMethods::isCharacterValid)
-        .function("provenance", &internal::ComponentMethods::provenance);
+        .function("provenance", &internal::ComponentMethods::provenance)
+        .function("getDisplayedChildCount", &internal::ComponentMethods::getDisplayedChildCount)
+        .function("getDisplayedChildId", &internal::ComponentMethods::getDisplayedChildId);
 }
 
 } // namespace wasm

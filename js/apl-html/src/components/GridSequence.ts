@@ -1,5 +1,6 @@
 /*!
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import APLRenderer from '../APLRenderer';
@@ -15,7 +16,7 @@ export class GridSequence extends MultiChildScrollable {
         super(renderer, component, factory, parent);
     }
 
-    protected setDisplay = () => {
-        this.$container.css({display : 'grid'});
+    protected getNormalDisplay() : string {
+        return 'grid';
     }
 }

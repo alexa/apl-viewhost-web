@@ -16,9 +16,7 @@
   },
   "exclude": [
     "build",
-    "tests"
-  ],
-  "types": [
-    "typePatches"
+    "tests",
+    "cypress"
   ]
 }

@@ -1,5 +1,6 @@
 /*
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 'use strict';
@@ -27,10 +28,6 @@ export interface INoise extends IBaseFilter {
 export function isINoise(filter : Filter) : filter is INoise {
     return (filter as INoise).type === FilterType.kFilterTypeNoise;
 }
-
-
-
-
 
 export class Noise {
     private static readonly DEFAULT_USE_COLOR : boolean = false;

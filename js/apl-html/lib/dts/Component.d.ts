@@ -2,7 +2,12 @@
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  */
 
-declare namespace APL {
+/**
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+ declare namespace APL {
     export class Component extends Deletable {
         public getCalculated() : {[key : number] : any};
         public getCalculatedByKey<T>(key : number) : T;
@@ -20,6 +25,8 @@ declare namespace APL {
         public updateGraphic(json : string);
         public getChildCount() : number;
         public getChildAt(index : number) : Component;
+        public getDisplayedChildCount() : Promise<number>;
+        public getDisplayedChildId(displayIndex : number) : Promise<string>;
         public appendChild(child : Component) : boolean;
         public insertChild(child : Component, index : number) : boolean;
         public remove() : boolean;

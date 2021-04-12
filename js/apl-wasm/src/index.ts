@@ -1,9 +1,11 @@
 /**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import { APLWASMRenderer } from './APLWASMRenderer';
 export { IAPLWASMOptions, IValidViewportSpecification } from './APLWASMRenderer';
+export { ConfigurationChange } from './ConfigurationChange';
 export { LiveMap } from './LiveMap';
 export { LiveArray } from './LiveArray';
 export default APLWASMRenderer;

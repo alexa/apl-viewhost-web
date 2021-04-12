@@ -1,8 +1,10 @@
 /*!
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import { Content } from 'apl-html';
+import { ConfigurationChange } from '../ConfigurationChange';
 
  /**
   * The IDocumentState is an object designed to cache the state of an active APL document such that it can
@@ -14,6 +16,7 @@ export interface IDocumentState {
     context : APL.Context;
     content : Content;
     background : APL.IBackground;
+    configurationChange : ConfigurationChange | undefined;
 }
 
 /**

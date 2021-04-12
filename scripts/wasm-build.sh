@@ -35,7 +35,7 @@ do
     source "$(pwd)/emsdk/emsdk_env.sh"
 
     # Clone APL Core Dependency
-    version="1.5.1"
+    version="1.6.0"
     tagName="v${version}"
     repoUrl='https://github.com/alexa/apl-core-library.git'
     git clone --depth 1 --branch "$tagName" "$repoUrl"

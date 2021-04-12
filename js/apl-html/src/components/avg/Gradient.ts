@@ -1,9 +1,10 @@
 /**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import { ILogger } from '../../logging/ILogger';
-import { Component, IDENTITY_TRANSFORM, SVG_NS, uuidv4 } from '../Component';
+import { Component, IDENTITY_TRANSFORM, IValueWithReference, SVG_NS, uuidv4 } from '../Component';
 import { GradientType } from '../../enums/GradientType';
 import { GradientSpreadMethod } from '../../enums/GradientSpreadMethod';
 import { GradientUnits } from '../../enums/GradientUnits';
@@ -26,8 +27,8 @@ export interface IAVGGradient {
     radius : number;
 }
 
-export function getGradientElementId(gradient : IAVGGradient, transform : string,
-                                     parent : Element, logger : ILogger) : string {
+export function createGradientElement(gradient : IAVGGradient, transform : string,
+                                      parent : Element, logger : ILogger) : IValueWithReference | undefined {
     const defs = document.createElementNS(SVG_NS, 'defs');
     let gradientElement : SVGLinearGradientElement | SVGRadialGradientElement;
     const gradientId = uuidv4().toString();
@@ -50,8 +51,8 @@ export function getGradientElementId(gradient : IAVGGradient, transform : string
             break;
         }
         default: {
-            logger.warn('Incorrect gardient type');
-            return '';
+            logger.warn('Incorrect gradient type');
+            return undefined;
         }
     }
     if (transform && transform !== IDENTITY_TRANSFORM) {
@@ -78,6 +79,8 @@ export function getGradientElementId(gradient : IAVGGradient, transform : string
         gradientElement.appendChild(stop);
     });
     defs.appendChild(gradientElement);
-    parent.appendChild(defs);
-    return gradientId;
+    return {
+        value: `url('#${gradientId}')`,
+        reference: defs
+    };
 }

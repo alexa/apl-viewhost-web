@@ -50,7 +50,5 @@ module.exports = {
 
 ```
 
-
-
 * Should be able to work with `@types` modules, not just ones that define `types` or `typings` field in their `package.json`
 * Handle tripple slash directives more elegantly. I.e. how are TSDs incorporated into TypeScript's AST.

@@ -1,5 +1,6 @@
 /*!
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 import { Content, ILogger, LoggerFactory, IExtensionManager, IExtensionEventCallbackResult } from 'apl-html';
 import { IExtension, IExtensionConnection, IExtensionService } from './IExtension';
