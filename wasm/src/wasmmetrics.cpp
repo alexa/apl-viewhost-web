@@ -1,5 +1,6 @@
 /**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #include "wasm/wasmmetrics.h"
@@ -25,6 +26,11 @@ namespace wasm {
     float
     WASMMetrics::getViewhostHeight() const {
         return getHeight();
+    }
+
+    float
+    WASMMetrics::toCorePixel(float value) {
+        return value * getScaleToCore();
     }
 
 } // namespace wasm

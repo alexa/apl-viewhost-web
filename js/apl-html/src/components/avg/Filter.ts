@@ -1,5 +1,6 @@
 /*
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import * as $ from 'jquery';
@@ -50,7 +51,6 @@ function convertAVGFilter(filter : AVGFilter) : SVGElement[] {
     switch (filter.type) {
         case GraphicFilterType.kGraphicFilterTypeDropShadow: {
             if (isEdge) {
-
                 const blur = document.createElementNS(SVG_NS, 'feGaussianBlur');
                 blur.setAttributeNS('', 'stdDeviation', filter.radius.toString());
                 const offset = document.createElementNS(SVG_NS, 'feOffset');

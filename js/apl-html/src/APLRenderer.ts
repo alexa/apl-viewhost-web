@@ -1,5 +1,6 @@
 /**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import { commandFactory } from './CommandFactory';
@@ -10,7 +11,6 @@ import { TextMeasurement } from './components/text/Text';
 import { AnimationQuality } from './enums/AnimationQuality';
 import { IVideoFactory } from './components/video/IVideoFactory';
 import { VideoFactory } from './components/video/VideoFactory';
-import { SpatialNavigation } from './utils/SpatialNavigation';
 import { AudioPlayerWrapper } from './AudioPlayerWrapper';
 import { AudioPlayerFactory } from './media/audio/AudioPlayer';
 import { LoggerFactory } from './logging/LoggerFactory';
@@ -20,6 +20,8 @@ import { PointerEventType } from './enums/PointerEventType';
 import { PointerType } from './enums/PointerType';
 import { ARROW_DOWN, ARROW_LEFT, ARROW_RIGHT, ARROW_UP, ENTER_KEY } from './utils/Constant';
 import { IExtensionManager } from './extensions/IExtensionManager';
+import { FocusDirection } from './enums/FocusDirection';
+import throttle = require('lodash.throttle');
 
 const agentName = 'AplWebRenderer';
 const agentVersion = '1.0.0';
@@ -37,6 +39,11 @@ export type DeviceMode = 'AUTO' | 'HUB' | 'MOBILE' | 'PC' | 'TV';
  * Device viewport shape
  */
 export type ViewportShape = 'ROUND' | 'RECTANGLE';
+
+/**
+ * Device screen mode
+ */
+export type ScreenMode = 'normal' | 'high-contrast';
 
 /**
  * Physical charcteristics of the viewport
@@ -68,6 +75,28 @@ export interface IEnvironment {
     disallowVideo? : boolean;
     /** Level of animation quality. Defaults to `AnimationQuality.kAnimationQualityNormal` */
     animationQuality? : AnimationQuality;
+}
+
+/**
+ * Configuration Change options.
+ *
+ * Dynamic changes to the renderer viewport or envrionment.
+ */
+export interface IConfigurationChangeOptions {
+    /** Viewport Width in pixels */
+    width? : number;
+    /** Viewport Height in pixels */
+    height? : number;
+    /** APL theme. Usually 'light' or 'dark' */
+    docTheme? : string;
+    /** Device mode. If no provided "HUB" is used. */
+    mode? : DeviceMode;
+    /** Relative size of fonts to display as specified by the OS accessibility settings */
+    fontScale? : number;
+    /** The accessibility settings for how colors should be displayed. */
+    screenMode? : ScreenMode;
+    /** Indicates if a screen reader has been enabled for the user. */
+    screenReader? : boolean;
 }
 
 /**
@@ -169,6 +198,9 @@ export interface IAPLOptions {
     /** Callback for pending errors from APLCore Library */
     onRunTimeError? : (pendingErrors : object[]) => void;
 
+    /** Callback for ignoring resize config change */
+    onResizingIgnored? : (ignoredWidth : number, ignoredHeight : number) => void;
+
     /**
      * Callback when a AVG source needs to be retreived by the consumer
      * If this is not provided, this viewhost will use the fetch API to
@@ -195,8 +227,6 @@ export interface IAPLOptions {
 /**
  * The main renderer. Create a new one with `const renderer = APLRenderer.create(content);`
  */
-
-
 export default abstract class APLRenderer<Options = {}> {
     private static mappingKeyExpression : RegExp = /:\d+$/;
     private static mousePointerId : number = 0;
@@ -242,6 +272,16 @@ export default abstract class APLRenderer<Options = {}> {
 
     /** A reference to the APL extension manager */
     public extensionManager : IExtensionManager;
+
+    /** Configuration Change handler */
+    protected handleConfigurationChange : (configurationChangeOption : IConfigurationChangeOptions) => void;
+
+    /** Document set flag for allowing config change driven resizing */
+    protected supportsResizing : boolean = false;
+
+    private configChangeThrottle = throttle((configurationChangeOptions : IConfigurationChangeOptions) => {
+        this.handleConfigurationChange(configurationChangeOptions);
+    }, 200);
 
     /**
      * @internal
@@ -326,15 +366,15 @@ export default abstract class APLRenderer<Options = {}> {
             mOptions.viewport.shape = mOptions.viewport.isRound  ? 'ROUND' : 'RECTANGLE';
         }
 
-        mOptions.view.style.height = mOptions.viewport.height + 'px';
-        mOptions.view.style.width = mOptions.viewport.width + 'px';
-        if (mOptions.viewport.shape === 'ROUND') {
-            mOptions.view.style.clipPath = 'circle(50%)';
-        } else {
-            mOptions.view.style.clipPath = '';
-        }
         this.view = mOptions.view;
+        this.setViewSize(mOptions.viewport.width, mOptions.viewport.height);
+        if (mOptions.viewport.shape === 'ROUND') {
+            this.view.style.clipPath = 'circle(50%)';
+        } else {
+            this.view.style.clipPath = '';
+        }
         this.view.style.display = 'flex';
+        this.view.style.overflow = 'hidden';
         this.view.tabIndex = 0;
         this.view.addEventListener('keydown', this.handleKeyDown, false);
         this.view.addEventListener('keyup', this.handleKeyUp, false);
@@ -390,6 +430,9 @@ export default abstract class APLRenderer<Options = {}> {
         if (mOptions.onExtensionEvent) {
             this.onExtensionEvent = mOptions.onExtensionEvent;
         }
+        if (mOptions.onResizingIgnored) {
+            this.onResizingIgnored = mOptions.onResizingIgnored;
+        }
 
         this.audioPlayer = new AudioPlayerWrapper(mOptions.audioPlayerFactory);
 
@@ -397,20 +440,12 @@ export default abstract class APLRenderer<Options = {}> {
     }
 
     public init(metricRecorder? : (m : APL.DisplayMetric) => void) {
-        SpatialNavigation.uninit();
-        if (this.mOptions.mode === 'TV') {
-            SpatialNavigation.init();
-        }
-
         const startTime = performance.now();
-        const top = this.context.topComponent();
-        this.top = componentFactory(this, top) as Component;
-        if (this.view) {
-            this.view.appendChild(this.top.container);
+        if (this.mOptions.mode === 'TV') {
+            this.focusTopLeft();
+            window.addEventListener('keydown', this.passWindowEventsToCore);
         }
-        this.top.init();
-        // just the top component
-        this.top.$container.css('position', '');
+        this.renderComponents();
         const stopTime = performance.now();
         if (typeof metricRecorder === 'function') {
             metricRecorder({
@@ -430,9 +465,41 @@ export default abstract class APLRenderer<Options = {}> {
 
         // begin update loop
         this.requestId = requestAnimationFrame(this.update);
-        if (this.mOptions.mode === 'TV') {
-            SpatialNavigation.setFocusableComponents();
+    }
+
+    /**
+     * Sets the renderer view size in pixels
+     * @param width width in pixels
+     * @param height height in pixels
+     */
+    public setViewSize(width : number, height : number) {
+        if (!this.view) {
+            return;
         }
+        this.logger.info(`APL Renderer Set View Size: ${width} x ${height}`);
+        this.view.style.width = `${width}px`;
+        this.view.style.height = `${height}px`;
+    }
+
+    /**
+     * Sets if the renderer supports resizing as defined by the APL document settings
+     * @param supportsResizing - True if the document supports resizing.  Defaults to false.
+     */
+    public setSupportsResizing(supportsResizing : boolean) {
+        this.supportsResizing = supportsResizing;
+    }
+
+    /**
+     * Process Configuration Change. ViewHost will resize/reinflate upon configuration change if supported.
+     * @param configurationChangeOptions The configuration change options to provide to core.
+     */
+    public onConfigurationChange(configurationChangeOptions : IConfigurationChangeOptions) : void {
+        if (!this.supportsResizing && (configurationChangeOptions.width || configurationChangeOptions.height)) {
+            this.onResizingIgnored(configurationChangeOptions.width, configurationChangeOptions.height);
+            configurationChangeOptions.width = undefined;
+            configurationChangeOptions.height = undefined;
+        }
+        this.configChangeThrottle(configurationChangeOptions);
     }
 
     public getComponentCount() : number {
@@ -568,6 +635,10 @@ export default abstract class APLRenderer<Options = {}> {
         this.logger.warn(`onRunTimeError: ${JSON.stringify(pendingErrors)}`);
     }
 
+    public onResizingIgnored(ignoredWidth : number, ignoredHeight : number) : void {
+        this.logger.warn(`onResizeIgnored: width: ${ignoredWidth}, height: ${ignoredHeight}`);
+    }
+
     /**
      * Called by core when a text measure is required
      * @param component The component to measure
@@ -597,6 +668,14 @@ export default abstract class APLRenderer<Options = {}> {
     }
 
     /**
+     * Rerender the same template with current content, config and context.
+     */
+    public reRenderComponents() : void {
+        this.removeRenderingComponents();
+        this.renderComponents();
+    }
+
+    /**
      * Cleans up this instance
      */
     public destroy(preserveContext? : boolean) {
@@ -606,27 +685,18 @@ export default abstract class APLRenderer<Options = {}> {
                 name: 'APL-Web.RootContext.dropFrame',
                 value: this.dropFrameCount
             }]);
-
-            if (this.context.topComponent()) {
-                const root = this.componentMap[this.context.topComponent().getUniqueId()];
-                if (root) {
-                    root.destroy(true);
-                }
-            }
+            this.destroyRenderingComponents();
             if (!preserveContext) {
                 this.context.delete();
             }
             (this.context as any) = undefined;
         }
-
-        if (this.top && this.view &&
-            this.top.container &&
-            this.view.contains(this.top.container)) {
-            this.view.removeChild(this.top.container);
-        }
+        this.removeRenderingComponents();
         if (this.view) {
             this.view = undefined;
         }
+        window.removeEventListener('keydown', this.passWindowEventsToCore);
+
     }
 
     /**
@@ -649,6 +719,84 @@ export default abstract class APLRenderer<Options = {}> {
      */
     public screenLock() : boolean {
         return this.screenLocked;
+    }
+
+    // Devtool APIs
+    /**
+     * Cancel Animation Frame
+     */
+    public async stopUpdate() : Promise<void> {
+        window.cancelAnimationFrame(this.requestId);
+        this.requestId = undefined;
+        return Promise.resolve();
+    }
+
+    /**
+     * Return a map of components where the key matches the non-unique part of mappingKey
+     * (when mappings are created a unique identifier is appended to ensure maps are unique)
+     *
+     * Note: mappingKeys are configured via developerToolOptions and come from -user- attributes
+     */
+    public getComponentsByMappingKey(mappingKey : string) : Map<string, Component> {
+        return new Map(
+            Array.from(this.componentByMappingKey).filter(
+                /*
+                * evaluate the passed `path` value against the map of componentsByPath
+                * after stripping the internalId so that it's a path to path comparison.
+                */
+                (v, k) => v[0].replace(APLRenderer.mappingKeyExpression, '') === mappingKey));
+    }
+
+    /**
+     * Add a component without re-rendering the whole output. The virtual component will be returned.
+     *
+     * @param parent Virtual component to add new component to.
+     * @param childIndex Index to put component to. Existing component at this index will be pushed up.
+     * @param componentData json string containing component definition.
+     * @returns virtual component.
+     */
+    public addComponent(parent : Component, childIndex : number, componentData : string) : Component | undefined {
+        return parent.inflateAndAddChild(childIndex, componentData);
+    }
+
+    /**
+     * Delete a component without re-rendering the whole output.
+     *
+     * @param component Virtual component to remove.
+     * @returns true if removed, false otherwise.
+     */
+    public deleteComponent(component : Component) : boolean {
+        return component.remove();
+    }
+
+    /**
+     * Update a component without re-rendering the whole output. Given the component's path and json payload,
+     * this component's DOM element will be returned.
+     *
+     * @param parent Virtual component to replace current component with.
+     * @param componentData Json string containing component definition.
+     * @returns virtual component.
+     */
+    public updateComponent(component : Component, componentData : string) : Component | undefined {
+        const parent = component.parent;
+        if (!parent) {
+            return undefined;
+        }
+        const childIndex = parent.children.indexOf(component);
+        component.remove();
+        return parent.inflateAndAddChild(childIndex, componentData);
+    }
+
+    /**
+     * Destroy current rendering component from top.
+     */
+    public destroyRenderingComponents() : void {
+        if (this.context.topComponent()) {
+            const root = this.componentMap[this.context.topComponent().getUniqueId()];
+            if (root) {
+                root.destroy(true);
+            }
+        }
     }
 
     /**
@@ -750,72 +898,6 @@ export default abstract class APLRenderer<Options = {}> {
             }
             this.previousTimeStamp = timestamp;
         }
-    }
-
-    // Devtool APIs
-    /**
-     * Cancel Animation Frame
-     */
-    public async stopUpdate() : Promise<void> {
-        window.cancelAnimationFrame(this.requestId);
-        this.requestId = undefined;
-        return Promise.resolve();
-    }
-
-    /**
-     * Return a map of components where the key matches the non-unique part of mappingKey
-     * (when mappings are created a unique identifier is appended to ensure maps are unique)
-     *
-     * Note: mappingKeys are configured via developerToolOptions and come from -user- attributes
-     */
-    public getComponentsByMappingKey(mappingKey : string) : Map<string, Component> {
-        return new Map(
-            Array.from(this.componentByMappingKey).filter(
-                /*
-                * evaluate the passed `path` value against the map of componentsByPath
-                * after stripping the internalId so that it's a path to path comparison.
-                */
-                (v, k) => v[0].replace(APLRenderer.mappingKeyExpression, '') === mappingKey));
-    }
-
-    /**
-     * Add a component without re-rendering the whole output. The virtual component will be returned.
-     *
-     * @param parent Virtual component to add new component to.
-     * @param childIndex Index to put component to. Existing component at this index will be pushed up.
-     * @param componentData json string containing component definition.
-     * @returns virtual component.
-     */
-    public addComponent(parent : Component, childIndex : number, componentData : string) : Component | undefined {
-        return parent.inflateAndAddChild(childIndex, componentData);
-    }
-
-    /**
-     * Delete a component without re-rendering the whole output.
-     *
-     * @param component Virtual component to remove.
-     * @returns true if removed, false otherwise.
-     */
-    public deleteComponent(component : Component) : boolean {
-        return component.remove();
-    }
-
-    /**
-     * Update a component without re-rendering the whole output. Given the component's path and json payload,
-     * this component's DOM element will be returned.
-     *
-     * @param parent Virtual component to replace current component with.
-     * @param componentData Json string containing component definition.
-     * @returns virtual component.
-     */
-    public updateComponent(component : Component, componentData : string) : Component | undefined {
-        const parent = component.parent;
-        if (!parent) {
-            return undefined;
-        }
-        const childIndex = parent.children.indexOf(component);
-        component.remove();
-        return parent.inflateAndAddChild(childIndex, componentData);
     }
 
     private getScreenCoords = (evt : MouseEvent | Touch) => {
@@ -977,38 +1059,68 @@ export default abstract class APLRenderer<Options = {}> {
     }
 
     private passKeyboardEventToCore = async (evt : IAsyncKeyboardEvent, keyHandlerType : number) => {
-        if (this.context && !evt.asyncChecked) {
-            if (this.isDPadKey(evt.key)) {
-                evt.preventDefault();
-                evt.stopPropagation();
-            }
+        if (this.context) {
             const keyboard : APL.Keyboard = this.getKeyboard(evt);
-            const handleKeyboardResult = await this.context.handleKeyboard(keyHandlerType, keyboard);
-            if (handleKeyboardResult === false) {
-                if (this.isDPadKey(evt.key)) {
-                    if (!this.isEdge) {
-                        // @ts-ignore
-                        const eventClone = new evt.constructor(evt.type, evt);
-                        eventClone.asyncChecked = true;
-                        evt.target.dispatchEvent(eventClone);
-                    } else {
-                        // Handle Edge browser dispatch keyboard event copy
-                        // cast to any type to bypass changing read-only property
-                        // @ts-ignore
-                        const eventCopy = document.createEvent('Event') as Any;
-                        eventCopy.initEvent(evt.type, evt.bubbles, evt.cancelable);
-                        eventCopy.code = evt.key;
-                        eventCopy.key = evt.key;
-                        eventCopy.keyCode = evt.keyCode;
-                        eventCopy.asyncChecked = true;
-                        evt.target.dispatchEvent(eventCopy);
-                    }
-                }
-            }
+            await this.context.handleKeyboard(keyHandlerType, keyboard);
         }
     }
 
     private isDPadKey = (key : string) : boolean => {
         return key === ENTER_KEY || key === ARROW_LEFT || key === ARROW_UP || key === ARROW_RIGHT || key === ARROW_DOWN;
+    }
+
+    private renderComponents() : void {
+        if (!this.context || !this.view) {
+            return;
+        }
+        if (this.top && this.top.container && this.view.contains(this.top.container)) {
+            // already rendered
+            return;
+        }
+        const top = this.context.topComponent();
+        this.top = componentFactory(this, top) as Component;
+        this.view.appendChild(this.top.container);
+        this.top.init();
+        // just the top component
+        this.top.$container.css('position', '');
+    }
+
+    private removeRenderingComponents() : void {
+        if (this.top && this.view &&
+            this.top.container &&
+            this.view.contains(this.top.container)) {
+            this.view.removeChild(this.top.container);
+            this.top = undefined;
+        }
+    }
+
+    private async focusTopLeft() : Promise<void> {
+        const focusableAreas = await this.context.getFocusableAreas();
+        let topLeft;
+        for (const id in focusableAreas) {
+            if (focusableAreas.hasOwnProperty(id)) {
+                if (!topLeft) {
+                    topLeft = id;
+                }
+                if (focusableAreas[id].top < focusableAreas[topLeft].top
+                    || (focusableAreas[id].top === focusableAreas[topLeft].top
+                        && focusableAreas[id].left < focusableAreas[topLeft].left)) {
+                    topLeft = id;
+                }
+            }
+        }
+        const focused = await this.context.getFocused();
+        if (topLeft && focusableAreas[topLeft] && !focused) {
+            this.context.setFocus(FocusDirection.kFocusDirectionForward, focusableAreas[topLeft], topLeft);
+        }
+    }
+
+    private passWindowEventsToCore = async (event : IAsyncKeyboardEvent) => {
+        if (this.isDPadKey(event.code)
+            && (!document.activeElement || document.activeElement === document.body)
+            && this.context
+            && this.context.getFocused()) {
+            this.passKeyboardEventToCore(event, KeyHandlerType.KeyDown);
+        }
     }
 }

@@ -1,5 +1,6 @@
 /**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import APLRenderer from '../../APLRenderer';
@@ -38,8 +39,8 @@ export abstract class AbstractVideoComponent extends Component<IVideoProperties>
         this.propExecutor
             (this.setScaleFromProp, PropertyKey.kPropertyScale)
             (this.setAudioTrackFromProp, PropertyKey.kPropertyAudioTrack)
-            (this.setSourceFromProp, PropertyKey.kPropertySource)
             (this.setTrackCurrentTimeFromProp, PropertyKey.kPropertyTrackCurrentTime)
+            (this.setSourceFromProp, PropertyKey.kPropertySource)
             (this.setTrackIndexFromProp, PropertyKey.kPropertyTrackIndex);
     }
 

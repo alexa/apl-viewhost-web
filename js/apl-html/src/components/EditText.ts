@@ -1,18 +1,18 @@
 /**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import APLRenderer, { IAsyncKeyboardEvent } from '../APLRenderer';
 import { ActionableComponent } from './ActionableComponent';
-import { Component, FactoryFunction, IComponentProperties } from './Component';
+import { Component, FactoryFunction, IComponentProperties, fitElementToRectangle } from './Component';
 import { FontStyle } from '../enums/FontStyle';
 import { PropertyKey } from '../enums/PropertyKey';
 import * as $ from 'jquery';
 import { FontUtils } from '../utils/FontUtils';
-import { Direction, SectionType, SpatialNavigation } from '../utils/SpatialNavigation';
 import { UpdateType } from '../enums/UpdateType';
 import { KeyboardType } from '../enums/KeyboardType';
-import { ENTER_KEY } from '../utils/Constant';
+import { ARROW_RIGHT, ARROW_LEFT, ARROW_DOWN, ARROW_UP, ENTER_KEY } from '../utils/Constant';
 
 /**
  * @ignore
@@ -53,18 +53,8 @@ export class EditText extends ActionableComponent<IEditTextProperties> {
         super(renderer, component, factory, parent);
         this.initEditTextHtmlComponent();
 
-        if (SpatialNavigation.enabled()) {
-            // D-Pad supports
-            SpatialNavigation.makeNavigable(
-                this.inputElement, this.getSectionId(), this.focus, this.blur);
-            SpatialNavigation.addSection(this.getSectionId(), SectionType.NONE);
-            // override will move listener
-            this.inputElement.addEventListener('sn:willmove', this.navigate);
-        } else {
-            this.inputElement.addEventListener('focus', this.onFocus);
-            this.inputElement.addEventListener('blur', this.onBlur);
-        }
-
+        this.inputElement.addEventListener('focus', this.focus);
+        this.inputElement.addEventListener('blur', this.blur);
         this.formElement.onsubmit = this.onSubmit;
         this.inputElement.addEventListener('keyup', this.onKeyup);
         this.inputElement.addEventListener('keydown', this.onKeydown);
@@ -88,12 +78,20 @@ export class EditText extends ActionableComponent<IEditTextProperties> {
         (this.setMaxLength, PropertyKey.kPropertyMaxLength)
         (this.setSelectTextOnFocus, PropertyKey.kPropertySelectOnFocus)
         (this.setInputSize, PropertyKey.kPropertySize)
-        (this.setInputText, PropertyKey.kPropertyText);
+        (this.setInputText, PropertyKey.kPropertyText)
+        (this.setTextBoundsAndDisplay, PropertyKey.kPropertyBounds, PropertyKey.kPropertyInnerBounds,
+            PropertyKey.kPropertyDisplay);
+    }
+
+    protected setTextBoundsAndDisplay = () => {
+        this.setBoundsAndDisplay();
+        this.setInnerBounds();
     }
 
     private initEditTextHtmlComponent() {
         // Form is required to wrap input type for OS to detect submit key in its virtual keyboard.
         this.formElement = document.createElement('form');
+        this.formElement.autocomplete = 'off';
         // set input's height and width same as container which read from core.
         $(this.formElement).css('max-width', '100%');
         $(this.formElement).css('max-height', '100%');
@@ -101,21 +99,22 @@ export class EditText extends ActionableComponent<IEditTextProperties> {
         this.inputElement = document.createElement('input');
         $(this.inputElement).attr('id', this.id);
         // set position, height, and width of input element according to core inner bounds.
-        const innerBounds = this.component.getCalculatedByKey<APL.Rect>(PropertyKey.kPropertyInnerBounds);
-        if (innerBounds) {
-            $(this.inputElement).css('width', innerBounds.width);
-            $(this.inputElement).css('height', innerBounds.height);
-            $(this.inputElement).css('top', innerBounds.top);
-            $(this.inputElement).css('left', innerBounds.left);
-        } else {
-            $(this.inputElement).css('max-width', '100%');
-            $(this.inputElement).css('max-height', '100%');
-        }
+        this.setInnerBounds();
         // To apply transparent background to remain parity with Android
         $(this.inputElement).css('background', 'transparent');
         $(this.inputElement).css('border-color', 'transparent');
         this.formElement.appendChild(this.inputElement);
         this.container.appendChild(this.formElement);
+    }
+
+    private setInnerBounds() {
+        const innerBounds = this.component.getCalculatedByKey<APL.Rect>(PropertyKey.kPropertyInnerBounds);
+        if (innerBounds) {
+            fitElementToRectangle(this.inputElement, innerBounds);
+        } else {
+            $(this.inputElement).css('max-width', '100%');
+            $(this.inputElement).css('max-height', '100%');
+        }
     }
 
     private setBorderColor = () => {
@@ -251,17 +250,18 @@ export class EditText extends ActionableComponent<IEditTextProperties> {
         }
     }
 
-    private onFocus = () => {
+    public focus = () => {
         if (!this.localFocused) {
             this.localFocused = true;
-            this.update(UpdateType.kUpdateTakeFocus, 1);
+            this.inputElement.focus();
+            this.takeFocus();
         }
     }
 
-    private onBlur = () => {
+    protected blur = () => {
         if (this.localFocused) {
             this.localFocused = false;
-            this.update(UpdateType.kUpdateTakeFocus, 0);
+            this.inputElement.blur();
         }
     }
 
@@ -281,54 +281,14 @@ export class EditText extends ActionableComponent<IEditTextProperties> {
             this.update(UpdateType.kUpdateSubmit, 0);
             this.enterPressedDown = false;
         }
+        this.filterEventPropagation(event, this.inputElement);
     }
 
     private onKeydown = (event : IAsyncKeyboardEvent) => {
         if (event.key === ENTER_KEY && !event.asyncChecked) {
             this.enterPressedDown = true;
         }
-    }
-
-    private getSectionId = () => {
-        return SpatialNavigation.getSectionName(this.component.getUniqueId());
-    }
-
-    protected navigate = (event) => {
-        if (this.inputElement.selectionEnd === undefined || this.inputElement.selectionEnd === null) {
-            // Not every input type support retrieving cursor position. (eg. email)
-            // delegate to spatial navigation
-            return;
-        }
-        const endPosition = this.inputElement.selectionEnd;
-        const direction : Direction = event.detail.direction;
-        switch (direction) {
-            case 'up':
-                if (endPosition !== 0) {
-                    event.preventDefault();
-                    this.inputElement.setSelectionRange(0, 0);
-                }
-                break;
-            case 'left':
-                if (endPosition !== 0) {
-                    event.preventDefault();
-                    this.inputElement.setSelectionRange(endPosition - 1, endPosition - 1);
-                }
-                break;
-            case 'right':
-                if (endPosition !== this.inputElement.value.length) {
-                    event.preventDefault();
-                    this.inputElement.setSelectionRange(endPosition + 1, endPosition + 1);
-                }
-                break;
-            case 'down':
-                if (endPosition !== this.inputElement.value.length) {
-                    event.preventDefault();
-                    this.inputElement.setSelectionRange(
-                        this.inputElement.value.length, this.inputElement.value.length);
-                }
-                break;
-            default:
-        }
+        this.filterEventPropagation(event, this.inputElement);
     }
 
     // filter the text based on validCharacters
@@ -348,6 +308,29 @@ export class EditText extends ActionableComponent<IEditTextProperties> {
             } catch (e) {
                 continue;
             }
+        }
+    }
+
+    private filterEventPropagation(event : IAsyncKeyboardEvent, inputElement : HTMLInputElement) {
+        if (this.shouldStopPropagation(event, inputElement)) {
+            event.stopPropagation();
+            event.cancelBubble = true;
+        }
+    }
+
+    private shouldStopPropagation(event : IAsyncKeyboardEvent, inputElement : HTMLInputElement) {
+        if (inputElement.selectionStart !== inputElement.selectionEnd) {
+            return true;
+        }
+        switch (event.code) {
+            case ARROW_LEFT:
+            case ARROW_UP:
+                return inputElement.selectionStart !== 0;
+            case ARROW_RIGHT:
+            case ARROW_DOWN:
+                return inputElement.selectionEnd !== inputElement.value.length;
+            default:
+                return false;
         }
     }
 }

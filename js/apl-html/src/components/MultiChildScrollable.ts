@@ -1,16 +1,15 @@
 /**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import APLRenderer from '../APLRenderer';
 import { PropertyKey } from '../enums/PropertyKey';
 import { ScrollDirection } from '../enums/ScrollDirection';
 import { Component, FactoryFunction, IComponentProperties } from './Component';
-import { IScollOptions, Scrollable } from './Scrollable';
+import { Scrollable } from './Scrollable';
 import { Text } from './text/Text';
 import { ChildAction } from '../utils/Constant';
-import { Snap } from '../enums/Snap';
-const PerfectScrollbar = require('perfect-scrollbar').default;
 
 /**
  * @ignore
@@ -46,7 +45,6 @@ export abstract class MultiChildScrollable extends Scrollable<IMultiChildScrolla
         // override or add more propExecutors
         this.propExecutor
         (this.updateUponChildrenChange, PropertyKey.kPropertyNotifyChildrenChanged)
-        (this.setSnapType, PropertyKey.kPropertySnap)
         (this.setScrollDirection, PropertyKey.kPropertyScrollDirection);
     }
 
@@ -57,22 +55,11 @@ export abstract class MultiChildScrollable extends Scrollable<IMultiChildScrolla
         this.alignSize();
 
         this.$container.css('overflow', 'hidden');
-        const options : IScollOptions = {
-            handlers: ['drag-thumb', 'touch', 'wheel'],
-            scrollXMarginOffset: this.bounds.width - this.innerBounds.width,
-            scrollYMarginOffset: this.bounds.height - this.innerBounds.height,
-            suppressScrollX: this.direction === ScrollDirection.kScrollDirectionVertical,
-            suppressScrollY: this.direction === ScrollDirection.kScrollDirectionHorizontal,
-            useBothWheelAxes: true
-        };
 
-        this.registerScrollHandler(this.onScroll.bind(this));
         if (this.childCount > 0) {
-            this.scrollbar = new PerfectScrollbar(this.container, options);
             this.first = this.last = this.createItem(0);
             requestAnimationFrame(this.onUpdate);
         }
-        super.configureNavigation();
 
         // Override gap size to accomodate for padding
         const endGapWidth : number = parseInt(this.$endGap.css('width'), 10);
@@ -170,39 +157,6 @@ export abstract class MultiChildScrollable extends Scrollable<IMultiChildScrolla
         }
     }
 
-    private setSnapAlign = (comp : Component) => {
-        const snap = this.props[PropertyKey.kPropertySnap];
-        comp.$container.css({'scroll-snap-align' : this.getSnapType(snap)});
-    }
-
-    private setSnapType = () => {
-        switch (this.props[PropertyKey.kPropertyScrollDirection]) {
-            case ScrollDirection.kScrollDirectionHorizontal:
-                this.$container.css({'scroll-snap-type' : 'x mandatory'});
-                break;
-            case ScrollDirection.kScrollDirectionVertical:
-                this.$container.css({'scroll-snap-type' : 'y mandatory'});
-                break;
-            default:
-                this.logger.warn('Incorrect ScrollDirection type');
-                break;
-        }
-    }
-
-    private getSnapType(snapType : Snap) : string {
-        switch (snapType) {
-            case Snap.kSnapCenter:
-                return 'center';
-            case Snap.kSnapEnd:
-                return 'end';
-            case Snap.kSnapStart:
-                return 'start';
-            case Snap.kSnapNone:
-            default:
-                return 'none';
-        }
-    }
-
     private setScrollDirection = () => {
         switch (this.props[PropertyKey.kPropertyScrollDirection]) {
             case ScrollDirection.kScrollDirectionHorizontal:
@@ -225,21 +179,12 @@ export abstract class MultiChildScrollable extends Scrollable<IMultiChildScrolla
         }
     }
 
-    private onScroll(relativePosition : number) {
-        if (this.component) {
-            this.component.updateScrollPosition(relativePosition);
-        }
-    }
-
     private createItem(index : number, insertAt : number = -1) : IItem {
         if (this.childCache.has(this.component.getChildAt(index).getUniqueId())) {
             return null;
         }
         const component = this.factory(this.renderer, this.component.getChildAt(index), this, true, insertAt);
-        // Set the Snap value during the child components' creation.
-        this.setSnapAlign(component);
         this.childCache.add(component.id);
-        this.overrideSpatialNavigationSection(this.container);
         if (component instanceof Text) {
             component.setDimensions();
         }

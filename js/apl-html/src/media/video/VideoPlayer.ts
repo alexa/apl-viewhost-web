@@ -1,5 +1,6 @@
 /**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 // const hls = require("hls.js/dist/hls.light.min.js");
@@ -58,6 +59,9 @@ export class VideoPlayer implements IPlayer {
             this.playbackState = PlaybackState.LOADED;
         };
         this.player.ontimeupdate = () : any => {
+            if (this.playbackState === PlaybackState.PLAYING) {
+                this.eventListener.onEvent(PlaybackState.PLAYING);
+            }
             this.onVideoTimeUpdated();
         };
     }
@@ -80,7 +84,7 @@ export class VideoPlayer implements IPlayer {
     }
 
     public play(id : string, url : string, offset : number) : Promise<void> {
-            if (this.playbackState !== PlaybackState.PAUSED) {
+            if (this.playbackState !== PlaybackState.PAUSED && offset > this.player.currentTime) {
                 // HTMLVidioElement is using second while offset is milliseconds.
                 this.player.currentTime = offset / 1000;
             }

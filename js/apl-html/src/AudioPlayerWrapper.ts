@@ -1,5 +1,6 @@
 /*
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 'use strict';
@@ -9,6 +10,7 @@ import { DefaultAudioPlayer } from './media/audio/DefaultAudioPlayer';
 import { IAudioEventListener } from './media/audio/IAudioEventListener';
 import { IBaseMarker } from './media/audio/SpeechMarks';
 import { PromiseContainer } from './utils/PromiseUtils';
+import { LoggerFactory } from './logging/LoggerFactory';
 
 /**
  * @internal
@@ -28,6 +30,7 @@ export class AudioPlayerWrapper implements IAudioEventListener {
   protected latestMarkers : IBaseMarker[];
   protected audioContext : AudioContext;
   protected playbackEventListener : IPlaybackEventListener;
+  protected logger = LoggerFactory.getLogger(AudioPlayerWrapper.name);
 
   constructor(factory : AudioPlayerFactory) {
     this.audioPlayer = factory ? factory(this) : new DefaultAudioPlayer(this);
@@ -42,7 +45,8 @@ export class AudioPlayerWrapper implements IAudioEventListener {
 
   public prepareAsync(url : string, decodeMarkers : boolean) {
     if (this.preparePromise) {
-      throw new Error('prepare already in progress');
+      this.logger.warn('prepare already in progress');
+      return;
     }
     this.preparePromise = new PromiseContainer();
     this.latestId = this.audioPlayer.prepare(url, decodeMarkers);

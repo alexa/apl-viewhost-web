@@ -1,5 +1,6 @@
 /**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /// <reference path="../lib/dts/Module.d.ts" />
@@ -7,8 +8,8 @@
 import './assets/css/fonts.css';
 import APLRenderer from './APLRenderer';
 export default APLRenderer;
-export {IAPLOptions, IViewportCharacteristics, IEnvironment, ISendEvent, IDataSourceFetchRequest, DeviceMode,
-    ViewportShape} from './APLRenderer';
+export {IAPLOptions, IViewportCharacteristics, IEnvironment, IConfigurationChangeOptions,
+    ISendEvent, IDataSourceFetchRequest, DeviceMode, ViewportShape, ScreenMode} from './APLRenderer';
 export {Content} from './Content';
 export {commandFactory} from './CommandFactory';
 export {componentFactory} from './ComponentFactory';
@@ -42,6 +43,7 @@ export * from './components/text/Text';
 export * from './components/pager/PagerComponent';
 export * from './components/avg/Filter';
 export * from './components/avg/VectorGraphic';
+export * from './components/avg/VectorGraphicElementUpdater';
 export * from './enums/AnimationQuality';
 export * from './enums/AudioTrack';
 export * from './enums/BlendMode';
@@ -73,6 +75,7 @@ export * from './enums/TextAlign';
 export * from './enums/TextAlignVertical';
 export * from './enums/UpdateType';
 export * from './enums/VideoScale';
+export * from './enums/GraphicElementType';
 export * from './enums/GraphicFilterType';
 export * from './enums/GraphicPropertyKey';
 export * from './extensions/IExtensionManager';
@@ -82,6 +85,7 @@ export * from './media/Resource';
 export * from './utils/FilterUtils';
 export * from './utils/FontUtils';
 export * from './utils/SoftRandom';
+export * from './utils/LocaleMethods';
 export * from './logging/ILogger';
 export * from './logging/LoggerFactory';
 export {LogLevel as JSLogLevel} from './logging/LogLevel';

@@ -1,5 +1,6 @@
 /**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import { ImageAlign } from '../enums/ImageAlign';
@@ -12,8 +13,6 @@ import * as $ from 'jquery';
 
 // This is a temporary shim for jquery so that the image scale
 // library works.
-
-
 (window as any).jQuery = $;
 import 'image-scale';
 import APLRenderer from '../APLRenderer';
@@ -49,7 +48,6 @@ export interface IImageProperties extends IComponentProperties {
 
 /**
  * @ignore
-
  */
 export class Image extends Component<IImageProperties> {
 

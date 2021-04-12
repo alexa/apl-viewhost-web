@@ -1,6 +1,8 @@
-/*!
+/**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
+
 declare namespace APL {
     export class LiveArray {
         public static create(array? : any[]) : LiveArray;

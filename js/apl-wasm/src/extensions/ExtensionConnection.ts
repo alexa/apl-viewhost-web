@@ -1,5 +1,6 @@
 /*!
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import { IExtensionConnection, IExtensionService, IExtensionConnectionMessage } from './IExtension';
@@ -8,7 +9,6 @@ import { ILogger, LoggerFactory } from 'apl-html';
 
 /**
  * The connection to local service.
-
  */
 export class ExtensionLocalConnection implements IExtensionConnection {
     private extensionService : IExtensionService | undefined;

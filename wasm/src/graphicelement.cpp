@@ -1,5 +1,6 @@
 /**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #include "wasm/graphicelement.h"
@@ -38,7 +39,7 @@ emscripten::val
 GraphicElementMethods::getDirtyProperties(const GraphicElementPtr& element) {
     emscripten::val dirty = emscripten::val::array();
     for (auto key : element->getDirtyProperties()) {
-        dirty.call<void>("push", key);
+       dirty.call<void>("push", static_cast<int>(key));
     }
     return dirty;
 }

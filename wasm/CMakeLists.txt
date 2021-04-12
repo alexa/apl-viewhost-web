@@ -7,6 +7,7 @@ add_executable(apl-wasm
         src/main.cpp
         src/logbridge.cpp
         src/log.cpp
+        src/configurationchange.cpp
         src/content.cpp
         src/rootconfig.cpp
         src/extension.cpp
@@ -23,6 +24,7 @@ add_executable(apl-wasm
         src/graphicpattern.cpp
         src/livearray.cpp
         src/livemap.cpp
+        src/localemethods.cpp
         src/wasmmetrics.cpp
         src/metrics.cpp
         src/session.cpp
@@ -47,7 +49,6 @@ if(WASM_ASMJS)
         ${CMAKE_CURRENT_BINARY_DIR}/apl-wasm.js.mem
         DESTINATION ${WEB_PUBLIC_DIR})
 endif(WASM_ASMJS)
-
 
 install(DIRECTORY
     ${CMAKE_SOURCE_DIR}/fonts
@@ -75,6 +76,7 @@ add_custom_target(generate-wasm-enums ALL
         -f "FilterType"
         -f "FlexboxAlign"
         -f "FlexboxJustifyContent"
+        -f "FocusDirection"
         -f "FontStyle"
         -f "GradientProperty"
         -f "GradientSpreadMethod"

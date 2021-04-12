@@ -1,5 +1,6 @@
 /**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
@@ -23,6 +24,12 @@ export class Content {
     public content : APL.Content;
 
     /**
+     * APL doc settings.
+     * @private
+     */
+    private settings : object;
+
+    /**
      * Get Content created from Core.
      */
     public getContent() : APL.Content {
@@ -36,6 +43,11 @@ export class Content {
      */
     private constructor(doc : string) {
         this.content = Module.Content.create(doc);
+        try {
+            this.settings = JSON.parse(doc).settings || {};
+        } catch (e) {
+            this.settings = {};
+        }
     }
 
     /**
@@ -117,4 +129,12 @@ export class Content {
     public getExtensionSettings(uri : string) : object {
         return this.content.getExtensionSettings(uri);
     }
-}
+
+    /**
+     * get APL settings in APL Doc.
+     * @param key
+     */
+    public getAPLSettings(key : string) : any {
+        return this.settings[key];
+    }
+ }

@@ -1,5 +1,6 @@
 /**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import APLRenderer from './APLRenderer';
@@ -16,6 +17,7 @@ import { Text } from './components/text/Text';
 import { TouchWrapper } from './components/TouchWrapper';
 import { ComponentType } from './enums/ComponentType';
 import { GridSequence } from './components/GridSequence';
+import { VectorGraphicElementUpdater } from './components/avg/VectorGraphicElementUpdater';
 
 export const componentFactory = (renderer : APLRenderer, component : APL.Component,
                                  parent? : Component, ensureLayout : boolean = false,
@@ -96,7 +98,7 @@ const factoryMap = {
     },
     [ComponentType.kComponentTypeVectorGraphic]: (renderer : APLRenderer, component : APL.Component,
                                                   parent? : Component) => {
-        return new VectorGraphic(renderer, component, componentFactory, parent);
+        return new VectorGraphic(renderer, component, componentFactory, new VectorGraphicElementUpdater(), parent);
     }
 };
 // tslint:enable:max-line-length

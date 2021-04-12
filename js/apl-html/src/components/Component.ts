@@ -1,5 +1,6 @@
 /**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import EventEmitter = require('eventemitter3');
@@ -11,13 +12,13 @@ import { UpdateType } from '../enums/UpdateType';
 import { ComponentType } from '../enums/ComponentType';
 import { LoggerFactory } from '../logging/LoggerFactory';
 import { ILogger } from '../logging/ILogger';
-import { SpatialNavigation } from '../utils/SpatialNavigation';
 import { getScaledTransform } from '../utils/TransformUtils';
 import { GradientSpreadMethod } from '../enums/GradientSpreadMethod';
-import { Patterns } from './avg/Patterns';
 import { ChildAction } from '../utils/Constant';
 import { GradientUnits } from '../enums/GradientUnits';
-import { getGradientElementId, IAVGGradient } from './avg/Gradient';
+import { createGradientElement, IAVGGradient } from './avg/Gradient';
+import { createPatternElement } from './avg/Patterns';
+import {FocusDirection} from '../enums/FocusDirection';
 
 /**
  * @ignore
@@ -46,6 +47,15 @@ export interface IGenericPropType {
     [key : number] : any;
 }
 
+export const copyAsPixels = (from : any, to : HTMLElement, propertyName : string) => {
+    to.style[propertyName] = `${from[propertyName]}px`;
+};
+
+export const fitElementToRectangle = (element : HTMLElement, rectangle : APL.Rect) => {
+
+    ['top', 'left' , 'width', 'height'].forEach((propertyName) => copyAsPixels(rectangle, element, propertyName));
+};
+
 /**
  * @ignore
  */
@@ -57,6 +67,11 @@ export interface IComponentProperties {
     [PropertyKey.kPropertyShadowVerticalOffset] : number;
     [PropertyKey.kPropertyShadowRadius] : number;
     [PropertyKey.kPropertyShadowColor] : number;
+}
+
+export interface IValueWithReference {
+    value : string;
+    reference? : Element;
 }
 
 /**
@@ -99,6 +114,8 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
 
     /** true us destroyed was called */
     protected isDestroyed : boolean = false;
+
+    private doForceInvisible : boolean = false;
 
     /** Component state */
     protected state = {
@@ -178,12 +195,19 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
         }
     }
 
+    /**
+     * Get all displayed child count
+     * @ignore
+     */
+    public async getDisplayedChildCount() : Promise<number> {
+        return this.component.getDisplayedChildCount();
+    }
+
     protected onPropertiesUpdated() : void {
       // do nothing
     }
 
     /**
-
      * @param props
      * @ignore
      */
@@ -236,7 +260,6 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
         if (this.container && this.container.parentElement) {
             this.container.parentElement.removeChild(this.container);
         }
-        SpatialNavigation.removeSection(SpatialNavigation.getSectionName(this.id));
         this.isDestroyed = true;
         this.parent = undefined;
         delete this.renderer.componentMap[this.id];
@@ -292,42 +315,21 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
      * @param parent the parent element
      * @param logger logger for console output
      */
-    public static fillAndStrokeConverter(val : object, transform : string, parent : Element, logger : ILogger) {
+    public static fillAndStrokeConverter(val : object, transform : string, parent : Element, logger : ILogger)
+        : IValueWithReference | undefined {
         if (typeof val === 'number') {
-            return this.numberToColor(val);
+            return {
+                value: this.numberToColor(val)
+            };
         }
         if ((val as IAVGGradient).type !== undefined) {
-            // get Gradient url
-            return this.getGradientUrl(val as IAVGGradient, transform, parent, logger);
+            return createGradientElement(val as IAVGGradient, transform, parent, logger);
         } else if ((val as APL.GraphicPattern).getId()) {
-            // get Pattern url
-            return this.getPatternUrl(val as APL.GraphicPattern, transform, parent, logger);
-        } else {
-            // non-supported type
-            logger.warn('Type is not supported yet.');
-            return '';
+            return createPatternElement(val as APL.GraphicPattern, transform, parent, logger);
         }
-    }
-
-    public static getGradientUrl(val : IAVGGradient, transform : string, parent : Element,
-                                 logger : ILogger) : string {
-        const gradientElementId = getGradientElementId(val as IAVGGradient, transform, parent, logger);
-        if (!gradientElementId || gradientElementId === '') {
-            return '';
-        } else {
-            return `url('#${gradientElementId}')`;
-        }
-    }
-
-    public static getPatternUrl(pattern : APL.GraphicPattern, transform : string, parent : Element,
-                                logger : ILogger) : string {
-        const patternElement : Patterns = new Patterns(pattern, transform, parent, logger);
-        const patternId = patternElement.getPatternId();
-        if (!patternId || patternId === '') {
-            return '';
-        } else {
-            return `url('#${patternId}')`;
-        }
+        // non-supported type
+        logger.warn('Type is not supported yet.');
+        return undefined;
     }
 
     public hasValidBounds() : boolean {
@@ -392,7 +394,7 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
 
         if (this.parent && this.parent.component.getType() === ComponentType.kComponentTypeContainer && this.isLayout()
             && (this.bounds.width + this.bounds.left > this.parent.bounds.width
-            || this.bounds.height + this.bounds.top > this.parent.bounds.height)) {
+                || this.bounds.height + this.bounds.top > this.parent.bounds.height)) {
             width = Math.min(this.parent.bounds.width - this.bounds.left, this.bounds.width);
             height = Math.min(this.parent.bounds.height - this.bounds.top, this.bounds.height);
             this.logger.warn(`Component ${this.id} has bounds that is bigger than parent bounds.\n`
@@ -466,9 +468,20 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
         this.$container.css('opacity', this.props[PropertyKey.kPropertyOpacity]);
     }
 
+    public forceInvisible(doForceInvisible : boolean) {
+        if (this.doForceInvisible !== doForceInvisible) {
+            this.doForceInvisible = doForceInvisible;
+            this.setDisplay();
+        }
+    }
+
+    protected getNormalDisplay() {
+        return '';
+    }
+
     protected setDisplay = () => {
         let display = this.props[PropertyKey.kPropertyDisplay] as Display;
-        if (!this.hasValidBounds()) {
+        if (!this.hasValidBounds() || this.doForceInvisible) {
             display = Display.kDisplayInvisible;
         }
         switch (display) {
@@ -477,7 +490,7 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
                 this.$container.css({display: 'none'});
                 break;
             case Display.kDisplayNormal:
-                this.$container.css({display: ''});
+                this.$container.css({display: this.getNormalDisplay()});
                 break;
             default:
                 this.logger.warn(`Incorrect display type: ${display}`);
@@ -514,12 +527,7 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
         for (const child of this.children) {
             child.setBoundsAndDisplay();
         }
-
-        this.$container.css('top', this.bounds.top);
-        this.$container.css('left', this.bounds.left);
-        this.$container.css('width', this.bounds.width);
-        this.$container.css('height', this.bounds.height);
-
+        fitElementToRectangle(this.container, this.bounds);
         this.innerBounds = this.props[PropertyKey.kPropertyInnerBounds];
         this.$container.css('padding-left', this.innerBounds.left);
         this.$container.css('padding-right', this.bounds.width - this.innerBounds.left - this.innerBounds.width);
@@ -586,5 +594,12 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
 
     protected applyCssShadow = (shadowParams : string) => {
         this.$container.css('box-shadow', shadowParams);
+    }
+    protected async takeFocus() {
+        const focusableAreas = await this.renderer.context.getFocusableAreas();
+        const myFocusableArea = focusableAreas[this.id];
+        if (myFocusableArea) {
+            this.renderer.context.setFocus(FocusDirection.kFocusDirectionNone, myFocusableArea, this.id);
+        }
     }
 }

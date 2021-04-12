@@ -1,5 +1,6 @@
 /**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #ifndef APL_WASM_WASMMETRICS_H
@@ -40,6 +41,12 @@ public:
      * @return pixel height
      */
     float getViewhostHeight() const override;
+
+    /**
+     * Converts px from VH to Core based on Scale.
+     * @return pixel height
+     */
+    float toCorePixel(float value);
 };
 
 } // namespace wasm

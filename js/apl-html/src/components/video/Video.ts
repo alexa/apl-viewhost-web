@@ -1,5 +1,6 @@
 /**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import APLRenderer from '../../APLRenderer';
@@ -44,6 +45,7 @@ export class Video extends AbstractVideoComponent {
     private pauseCallback : undefined | CallbackFunction;
     private loadCallback : undefined | CallbackFunction;
 
+    private isSettingSource : boolean = false;
     private fromEvent : boolean = false;
     private trackCurrentTime : number = 0;
     constructor(renderer : APLRenderer, component : APL.Component, factory : FactoryFunction, parent? : Component) {
@@ -189,6 +191,7 @@ export class Video extends AbstractVideoComponent {
     }
 
     public async seek(offset : number) {
+        const shouldPauseAtSeek = this.shouldPauseAtSeek(offset);
         await this.pause();
         const mediaResource : IMediaResource = this.playbackManager.getCurrent();
         const startOffset : number = mediaResource.offset;
@@ -202,8 +205,9 @@ export class Video extends AbstractVideoComponent {
         } else {
             this.player.setCurrentTime(desireOffset / 1000);
         }
-        // video restore from back stack, check whether we should start play or remain pause
-        if (this.props[PropertyKey.kPropertyAutoplay]) {
+        // video restore from previous state, check whether we should start play or remain pause
+        this.currentMediaState.paused = shouldPauseAtSeek;
+        if (!this.currentMediaState.paused) {
             await this.play();
         }
         this.updateMediaState();
@@ -237,17 +241,16 @@ export class Video extends AbstractVideoComponent {
     }
 
     protected async setSource(source : IMediaSource | IMediaSource[]) {
+        this.isSettingSource = true;
         this.playbackManager.setup(source);
-        if (this.props[PropertyKey.kPropertyAutoplay]) {
-            await this.play();
-        }
-        if (this.props[PropertyKey.kPropertyTrackCurrentTime]) {
-            await this.seek(this.trackCurrentTime);
-        }
+        await this.play();
+        this.isSettingSource = false;
+        await this.seek(this.trackCurrentTime);
     }
 
     protected setTrackCurrentTime(trackCurrentTime : number) {
         this.trackCurrentTime = trackCurrentTime;
+        this.player.setCurrentTime(this.trackCurrentTime / 1000);
     }
 
     protected setTrackIndex(trackIndex : number) {
@@ -256,26 +259,18 @@ export class Video extends AbstractVideoComponent {
         }
     }
 
-    /**
-     * extract currentTime value in integer value since Medici parse this value as int
-     */
-    protected extractCurrentTime(currentTime : number) : number {
-        const currentTimeString = currentTime.toString();
-        const parts : string[] = currentTimeString.split('.');
-        // return the part before decimal
-        if (parts[0]) {
-            return Number(parts[0]);
-        }
-        return 0;
-    }
-
     protected updateMediaState() {
-        this.currentMediaState.currentTime = this.extractCurrentTime(this.player.getCurrentPlaybackPosition() * 1000);
-        this.currentMediaState.duration = this.player.getDuration();
+        if (this.player === undefined) {
+            return;
+        }
+        this.currentMediaState.currentTime = Math.round(this.player.getCurrentPlaybackPosition() * 1000);
+        this.currentMediaState.duration = Math.round(this.player.getDuration() * 1000);
         this.currentMediaState.trackCount = this.playbackManager.getTrackCount();
         this.currentMediaState.trackIndex = this.playbackManager.getCurrentIndex();
-        this.component.updateMediaState(this.currentMediaState, this.fromEvent);
-        this.emit('onUpdateMediaState', this.currentMediaState, this.fromEvent);
+        if (!this.isSettingSource) {
+            this.component.updateMediaState(this.currentMediaState, this.fromEvent);
+            this.emit('onUpdateMediaState', this.currentMediaState, this.fromEvent);
+        }
 
         if (this.loadPromise &&
             this.currentMediaResource.loaded) {
@@ -333,9 +328,29 @@ export class Video extends AbstractVideoComponent {
         }
     }
 
+    /**
+     * Return if the video should be paused when seeking to an offset.
+     * The play/pause should depend on kPropertyAutoplay at initial load - offset == 0.
+     * The play/pause should depend on kPropertyTrackPaused once video has been played - offset > 0.
+     *
+     * @param seekOffset
+     * @private
+     */
+    private shouldPauseAtSeek(seekOffset : number) : boolean {
+        let shouldPauseAtSeek = true;
+        if (this.props[PropertyKey.kPropertyAutoplay]) {
+            shouldPauseAtSeek = false;
+        }
+        if (seekOffset > 0) {
+            shouldPauseAtSeek = this.props[PropertyKey.kPropertyTrackPaused];
+        }
+        return shouldPauseAtSeek;
+    }
+
     public destroy() {
         super.destroy();
         // to prevent component go destroy before saving media state
         this.updateMediaState();
+        this.player = undefined;
     }
 }

@@ -1,5 +1,6 @@
 /**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import { SpanType } from '../../enums/SpanType';
@@ -108,6 +109,9 @@ export class DocumentBuilder {
                 break;
             case SpanType.kSpanTypeUnderline:
                 convertedElement.style.textDecoration = 'underline';
+                break;
+            case SpanType.kSpanTypeNoBreak:
+                convertedElement.style.whiteSpace = 'nowrap';
                 break;
             case 'text':
                 if (sourceSpan.text) {
