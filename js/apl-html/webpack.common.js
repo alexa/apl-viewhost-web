@@ -12,7 +12,10 @@ module.exports = {
             {
                 test: /\.tsx?$/,
                 loader: 'ts-loader',
-                exclude: /node_modules/
+                exclude: path.resolve(__dirname, 'node_modules'),
+                options: {
+                    allowTsInNodeModules: true
+                }
             },
             {
                 test: /\.ts$/,
@@ -30,7 +33,7 @@ module.exports = {
             // Use CSS loader
             {
                 test: /\.css$/,
-                use: [ 'style-loader', 'css-loader' ]
+                use: ['style-loader', 'css-loader']
             }
         ]
     },
