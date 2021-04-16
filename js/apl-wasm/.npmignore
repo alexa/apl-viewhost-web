@@ -1,8 +1,0 @@
-/src
-webpack.*
-.mocha
-.gitignore
-.tslint.json
-.tsconfig.json
-/tests
-/tst-web
