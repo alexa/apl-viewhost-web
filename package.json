@@ -1,6 +1,6 @@
 {
   "name": "apl-viewhost-web",
-  "version": "1.6.2-rc.2",
+  "version": "1.6.3",
   "description": "This is a Web-assembly version (WASM) of apl viewhost web.",
   "license": "Apache 2.0",
   "repository": {
@@ -9,6 +9,6 @@
   },
   "main": "./index.js",
   "scripts": {
-    "preinstall": "sh -c ./scripts/wasm-build.sh && sh -c ./scripts/wasm-bundle.sh"
+    "preinstall": "node ./scripts/fetch.js"
   }
 }
