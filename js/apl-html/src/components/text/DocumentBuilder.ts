@@ -3,34 +3,37 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { SpanAttributeName } from '../../enums/SpanAttributeName';
 import { SpanType } from '../../enums/SpanType';
 import { IRichTextStyles, ISpannedTextNode } from './RichTextParser';
 import { LoggerFactory } from '../../logging/LoggerFactory';
 import { ILogger } from '../../logging/ILogger';
+import { numberToColor } from '../../utils/ColorUtils';
+import {createStylesApplier, CssUnitType, StylesApplierArgs} from '../helpers/StylesApplier';
 
 export class DocumentBuilder {
-    private static logger : ILogger = LoggerFactory.getLogger('DocumentBuilder');
-    private root : ISpannedTextNode;
-    private markStyles : IRichTextStyles;
-    constructor(markStyles : IRichTextStyles, end : number) {
+    private static logger: ILogger = LoggerFactory.getLogger('DocumentBuilder');
+    private root: ISpannedTextNode;
+    private markStyles: IRichTextStyles;
+    constructor(markStyles: IRichTextStyles, end: number) {
         this.root = { type: 'root', start: 0, end, children: [] };
         this.markStyles = markStyles;
     }
-    public add(span : ISpannedTextNode) {
+    public add(span: ISpannedTextNode) {
         this.addTo(this.root, span);
     }
-    public finalize(targetElement : HTMLElement) {
+    public finalize(targetElement: HTMLElement) {
         if (this.root.children) {
             for (const child of this.root.children) {
                 this.process(child, targetElement);
             }
         }
     }
-    private addTo(to : ISpannedTextNode, what : ISpannedTextNode) : boolean {
+    private addTo(to: ISpannedTextNode, what: ISpannedTextNode): boolean {
         let added = false;
 
         // point features don't have children
-        const isTextOrLineBreak = (type : SpanType|string) : boolean => {
+        const isTextOrLineBreak = (type: SpanType|string): boolean => {
             switch (type) {
                 case 'text':
                 case SpanType.kSpanTypeLineBreak:
@@ -66,8 +69,8 @@ export class DocumentBuilder {
      * @param {ISpannedTextNode} sourceSpan span to be converted
      * @param {HTMLElement} targetElement the target of node conversion
      */
-    private process(sourceSpan : ISpannedTextNode, targetElement : HTMLElement) : void {
-        const transformedElement : HTMLElement = this.transformElement(sourceSpan);
+    private process(sourceSpan: ISpannedTextNode, targetElement: HTMLElement): void {
+        const transformedElement: HTMLElement = this.transformElement(sourceSpan);
         targetElement.appendChild(transformedElement);
         if (sourceSpan.children && sourceSpan.children.length !== 0) {
             for (const child of sourceSpan.children) {
@@ -81,8 +84,8 @@ export class DocumentBuilder {
      * @param {ISpannedTextNode} sourceSpan to be converted
      * @returns {HTMLElement}
      */
-    private transformElement(sourceSpan : ISpannedTextNode) : HTMLElement {
-        let convertedElement : HTMLElement = document.createElement('data');
+    private transformElement(sourceSpan: ISpannedTextNode): HTMLElement {
+        let convertedElement: HTMLElement = document.createElement('data');
         switch (sourceSpan.type) {
             case SpanType.kSpanTypeItalic:
                 convertedElement.style.fontStyle = 'italic';
@@ -113,6 +116,14 @@ export class DocumentBuilder {
             case SpanType.kSpanTypeNoBreak:
                 convertedElement.style.whiteSpace = 'nowrap';
                 break;
+            case SpanType.kSpanTypeSpan:
+                if (!sourceSpan.attributes) {
+                    break;
+                }
+                for (const attribute of sourceSpan.attributes) {
+                    this.addSpanAttribute(attribute, convertedElement);
+                }
+                break;
             case 'text':
                 if (sourceSpan.text) {
                     convertedElement.textContent = sourceSpan.text;
@@ -130,5 +141,41 @@ export class DocumentBuilder {
             }
         }
         return convertedElement;
+    }
+
+    /**
+     * Add a single span attribute into target html element
+     * @private
+     * @param {APL.SpanAttribute} attribute to be added
+     * @param {HTMLElement} targetElement the target of attribute addition
+     */
+    private addSpanAttribute(attribute: APL.SpanAttribute, targetElement: HTMLElement): void {
+        let stylesApplierArgs: StylesApplierArgs;
+
+        switch (attribute.name) {
+            case SpanAttributeName.kSpanAttributeNameColor:
+                stylesApplierArgs = {
+                    element: targetElement,
+                    properties: {
+                        color: numberToColor(attribute.value)
+                    }
+                };
+                break;
+            case SpanAttributeName.kSpanAttributeNameFontSize:
+                stylesApplierArgs = {
+                    element: targetElement,
+                    properties: {
+                        fontSize: attribute.value
+                    },
+                    cssUnitType: CssUnitType.Pixels
+                };
+                break;
+            default: {
+                DocumentBuilder.logger.warn('Non-supported attribute name');
+                return;
+            }
+        }
+
+        createStylesApplier(stylesApplierArgs).applyStyle();
     }
 }

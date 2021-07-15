@@ -3,11 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {VideoPlayer as Player} from './VideoPlayer';
-declare const HLS_SUPPORT : boolean;
+import {createHLSVideoPlayer} from './HLSVideoPlayer';
 
-export let VideoPlayer : typeof Player = Player;
-
-if (HLS_SUPPORT) {
-    VideoPlayer = require('./HLSVideoPlayer').HLSVideoPlayer;
-}
+export const VideoPlayer = createHLSVideoPlayer;

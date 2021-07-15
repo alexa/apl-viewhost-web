@@ -10,16 +10,16 @@ import { IAudioEventListener } from './IAudioEventListener';
 import { DefaultAudioContextProvider, IAudioContextProvider } from './AudioContextProvider';
 
 export class DefaultAudioPlayer extends AudioPlayer {
-  protected contextProvider : IAudioContextProvider = new DefaultAudioContextProvider();
+  protected contextProvider: IAudioContextProvider = new DefaultAudioContextProvider();
 
-  constructor(eventListener : IAudioEventListener) {
+  constructor(eventListener: IAudioEventListener) {
     super(eventListener);
   }
 
-  public play(id : string) {
-    this.contextProvider.getAudioContext().then((context : AudioContext) => {
+  public play(id: string) {
+    this.contextProvider.getAudioContext().then((context: AudioContext) => {
       super.playWithContext(id, context);
-    }).catch((reason? : any) => {
+    }).catch((reason?: any) => {
     });
   }
 }

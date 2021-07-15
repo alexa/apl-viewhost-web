@@ -13,7 +13,7 @@ export class Content {
      * can be used with multiple [[APLRenderer]]s.
      * @param doc The main APL document
      */
-    public static create(doc : string) {
+    public static create(doc: string) {
         return new Content(doc);
     }
 
@@ -21,18 +21,18 @@ export class Content {
      * @internal
      * @ignore
      */
-    public content : APL.Content;
+    public content: APL.Content;
 
     /**
      * APL doc settings.
      * @private
      */
-    private settings : object;
+    private settings: object;
 
     /**
      * Get Content created from Core.
      */
-    public getContent() : APL.Content {
+    public getContent(): APL.Content {
         return this.content;
     }
 
@@ -41,7 +41,7 @@ export class Content {
      * @ignore
      * @param doc The main APL document
      */
-    private constructor(doc : string) {
+    private constructor(doc: string) {
         this.content = Module.Content.create(doc);
         try {
             this.settings = JSON.parse(doc).settings || {};
@@ -56,7 +56,7 @@ export class Content {
      * are moved internally into a "pending" list of packages.
      * @return The set of packages that should be loaded.
      */
-    public getRequestedPackages() : Set<APL.ImportRequest> {
+    public getRequestedPackages(): Set<APL.ImportRequest> {
         return this.content.getRequestedPackages();
     }
 
@@ -65,28 +65,28 @@ export class Content {
      * @param request The requested package import structure.
      * @param data Data for the package.
      */
-    public addPackage(request : APL.ImportRequest, data : string) : void {
+    public addPackage(request: APL.ImportRequest, data: string): void {
         this.content.addPackage(request, data);
     }
 
     /**
      * @return True if this content is in an error state and can't be inflated.
      */
-    public isError() : boolean {
+    public isError(): boolean {
         return this.content.isError();
     }
 
     /**
      * @return True if this content is complete and ready to be inflated.
      */
-    public isReady() : boolean {
+    public isReady(): boolean {
         return this.content.isReady();
     }
 
     /**
      * @return true if this document is waiting for any valid packages to be loaded.
      */
-    public isWaiting() : boolean {
+    public isWaiting(): boolean {
         return this.content.isWaiting() && !this.content.isError();
     }
 
@@ -95,7 +95,7 @@ export class Content {
      * @param name The name of the data source
      * @param data The raw data source
      */
-    public addData(name : string, data : string) : void {
+    public addData(name: string, data: string): void {
         this.content.addData(name, data);
     }
 
@@ -117,7 +117,7 @@ export class Content {
     /**
      * @return The set of requested custom extensions (a list of URI values)
      */
-    public getExtensionRequests() : Set<string> {
+    public getExtensionRequests(): Set<string> {
         return this.content.getExtensionRequests();
     }
 
@@ -126,7 +126,7 @@ export class Content {
      * @param uri The uri of the extension.
      * @return Map of settings, Object::NULL_OBJECT() if no settings are specified in the document.
      */
-    public getExtensionSettings(uri : string) : object {
+    public getExtensionSettings(uri: string): object {
         return this.content.getExtensionSettings(uri);
     }
 
@@ -134,7 +134,7 @@ export class Content {
      * get APL settings in APL Doc.
      * @param key
      */
-    public getAPLSettings(key : string) : any {
+    public getAPLSettings(key: string): any {
         return this.settings[key];
     }
  }

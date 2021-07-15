@@ -15,9 +15,9 @@ import { IBaseFilter } from './ImageFilter';
  * @ignore
  */
 export interface INoise extends IBaseFilter {
-    kind? : NoiseFilterKind;
-    useColor? : boolean;
-    sigma? : number;
+    kind?: NoiseFilterKind;
+    useColor?: boolean;
+    sigma?: number;
 }
 
 /**
@@ -25,24 +25,24 @@ export interface INoise extends IBaseFilter {
  * @param filter
  * @ignore
  */
-export function isINoise(filter : Filter) : filter is INoise {
+export function isINoise(filter: Filter): filter is INoise {
     return (filter as INoise).type === FilterType.kFilterTypeNoise;
 }
 
 export class Noise {
-    private static readonly DEFAULT_USE_COLOR : boolean = false;
-    private static readonly DEFAULT_KIND : NoiseFilterKind = NoiseFilterKind.kFilterNoiseKindGaussian;
-    private static readonly DEFAULT_SIGMGA : number = 10;
-    private static readonly RANDOM_SEED : number = 42;
+    private static readonly DEFAULT_USE_COLOR: boolean = false;
+    private static readonly DEFAULT_KIND: NoiseFilterKind = NoiseFilterKind.kFilterNoiseKindGaussian;
+    private static readonly DEFAULT_SIGMGA: number = 10;
+    private static readonly RANDOM_SEED: number = 42;
 
-    private useColor : boolean;
-    private kind : NoiseFilterKind;
-    private sigma : number;
+    private useColor: boolean;
+    private kind: NoiseFilterKind;
+    private sigma: number;
 
-    private generate : boolean = false;
-    private z1 : number = 0.0;
+    private generate: boolean = false;
+    private z1: number = 0.0;
 
-    constructor(useColor? : boolean, kind? : NoiseFilterKind, sigma? : number) {
+    constructor(useColor?: boolean, kind?: NoiseFilterKind, sigma?: number) {
         this.useColor = useColor === undefined ? Noise.DEFAULT_USE_COLOR : useColor;
         this.kind = kind || Noise.DEFAULT_KIND;
         // honor sigma equal zero case, otherwise if not present, assign default
@@ -76,7 +76,7 @@ export class Noise {
      * Add noise to provided one-dimensional image data.
      * @param imageData
      */
-    public addNoise(imageData : ImageData) : ImageData {
+    public addNoise(imageData: ImageData): ImageData {
         SoftRandom.seed(Noise.RANDOM_SEED);
         const func = this.kind === NoiseFilterKind.kFilterNoiseKindGaussian ? this.gaussianNoise : this.uniformNoise;
         const pix = imageData.data;

@@ -12,11 +12,11 @@ import { MultiChildScrollable } from './MultiChildScrollable';
  */
 export class GridSequence extends MultiChildScrollable {
 
-    constructor(renderer : APLRenderer, component : APL.Component, factory : FactoryFunction, parent? : Component) {
+    constructor(renderer: APLRenderer, component: APL.Component, factory: FactoryFunction, parent?: Component) {
         super(renderer, component, factory, parent);
     }
 
-    protected getNormalDisplay() : string {
+    protected getNormalDisplay(): string {
         return 'grid';
     }
 }

@@ -10,25 +10,25 @@ import { IMediaSource } from './IMediaSource';
  * @ignore
  */
 export interface IMediaResource {
-    toRepeat : number;
-    description : string;
-    offset : number;
-    repeatCount : number;
-    trackIndex : number;
-    url : string;
-    id : string;
-    loaded : boolean;
-    duration : number;
+    toRepeat: number;
+    description: string;
+    offset: number;
+    repeatCount: number;
+    trackIndex: number;
+    url: string;
+    id: string;
+    loaded: boolean;
+    duration: number;
 }
 
 /**
  * @ignore
  */
 export class PlaybackManager {
-    private current : number;
-    private resources : Map<number, IMediaResource> = new Map<number, IMediaResource>();
+    private current: number;
+    private resources: Map<number, IMediaResource> = new Map<number, IMediaResource>();
 
-    public setup(sources : IMediaSource | IMediaSource[]) {
+    public setup(sources: IMediaSource | IMediaSource[]) {
         this.resources.clear();
         if (Array.isArray(sources)) {
             let idx = 0;
@@ -50,7 +50,7 @@ export class PlaybackManager {
         return this.resources.size;
     }
 
-    public getCurrent() : IMediaResource {
+    public getCurrent(): IMediaResource {
         const currentResource = this.resources.get(this.current);
         if (!currentResource) {
             throw new Error('Sources misconfigured.');
@@ -58,7 +58,7 @@ export class PlaybackManager {
         return currentResource;
     }
 
-    public next() : IMediaResource {
+    public next(): IMediaResource {
         if (this.current < this.resources.size - 1) {
             const currentResource = this.resources.get(this.current);
             currentResource.loaded = false;
@@ -68,7 +68,7 @@ export class PlaybackManager {
         return this.getCurrent();
     }
 
-    public previous() : IMediaResource {
+    public previous(): IMediaResource {
         if (this.current > 0) {
             const currentResource = this.resources.get(this.current);
             currentResource.loaded = false;
@@ -78,7 +78,7 @@ export class PlaybackManager {
         return this.getCurrent();
     }
 
-    public setCurrent(index : number) {
+    public setCurrent(index: number) {
         if (this.current !== index) {
             const currentResource = this.resources.get(this.current);
             currentResource.loaded = false;
@@ -87,12 +87,12 @@ export class PlaybackManager {
         this.reset();
     }
 
-    public hasNext() : boolean {
+    public hasNext(): boolean {
         const currentResource = this.resources.get(this.current);
         return !!(currentResource && this.resources.get(this.current + 1));
     }
 
-    public repeat() : boolean {
+    public repeat(): boolean {
         const currentResource = this.resources.get(this.current);
         if (currentResource && currentResource.repeatCount === -1) {
             return true;
@@ -104,8 +104,8 @@ export class PlaybackManager {
         return false;
     }
 
-    private addToPlaylist(index : number, track : IMediaSource) {
-        const mediaResource : IMediaResource = {
+    private addToPlaylist(index: number, track: IMediaSource) {
+        const mediaResource: IMediaResource = {
             description : track.description,
             id : uuidv4(),
             offset : track.offset,

@@ -5,20 +5,24 @@
 
 import EventEmitter = require('eventemitter3');
 import * as $ from 'jquery';
+import {fillAndStrokeConverter} from './avg/GraphicsUtils';
 import APLRenderer from '../APLRenderer';
-import { Display } from '../enums/Display';
-import { PropertyKey } from '../enums/PropertyKey';
-import { UpdateType } from '../enums/UpdateType';
-import { ComponentType } from '../enums/ComponentType';
-import { LoggerFactory } from '../logging/LoggerFactory';
-import { ILogger } from '../logging/ILogger';
-import { getScaledTransform } from '../utils/TransformUtils';
-import { GradientSpreadMethod } from '../enums/GradientSpreadMethod';
-import { ChildAction } from '../utils/Constant';
-import { GradientUnits } from '../enums/GradientUnits';
-import { createGradientElement, IAVGGradient } from './avg/Gradient';
-import { createPatternElement } from './avg/Patterns';
+import {Display} from '../enums/Display';
+import {PropertyKey} from '../enums/PropertyKey';
+import {UpdateType} from '../enums/UpdateType';
+import {ComponentType} from '../enums/ComponentType';
+import {LoggerFactory} from '../logging/LoggerFactory';
+import {ILogger} from '../logging/ILogger';
+import {getScaledTransform} from '../utils/TransformUtils';
+import {GradientSpreadMethod} from '../enums/GradientSpreadMethod';
+import {ChildAction} from '../utils/Constant';
+import {numberToColor} from '../utils/ColorUtils';
+import {GradientUnits} from '../enums/GradientUnits';
 import {FocusDirection} from '../enums/FocusDirection';
+import {LayoutDirection} from '../enums/LayoutDirection';
+import {createBoundsFitter} from './helpers/BoundsFitter';
+import {getRectDifference} from '../utils/AplRectUtils';
+import {applyAplRectToStyle, applyPaddingToStyle} from './helpers/StylesUtil';
 
 /**
  * @ignore
@@ -37,57 +41,54 @@ const COMPONENT_TYPE_MAP = {
     [ComponentType.kComponentTypeVectorGraphic]: 'VectorGraphic'
 };
 
+const SUPPORTED_LAYOUT_DIRECTIONS = {
+    [LayoutDirection.kLayoutDirectionLTR]: 'ltr',
+    [LayoutDirection.kLayoutDirectionRTL]: 'rtl'
+};
+
 export const SVG_NS = 'http://www.w3.org/2000/svg';
 export const uuidv4 = require('uuid/v4');
 export const IDENTITY_TRANSFORM = 'matrix(1.000000,0.000000,0.000000,1.000000,0.000000,0.000000)';
+
 /**
  * @ignore
  */
 export interface IGenericPropType {
-    [key : number] : any;
+    [key: number]: any;
 }
-
-export const copyAsPixels = (from : any, to : HTMLElement, propertyName : string) => {
-    to.style[propertyName] = `${from[propertyName]}px`;
-};
-
-export const fitElementToRectangle = (element : HTMLElement, rectangle : APL.Rect) => {
-
-    ['top', 'left' , 'width', 'height'].forEach((propertyName) => copyAsPixels(rectangle, element, propertyName));
-};
 
 /**
  * @ignore
  */
 export interface IComponentProperties {
-    [PropertyKey.kPropertyOpacity] : number;
-    [PropertyKey.kPropertyBounds] : APL.Rect;
-    [PropertyKey.kPropertyInnerBounds] : APL.Rect;
-    [PropertyKey.kPropertyShadowHorizontalOffset] : number;
-    [PropertyKey.kPropertyShadowVerticalOffset] : number;
-    [PropertyKey.kPropertyShadowRadius] : number;
-    [PropertyKey.kPropertyShadowColor] : number;
+    [PropertyKey.kPropertyOpacity]: number;
+    [PropertyKey.kPropertyBounds]: APL.Rect;
+    [PropertyKey.kPropertyInnerBounds]: APL.Rect;
+    [PropertyKey.kPropertyShadowHorizontalOffset]: number;
+    [PropertyKey.kPropertyShadowVerticalOffset]: number;
+    [PropertyKey.kPropertyShadowRadius]: number;
+    [PropertyKey.kPropertyShadowColor]: number;
 }
 
 export interface IValueWithReference {
-    value : string;
-    reference? : Element;
+    value: string;
+    reference?: Element;
 }
 
 /**
  * @ignore
  */
-export type FactoryFunction = (renderer : APLRenderer, component : APL.Component,
-                               parent? : Component, ensureLayout? : boolean,
-                               insertAt? : number) => Component;
+export type FactoryFunction = (renderer: APLRenderer, component: APL.Component,
+                               parent?: Component, ensureLayout?: boolean,
+                               insertAt?: number) => Component;
 
 export type Executor = () => void;
 
 export abstract class Component<PropsType = IGenericPropType> extends EventEmitter {
     /// Logger to be used for this component logs.
-    protected logger : ILogger;
+    protected logger: ILogger;
 
-    public container : HTMLDivElement = document.createElement('div');
+    public container: HTMLDivElement = document.createElement('div');
 
     /** @internal */
     public $container = $(this.container);
@@ -95,27 +96,30 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
     /**
      * Array of children components in this hierarchy
      */
-    public children : Component[] = [];
+    public children: Component[] = [];
 
     /** Map of every property */
-    public props : IGenericPropType = {};
+    public props: IGenericPropType = {};
 
     /** Absolute calculated bounds of this component */
-    public bounds : APL.Rect;
+    public bounds: APL.Rect;
 
     /** Absolute calculated inner bounds of this component */
-    public innerBounds : APL.Rect;
+    public innerBounds: APL.Rect;
+
+    /** Display direction of this component */
+    protected layoutDirection: LayoutDirection;
 
     /** Component unique ID */
-    public id : string;
+    public id: string;
 
     /** User assigned ID */
-    public assignedId : string;
+    public assignedId: string;
 
     /** true us destroyed was called */
-    protected isDestroyed : boolean = false;
+    protected isDestroyed: boolean = false;
 
-    private doForceInvisible : boolean = false;
+    private doForceInvisible: boolean = false;
 
     /** Component state */
     protected state = {
@@ -126,8 +130,8 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
         [UpdateType.kUpdateTakeFocus]: 0
     };
 
-    protected executors : Map<PropertyKey, (props : PropsType) => void> =
-        new Map<PropertyKey, (props : PropsType) => void>();
+    protected executors: Map<PropertyKey, (props: PropsType) => void> =
+        new Map<PropertyKey, (props: PropsType) => void>();
 
     /**
      * @param renderer The renderer instance
@@ -136,8 +140,8 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
      * @param parent The parent component
      * @ignore
      */
-    constructor(public renderer : APLRenderer, public component : APL.Component,
-                protected factory : FactoryFunction, public parent? : Component) {
+    constructor(public renderer: APLRenderer, public component: APL.Component,
+                protected factory: FactoryFunction, public parent?: Component) {
         super();
         this.logger = LoggerFactory.getLogger(COMPONENT_TYPE_MAP[component.getType()] || 'Component');
         this.$container.css({
@@ -152,8 +156,8 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
         this.assignedId = component.getId();
 
         if (renderer) {
-          renderer.componentMap[this.id] = this;
-          renderer.componentIdMap[this.assignedId] = this;
+            renderer.componentMap[this.id] = this;
+            renderer.componentIdMap[this.assignedId] = this;
         }
 
         this.container.classList.add('apl-' + this.constructor.name.toLowerCase());
@@ -161,17 +165,18 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
         this.parent = parent;
 
         this.propExecutor
-            (this.setTransform, PropertyKey.kPropertyTransform)
-            (this.setBoundsAndDisplay, PropertyKey.kPropertyBounds, PropertyKey.kPropertyInnerBounds,
-                PropertyKey.kPropertyDisplay)
-            (this.setOpacity, PropertyKey.kPropertyOpacity)
-            (this.setUserProperties, PropertyKey.kPropertyUser)
-            (this.handleComponentChildrenChange, PropertyKey.kPropertyNotifyChildrenChanged)
-            (this.setShadow,
-                PropertyKey.kPropertyShadowHorizontalOffset,
-                PropertyKey.kPropertyShadowVerticalOffset,
-                PropertyKey.kPropertyShadowRadius,
-                PropertyKey.kPropertyShadowColor);
+        (this.setTransform, PropertyKey.kPropertyTransform)
+        (this.setLayoutDirection, PropertyKey.kPropertyLayoutDirection)
+        (this.setBoundsAndDisplay, PropertyKey.kPropertyBounds, PropertyKey.kPropertyInnerBounds,
+            PropertyKey.kPropertyDisplay)
+        (this.setOpacity, PropertyKey.kPropertyOpacity)
+        (this.setUserProperties, PropertyKey.kPropertyUser)
+        (this.handleComponentChildrenChange, PropertyKey.kPropertyNotifyChildrenChanged)
+        (this.setShadow,
+            PropertyKey.kPropertyShadowHorizontalOffset,
+            PropertyKey.kPropertyShadowVerticalOffset,
+            PropertyKey.kPropertyShadowRadius,
+            PropertyKey.kPropertyShadowColor);
     }
 
     /**
@@ -179,39 +184,72 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
      * @ignore
      */
     public init() {
-        const children = this.component.getChildCount();
-        for (let i = 0; i < children; i++) {
-            const childComponent = this.component.getChildAt(i);
-            const child : Component = this.factory(this.renderer, childComponent, this);
+        const displayedChildren = this.getDisplayedChildren();
+        for (let i = 0; i < displayedChildren.length; i++) {
+            const childComponent = displayedChildren[i];
+            const child: Component = this.factory(this.renderer, childComponent, this);
             this.container.appendChild(child.container);
             this.children[i] = child;
         }
 
         const props = this.component.getCalculated() as PropsType;
         this.setProperties(props);
-        this.alignSize();
+        this.sizeToFit();
         for (const child of this.children) {
             child.init();
         }
+    }
+
+    private ensureDisplayedChildren() {
+        const newChildren = [];
+        const displayedChildren = this.getDisplayedChildren();
+        for (let i = 0; i < displayedChildren.length; i++) {
+            const childComponent = displayedChildren[i];
+            const childInflated =
+                this.children.filter((existChild) => existChild.id === childComponent.getUniqueId()).shift();
+            if (childInflated !== undefined) {
+                newChildren[i] = childInflated;
+            } else {
+                newChildren[i] = this.factory(this.renderer, childComponent, this, true, i);
+            }
+        }
+        // remove old child which are not displaying.
+        this.children.forEach((exitChild) => {
+            const isChildInDisplay = newChildren.some((displayedChild) => displayedChild.id === exitChild.id);
+            if (!isChildInDisplay) {
+                exitChild.destroy();
+            }
+        });
+        this.children = newChildren;
     }
 
     /**
      * Get all displayed child count
      * @ignore
      */
-    public async getDisplayedChildCount() : Promise<number> {
+    public getDisplayedChildCount(): number {
         return this.component.getDisplayedChildCount();
     }
 
-    protected onPropertiesUpdated() : void {
-      // do nothing
+    public getDisplayedChildren() {
+        const displayedChildren: APL.Component[] = [];
+        const childCount = this.component.getDisplayedChildCount();
+        for (let i = 0; i < childCount; i++) {
+            const childComponent: APL.Component = this.component.getDisplayedChildAt(i);
+            displayedChildren.push(childComponent);
+        }
+        return displayedChildren;
+    }
+
+    protected onPropertiesUpdated(): void {
+        // do nothing
     }
 
     /**
      * @param props
      * @ignore
      */
-    public setProperties(props : PropsType) {
+    public setProperties(props: PropsType) {
         Object.keys(props).forEach((keyString) => {
             const key = parseInt(keyString, 10) as PropertyKey;
             this.props[key] = props[key];
@@ -243,7 +281,7 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
      * @param stateProp
      * @param value
      */
-    public update(stateProp : UpdateType, value : number | string) {
+    public update(stateProp: UpdateType, value: number | string) {
         if (typeof value === 'string') {
             this.state[stateProp] = value.toString();
             this.component.updateEditText(stateProp, value.toString());
@@ -256,7 +294,7 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
     /**
      * Destroys and cleans up this instance
      */
-    public destroy(destroyComponent : boolean = false) {
+    public destroy(destroyComponent: boolean = false) {
         if (this.container && this.container.parentElement) {
             this.container.parentElement.removeChild(this.container);
         }
@@ -276,19 +314,13 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
     }
 
     /**
-     * Converts a number to css rgba format
-     * @param val Number value to convert
+     * @Deprecated Use GraphicsUtils#numberToColor
      */
-    public static numberToColor(val : number) : string {
-        const a = (0xFF & val) / 0xFF;
-        const b = 0xFF & (val >> 8);
-        const g = 0xFF & (val >> 16);
-        const r = 0xFF & (val >> 24);
-
-        return `rgba(${r}, ${g}, ${b}, ${a})`;
+    public static numberToColor(val: number): string {
+        return numberToColor(val);
     }
 
-    public static getGradientSpreadMethod(gradientSpreadMethod : GradientSpreadMethod) : string {
+    public static getGradientSpreadMethod(gradientSpreadMethod: GradientSpreadMethod): string {
         switch (gradientSpreadMethod) {
             case GradientSpreadMethod.REFLECT:
                 return 'reflect';
@@ -300,7 +332,7 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
         }
     }
 
-    public static getGradientUnits(gradientUnits : GradientUnits) : string {
+    public static getGradientUnits(gradientUnits: GradientUnits): string {
         switch (gradientUnits) {
             case GradientUnits.kGradientUnitsUserSpace:
                 return 'userSpaceOnUse';
@@ -309,34 +341,25 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
                 return 'objectBoundingBox';
         }
     }
-    /*
-     * Converts to Color if input is number otherwise create Gradient or Pattern element.
-     * @param val Object value which could be either Color, Gradient or Pattern
-     * @param parent the parent element
-     * @param logger logger for console output
+
+    /**
+     * @Deprecated Use GraphicsUtils#fillAndStrokeConverter
      */
-    public static fillAndStrokeConverter(val : object, transform : string, parent : Element, logger : ILogger)
-        : IValueWithReference | undefined {
-        if (typeof val === 'number') {
-            return {
-                value: this.numberToColor(val)
-            };
-        }
-        if ((val as IAVGGradient).type !== undefined) {
-            return createGradientElement(val as IAVGGradient, transform, parent, logger);
-        } else if ((val as APL.GraphicPattern).getId()) {
-            return createPatternElement(val as APL.GraphicPattern, transform, parent, logger);
-        }
-        // non-supported type
-        logger.warn('Type is not supported yet.');
-        return undefined;
+    // tslint:disable-next-line:max-line-length
+    public static fillAndStrokeConverter(value: object, transform: string, parent: Element, logger: ILogger): IValueWithReference | undefined {
+        return fillAndStrokeConverter({
+            value,
+            transform,
+            parent,
+            logger
+        });
     }
 
-    public hasValidBounds() : boolean {
+    public hasValidBounds(): boolean {
         return this.bounds.width > 0 && this.bounds.width < 1000000;
     }
 
-    public static getClipPathElementId(pathData : string, parent : Element) : string {
+    public static getClipPathElementId(pathData: string, parent: Element): string {
         if (!pathData || pathData === '') {
             return '';
         }
@@ -352,7 +375,7 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
         return `url('#${clipPathElementId}')`;
     }
 
-    public inflateAndAddChild(index : number, data : string) : Component | undefined {
+    public inflateAndAddChild(index: number, data: string): Component | undefined {
         const inflated = this.component.inflateChild(data, index);
         let child;
         if (inflated) {
@@ -362,7 +385,7 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
         return child;
     }
 
-    public remove() : boolean {
+    public remove(): boolean {
         if (this.component.remove()) {
             if (this.parent && this.parent.children) {
                 this.parent.children.splice(this.parent.children.indexOf(this), 1);
@@ -377,70 +400,107 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
         // do nothing
     }
 
-    protected isLayout() : boolean {
+    protected isLayout(): boolean {
         return false;
     }
 
     /**
+     * Resizes child component to fit parent component when applicable
+     */
+    private sizeToFit(): void {
+        // adjust bounds
+        const componentHasBounds = !!this.bounds;
+        const componentHasParent = !!this.parent;
+        const componentIsLtr = this.layoutDirection === LayoutDirection.kLayoutDirectionLTR;
+        const canSizeToFit = componentHasBounds
+            && componentHasParent
+            && componentIsLtr;
+
+        if (!canSizeToFit) {
+            return;
+        }
+
+        const parentIsContainerComponent = this.parent.component.getType() === ComponentType.kComponentTypeContainer;
+        const componentCanContainOtherItems = this.isLayout();
+        const needsSizeToFit = parentIsContainerComponent
+            && componentCanContainOtherItems;
+
+        if (!needsSizeToFit) {
+            return;
+        }
+
+        const boundsFitter = createBoundsFitter({
+            containingBounds: this.parent.bounds,
+            innerBounds: this.bounds,
+            layoutDirection: this.layoutDirection
+        });
+        const fittedBounds = boundsFitter.fitBounds();
+
+        const isFittedBoundsTheSame = fittedBounds === this.bounds;
+        if (isFittedBoundsTheSame) {
+            return;
+        }
+
+        const {
+            width: fittedWidth,
+            height: fittedHeight
+        } = fittedBounds;
+
+        const {
+            width: oldWidth,
+            height: oldHeight
+        } = this.bounds;
+
+        this.logger.warn(`Component ${this.id} has bounds that is bigger than parent bounds.\n`
+            + `Check your template correctness.\n`
+            + `Adjusting ${this.id} to parent ${this.parent.id}\n`
+            + `WIDTH: ${oldWidth} => ${fittedWidth}\n`
+            + `HEIGHT: ${oldHeight} => ${fittedHeight}\n`);
+
+        const boundsDelta = getRectDifference(this.bounds, fittedBounds);
+        this.bounds = fittedBounds;
+
+        // Adjust inner bounds
+        const canAdjustInnerBounds = !!this.innerBounds;
+
+        if (!canAdjustInnerBounds) {
+            return;
+        }
+
+        const innerBoundsNeedsAdjustment = this.innerBounds.width > this.bounds.width
+            || this.innerBounds.height > this.bounds.height;
+
+        if (innerBoundsNeedsAdjustment) {
+            this.innerBounds = getRectDifference(this.innerBounds, boundsDelta);
+        }
+
+        // Apply new bounds
+        applyAplRectToStyle({
+            domElement: this.container,
+            rectangle: this.bounds
+        });
+
+        applyPaddingToStyle({
+            domElement: this.container,
+            bounds: this.bounds,
+            innerBounds: this.innerBounds
+        });
+
+        // bounds update
+        this.boundsUpdated();
+    }
+
+    /** @deprecated Use SizeToFit
      * If parent is Container component and this component is layout components then limit size of child to
      * offset+size of parent to overcome broken skills
      */
     protected alignSize() {
-        if (!this.bounds) {
-            return;
-        }
-        let width = this.bounds.width;
-        let height = this.bounds.height;
-
-        if (this.parent && this.parent.component.getType() === ComponentType.kComponentTypeContainer && this.isLayout()
-            && (this.bounds.width + this.bounds.left > this.parent.bounds.width
-                || this.bounds.height + this.bounds.top > this.parent.bounds.height)) {
-            width = Math.min(this.parent.bounds.width - this.bounds.left, this.bounds.width);
-            height = Math.min(this.parent.bounds.height - this.bounds.top, this.bounds.height);
-            this.logger.warn(`Component ${this.id} has bounds that is bigger than parent bounds.\n`
-                + `Check your template correctness.\n`
-                + `Adjusting ${this.id} to parent ${this.parent.id}\n`
-                + `WIDTH: ${this.bounds.width} => ${width}\n`
-                + `HEIGHT: ${this.bounds.height} => ${height}`);
-
-            this.bounds = {
-                left: this.bounds.left,
-                top: this.bounds.top,
-                width,
-                height
-            };
-        } else {
-            return;
-        }
-
-        if (!this.innerBounds) {
-            return;
-        }
-
-        if (this.innerBounds.width > this.bounds.width || this.innerBounds.height > this.bounds.height) {
-            const widthDiff = this.bounds.width - width;
-            const heightDiff = this.bounds.height - height;
-            this.innerBounds = {
-                left: this.innerBounds.left,
-                top: this.innerBounds.top,
-                width: this.innerBounds.width - widthDiff,
-                height: this.innerBounds.height - heightDiff
-            };
-        }
-
-        this.$container.css('width', width);
-        this.$container.css('height', height);
-        this.$container.css('padding-left', this.innerBounds.left);
-        this.$container.css('padding-right', width - this.innerBounds.left - this.innerBounds.width);
-        this.$container.css('padding-top', this.innerBounds.top);
-        this.$container.css('padding-bottom', height - this.innerBounds.top - this.innerBounds.height);
-
-        this.boundsUpdated();
+        return this.sizeToFit();
     }
 
-    protected propExecutor = (executor : () => void, ...props : PropertyKey[]) => {
+    protected propExecutor = (executor: () => void, ...props: PropertyKey[]) => {
         for (const prop of props) {
-            this.executors.set(prop, (remaining : PropsType) => {
+            this.executors.set(prop, (remaining: PropsType) => {
                 const keys = Object.keys(props);
                 for (const keyString of keys) {
                     const key = parseInt(keyString, 10) as PropertyKey;
@@ -452,7 +512,7 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
         return this.propExecutor;
     }
 
-    protected getProperties() : PropsType {
+    protected getProperties(): PropsType {
         return this.component.getCalculated() as PropsType;
     }
 
@@ -468,7 +528,24 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
         this.$container.css('opacity', this.props[PropertyKey.kPropertyOpacity]);
     }
 
-    public forceInvisible(doForceInvisible : boolean) {
+    protected setLayoutDirection = () => {
+        this.layoutDirection = this.props[PropertyKey.kPropertyLayoutDirection];
+
+        if (!SUPPORTED_LAYOUT_DIRECTIONS.hasOwnProperty(this.layoutDirection)) {
+            this.logger.warn(`Layout Direction ${this.layoutDirection} is not supported, defaulting to LTR`);
+            this.layoutDirection = LayoutDirection.kLayoutDirectionLTR;
+        }
+
+        if (!this.parent || this.parent.layoutDirection !== this.layoutDirection) {
+            this.container.dir = SUPPORTED_LAYOUT_DIRECTIONS[this.layoutDirection];
+        }
+    }
+
+    protected isRtl = () => {
+        return this.layoutDirection === LayoutDirection.kLayoutDirectionRTL;
+    }
+
+    public forceInvisible(doForceInvisible: boolean) {
         if (this.doForceInvisible !== doForceInvisible) {
             this.doForceInvisible = doForceInvisible;
             this.setDisplay();
@@ -527,23 +604,29 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
         for (const child of this.children) {
             child.setBoundsAndDisplay();
         }
-        fitElementToRectangle(this.container, this.bounds);
+
+        applyAplRectToStyle({
+            domElement: this.container,
+            rectangle: this.bounds
+        });
+
         this.innerBounds = this.props[PropertyKey.kPropertyInnerBounds];
-        this.$container.css('padding-left', this.innerBounds.left);
-        this.$container.css('padding-right', this.bounds.width - this.innerBounds.left - this.innerBounds.width);
-        this.$container.css('padding-top', this.innerBounds.top);
-        this.$container.css('padding-bottom', this.bounds.height - this.innerBounds.top - this.innerBounds.height);
+        applyPaddingToStyle({
+            domElement: this.container,
+            bounds: this.bounds,
+            innerBounds: this.innerBounds
+        });
 
         this.boundsUpdated();
     }
 
     protected setUserProperties = () => {
         if (!this.renderer) {
-          return;
+            return;
         }
         const options = this.renderer.getDeveloperToolOptions();
         if (!options) {
-          return;
+            return;
         }
 
         const userProperties = this.props[PropertyKey.kPropertyUser];
@@ -558,18 +641,18 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
 
         const writeKeys = options.writeKeys;
         if (writeKeys && Array.isArray(writeKeys)) {
-          for (const key of writeKeys) {
-            if (userProperties.hasOwnProperty(key)) {
-              this.container.setAttribute(['data', key].join('-'), userProperties[key]);
+            for (const key of writeKeys) {
+                if (userProperties.hasOwnProperty(key)) {
+                    this.container.setAttribute(['data', key].join('-'), userProperties[key]);
+                }
             }
-          }
         }
     }
 
     protected handleComponentChildrenChange = () => {
         for (const child of this.props[PropertyKey.kPropertyNotifyChildrenChanged]) {
             if (child.action === ChildAction.Insert) {
-                this.factory(this.renderer, this.component.getChildAt(child.index), this, true, child.index);
+                // empty by design
             } else if (child.action === ChildAction.Remove) {
                 if (this.container.children[child.uid] !== undefined) {
                     this.container.children[child.uid].remove();
@@ -578,6 +661,7 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
                 this.logger.warn(`Invalid action type ${child.action} for child ${child.uid}`);
             }
         }
+        this.ensureDisplayedChildren();
     }
 
     protected getCssShadow = () => {
@@ -592,14 +676,23 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
         this.applyCssShadow(this.getCssShadow());
     }
 
-    protected applyCssShadow = (shadowParams : string) => {
+    protected applyCssShadow = (shadowParams: string) => {
         this.$container.css('box-shadow', shadowParams);
     }
+
     protected async takeFocus() {
         const focusableAreas = await this.renderer.context.getFocusableAreas();
         const myFocusableArea = focusableAreas[this.id];
         if (myFocusableArea) {
             this.renderer.context.setFocus(FocusDirection.kFocusDirectionNone, myFocusableArea, this.id);
         }
+    }
+
+    protected get lang(): string {
+        const lang = this.props[PropertyKey.kPropertyLang];
+        if (lang) {
+            return lang;
+        }
+        return '';
     }
 }

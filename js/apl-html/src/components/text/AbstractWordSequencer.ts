@@ -8,49 +8,49 @@ import { ILogger } from '../../logging/ILogger';
 
 export interface ISpeakableCommand {
     onSpeechFinished();
-    onMarkWord(word : string);
+    onMarkWord(word: string);
 }
 
 export interface ISpeakItemRequestData {
     /** Speech property of text component */
-    speech : string;
+    speech: string;
 }
 
 /**
  * Base class for a TTS player.
  */
 export abstract class AbstractWordSequencer {
-    private static logger : ILogger = LoggerFactory.getLogger('AbstractWordSequencer');
+    private static logger: ILogger = LoggerFactory.getLogger('AbstractWordSequencer');
 
     /**
      * @internal
      * @ignore
      */
-    protected destroyed : boolean = false;
+    protected destroyed: boolean = false;
 
     /**
      * Maps Sequencer id to command
      * @ignore
      * @internal
      */
-    private commands : {[key : string] : ISpeakableCommand} = {};
+    private commands: {[key: string]: ISpeakableCommand} = {};
 
     /**
      * Called by the renderer when a speak item command needs to be executed
      * @param item
      * @returns The id of the audio playback
      */
-    public abstract onSpeakItem(item : ISpeakItemRequestData) : Promise<void>;
+    public abstract onSpeakItem(item: ISpeakItemRequestData): Promise<void>;
 
     /**
      * Called by the renderer if the SpeakItem command gets interrupted or terminated
      * @param id ID of the audio playback
      */
-    public abstract onStopSpeech(id : string);
+    public abstract onStopSpeech(id: string);
 
-    public abstract getSourceId() : string;
+    public abstract getSourceId(): string;
 
-    public abstract play(id : string) : void ;
+    public abstract play(id: string): void ;
 
     /**
      * Call this method as each work is spoken. Used to calculate
@@ -58,7 +58,7 @@ export abstract class AbstractWordSequencer {
      * @param id
      * @param timings
      */
-    public markWord(id : string, word : string) {
+    public markWord(id: string, word: string) {
         if (this.destroyed) {
             return;
         }
@@ -72,7 +72,7 @@ export abstract class AbstractWordSequencer {
     /**
      * Called by client when TTS is finished.
      */
-    public speechFinished(id : string) {
+    public speechFinished(id: string) {
         if (this.destroyed) {
             return;
         }
@@ -87,7 +87,7 @@ export abstract class AbstractWordSequencer {
     /**
      * Called by client when TTS is finished.
      */
-    public speechStarted(id : string) {
+    public speechStarted(id: string) {
         if (this.destroyed) {
             return;
         }
@@ -102,7 +102,7 @@ export abstract class AbstractWordSequencer {
      * @ignore
      * @param command
      */
-    public setCommand(id : string, command : ISpeakableCommand) {
+    public setCommand(id: string, command: ISpeakableCommand) {
         this.commands[id] = command;
     }
 

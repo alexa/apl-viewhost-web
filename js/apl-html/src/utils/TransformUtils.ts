@@ -6,7 +6,7 @@
 /**
  * Modify the TranslateX and TranslateY according to ScaleFactor.
  */
-export const getScaledTransform = (originalTransform : string, scaleFactor : number) : string => {
+export const getScaledTransform = (originalTransform: string, scaleFactor: number): string => {
     if (scaleFactor === 1) {
         return originalTransform;
     }

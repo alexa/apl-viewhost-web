@@ -16,7 +16,7 @@ export interface IAudioEventListener {
      * (in response to prepare())
      * @param id a uuid
      */
-    onPrepared(id : string) : void;
+    onPrepared(id: string): void;
 
     /**
      * Stream markers (if prepare was called with (<some url> markers: true))
@@ -25,19 +25,19 @@ export interface IAudioEventListener {
      * @param id a uuid
      * @param markers a list of IBaseMarker
      */
-    onMarker(id : string, markers : IBaseMarker[]) : void;
+    onMarker(id: string, markers: IBaseMarker[]): void;
 
     /**
      * Called when media starts playing (in response to play())
      * @param id a uuid
      */
-    onPlaybackStarted(id : string) : void;
+    onPlaybackStarted(id: string): void;
 
     /**
      * Called when media finishes playing
      * @param id a uuid
      */
-    onPlaybackFinished(id : string) : void;
+    onPlaybackFinished(id: string): void;
 
     /**
      * Called to report an error for a given request
@@ -45,5 +45,5 @@ export interface IAudioEventListener {
      * @param id a uuid
      * @param reason an arbitrary string
      */
-    onError(id : string, reason : string) : void;
+    onError(id: string, reason: string): void;
 }

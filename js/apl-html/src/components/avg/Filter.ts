@@ -9,25 +9,25 @@ import { Component, SVG_NS, uuidv4 } from '../Component';
 import { GraphicFilterType } from '../../enums/GraphicFilterType';
 
 export interface IAVGFilterElement {
-    filterId : string;
-    filterElement : SVGFilterElement;
+    filterId: string;
+    filterElement: SVGFilterElement;
 }
 
 export interface IAVGFilter {
-    type : GraphicFilterType;
+    type: GraphicFilterType;
 }
 
 export interface IDropShadowFilter extends IAVGFilter {
-    color : number;
-    radius : number;
-    horizontalOffset : number;
-    verticalOffset : number;
+    color: number;
+    radius: number;
+    horizontalOffset: number;
+    verticalOffset: number;
 }
 
 export type AVGFilter = IDropShadowFilter;
 
-export function createAndGetFilterElement(filters : AVGFilter[],
-                                          logger : ILogger) : IAVGFilterElement | undefined {
+export function createAndGetFilterElement(filters: AVGFilter[],
+                                          logger: ILogger): IAVGFilterElement | undefined {
     if (!filters || filters.length === 0) {
         return undefined;
     }
@@ -36,9 +36,9 @@ export function createAndGetFilterElement(filters : AVGFilter[],
     filterElement.setAttributeNS('', 'id', filterId);
     filterElement.setAttributeNS('', 'filterUnits', 'userSpaceOnUse');
 
-    filters.map(convertAVGFilter).forEach((svgElement : SVGElement[]) => {
+    filters.map(convertAVGFilter).forEach((svgElement: SVGElement[]) => {
         if (svgElement && svgElement.length > 0) {
-            svgElement.forEach( (element : SVGElement) => filterElement.appendChild(element));
+            svgElement.forEach( (element: SVGElement) => filterElement.appendChild(element));
         } else {
             logger.warn('incorrect avg filter type.');
         }
@@ -46,8 +46,8 @@ export function createAndGetFilterElement(filters : AVGFilter[],
     return { filterId, filterElement };
 }
 
-function convertAVGFilter(filter : AVGFilter) : SVGElement[] {
-    const isEdge : boolean = /msie\s|trident\/|edge\//i.test(window.navigator.userAgent);
+function convertAVGFilter(filter: AVGFilter): SVGElement[] {
+    const isEdge: boolean = /msie\s|trident\/|edge\//i.test(window.navigator.userAgent);
     switch (filter.type) {
         case GraphicFilterType.kGraphicFilterTypeDropShadow: {
             if (isEdge) {

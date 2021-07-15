@@ -15,16 +15,20 @@ import { extractTextFrames } from './Id3Parser';
 import { Demuxer } from './Demux';
 import { CancelablePromise } from '../../utils/PromiseUtils';
 
-export type AudioPlayerFactory = (eventListener : IAudioEventListener) => AudioPlayer;
+export type AudioPlayerFactory = (eventListener: IAudioEventListener) => AudioPlayer;
+
+export type IAudioNode = GainNode;
 
 export abstract class AudioPlayer {
-  private eventListener : IAudioEventListener;
-  private resourceMap : Map<string, Resource>;
-  private currentSource : AudioBufferSourceNode;
-  private decodePromise : CancelablePromise<AudioBuffer>;
-  private static logger : ILogger = LoggerFactory.getLogger('AudioPlayer');
+  private eventListener: IAudioEventListener;
+  private resourceMap: Map<string, Resource>;
+  private currentSource: AudioBufferSourceNode;
+  private decodePromise: CancelablePromise<AudioBuffer>;
+  private static logger: ILogger = LoggerFactory.getLogger('AudioPlayer');
 
-  constructor(eventListener : IAudioEventListener) {
+  private _audioNode: IAudioNode | undefined;
+
+  constructor(eventListener: IAudioEventListener) {
     if (!eventListener) {
       throw new Error('eventListener is null');
     }
@@ -32,14 +36,14 @@ export abstract class AudioPlayer {
     this.resourceMap = new Map<string, Resource>();
   }
 
-  public prepare(url : string, decodeMarkers : boolean) : string {
+  public prepare(url: string, decodeMarkers: boolean): string {
     const id = uuidv4();
-    const resource : Resource = new Resource();
+    const resource: Resource = new Resource();
     this.resourceMap.set(id, resource);
     let promiseCancelled = false;
 
     fetch(url)
-    .then((response : Response) => {
+    .then((response: Response) => {
       // convert to ArrayBuffer
       if (resource.getDownloadState() === 'cancelled') {
         promiseCancelled = true;
@@ -51,7 +55,7 @@ export abstract class AudioPlayer {
 
       return response.arrayBuffer();
     })
-    .then((arrayBuffer : ArrayBuffer) : PromiseLike<void> => {
+    .then((arrayBuffer: ArrayBuffer): PromiseLike<void> => {
       // demux audio and extract markers
       if (resource.getDownloadState() === 'cancelled') {
         promiseCancelled = true;
@@ -88,17 +92,17 @@ export abstract class AudioPlayer {
     return id;
   }
 
-  protected onPlaybackFinished(id : string) {
+  protected onPlaybackFinished(id: string) {
     this.eventListener.onPlaybackFinished(id);
   }
 
-  protected onError(id : string, reason : string) {
+  protected onError(id: string, reason: string) {
     this.eventListener.onError(id, reason);
   }
 
-  public abstract play(id : string);
+  public abstract play(id: string);
 
-  protected playWithContext(id : string, audioContext : AudioContext) : void {
+  protected playWithContext(id: string, audioContext: AudioContext): void {
     const resource = this.resourceMap.get(id);
     if (!resource || !resource.getBuffer()) {
       this.onError(id, 'Not prepared');
@@ -111,13 +115,16 @@ export abstract class AudioPlayer {
       return;
     }
 
-    const onDecode = (audioBuffer : AudioBuffer) => {
+    const onDecode = (audioBuffer: AudioBuffer) => {
+      const audioNode = this.getAudioNode(audioContext);
       this.currentSource = audioContext.createBufferSource();
       this.currentSource.buffer = audioBuffer;
-      this.currentSource.connect(audioContext.destination);
+      audioNode.connect(audioContext.destination);
+      this.currentSource.connect(audioNode);
 
-      this.currentSource.onended = (event : Event) => {
+      this.currentSource.onended = (event: Event) => {
         this.currentSource.disconnect();
+        audioNode.disconnect();
         this.currentSource = null;
         this.onPlaybackFinished(id);
         this.resourceMap.delete(id);
@@ -128,7 +135,7 @@ export abstract class AudioPlayer {
 
       this.decodePromise = null;
     };
-    const onDecodeError = (reason) : void => {
+    const onDecodeError = (reason): void => {
       this.onError(id, reason);
       this.decodePromise = null;
     };
@@ -138,9 +145,26 @@ export abstract class AudioPlayer {
       onDecodeError);
   }
 
-  protected cancelPendingAndRemoveCompleted() : void {
-    const toDelete : string[] = [];
-    this.resourceMap.forEach((resource : Resource, id : string) => {
+  // The gainNode passed in should be connected to the audiocontext destination
+  protected setCurrentAudioNode(node: IAudioNode): void {
+    this.disconnectCurrentAudioNode();
+    this._audioNode = node;
+  }
+
+  private getAudioNode(context: AudioContext): IAudioNode {
+    this._audioNode = this._audioNode || context.createGain();
+    return this._audioNode;
+  }
+
+  protected disconnectCurrentAudioNode(): void {
+    if (this._audioNode !== undefined) {
+      this._audioNode.disconnect();
+    }
+  }
+
+  protected cancelPendingAndRemoveCompleted(): void {
+    const toDelete: string[] = [];
+    this.resourceMap.forEach((resource: Resource, id: string) => {
       const state = resource.getDownloadState();
       if (state === 'pending') {
         resource.setDownloadState('cancelled');
@@ -149,12 +173,12 @@ export abstract class AudioPlayer {
       }
     });
 
-    toDelete.forEach((id : string) => {
+    toDelete.forEach((id: string) => {
       this.resourceMap.delete(id);
     });
   }
 
-  public flush() : void {
+  public flush(): void {
     if (this.decodePromise) {
       this.decodePromise.cancel();
       this.decodePromise = null;

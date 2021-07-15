@@ -8,9 +8,9 @@
 export class Blur {
     private static readonly CHANNEL_MAX = 255;
     private static readonly BOX_BLUR_ITERATIONS = 3;
-    private radius : number;
+    private radius: number;
 
-    constructor(r : number) {
+    constructor(r: number) {
         this.radius = r;
     }
 
@@ -19,7 +19,7 @@ export class Blur {
      *
      * @param imageData one-dimensional image data array
      */
-    public apply(imageData : ImageData) : ImageData {
+    public apply(imageData: ImageData): ImageData {
         const pix = imageData.data;
         const width = imageData.width;
         const height = imageData.height;
@@ -34,7 +34,7 @@ export class Blur {
      * @param sigma standard deviation
      * @param nBoxes number of boxes
      */
-    private boxesForGauss(sigma : number, nBoxes : number) : number[]  {
+    private boxesForGauss(sigma: number, nBoxes: number): number[]  {
         let boxWidth = Math.floor(Math.sqrt((12 * sigma * sigma / nBoxes) + 1));
         boxWidth = boxWidth % 2 === 0 ? boxWidth - 1 : boxWidth; // keep it odd
         const mIdeal = (12 * sigma * sigma - nBoxes * boxWidth * boxWidth - 4 * nBoxes * boxWidth - 3 * nBoxes) /
@@ -56,11 +56,11 @@ export class Blur {
      * @param radius blur radius
      */
     private gaussBlur(
-        src : Uint8ClampedArray,
-        dst : Uint8ClampedArray,
-        width : number,
-        height : number,
-        radius : number) {
+        src: Uint8ClampedArray,
+        dst: Uint8ClampedArray,
+        width: number,
+        height: number,
+        radius: number) {
 
         if (radius <= 0) {
             return;
@@ -82,11 +82,11 @@ export class Blur {
      * @param boxRadius box radius
      */
     private boxBlur(
-        src : Uint8ClampedArray,
-        dst : Uint8ClampedArray,
-        width : number,
-        height : number,
-        boxRadius : number) {
+        src: Uint8ClampedArray,
+        dst: Uint8ClampedArray,
+        width: number,
+        height: number,
+        boxRadius: number) {
         const boxDiameter = boxRadius * 2.0 + 1;
 
         for (let y = 0, srcRow = 0; y < height; y++, srcRow += width) {

@@ -23,7 +23,7 @@ export type Filter = IBlur | INoise | IColor | IGradientFilter |
 /**
  * The APL filters needs to be handled by SVG filter.
  */
-export const SVGFilters : Set<FilterType> = new Set<FilterType>([
+export const SVGFilters: Set<FilterType> = new Set<FilterType>([
     FilterType.kFilterTypeBlur,
     FilterType.kFilterTypeBlend,
     FilterType.kFilterTypeColor,
@@ -39,18 +39,18 @@ export const SVGFilters : Set<FilterType> = new Set<FilterType>([
  * @param filterId filter id
  * @return SVGDefsAndUseElement, if there is no SVGFilter requested in APLFilter, return undefined.
  */
-export const generateSVGDefsAndUseElement = (filters : Filter[],
-                                             imageSrcArray : string[],
-                                             filterId : string) => {
-    const filtersForSvg = filters.filter((f : Filter) => SVGFilters.has(f.type));
+export const generateSVGDefsAndUseElement = (filters: Filter[],
+                                             imageSrcArray: string[],
+                                             filterId: string) => {
+    const filtersForSvg = filters.filter((f: Filter) => SVGFilters.has(f.type));
     if (filtersForSvg.length <= 0) {
         // no SVG filter in APL filter.
         return undefined;
     }
-    const svgDefs : SVGDefsElement = document.createElementNS(SVG_NS, 'defs');
+    const svgDefs: SVGDefsElement = document.createElementNS(SVG_NS, 'defs');
     const svgUse = document.createElementNS(SVG_NS, 'use');
-    const imageFilter : ImageFilter = new ImageFilter(filters, imageSrcArray, svgDefs, svgUse);
-    const svgFilterElement : SVGFilterElement = imageFilter.getSvgFilterElement();
+    const imageFilter: ImageFilter = new ImageFilter(filters, imageSrcArray, svgDefs, svgUse);
+    const svgFilterElement: SVGFilterElement = imageFilter.getSvgFilterElement();
     if (svgFilterElement === undefined) {
         // no valid SVG filter returned
         return undefined;
@@ -68,12 +68,12 @@ export const generateSVGDefsAndUseElement = (filters : Filter[],
  * @param isDestinationIn used by blend filter, if true, set as destination in
  * @returns filterImageArray feImage array, store all the SVG feImage
  */
-export const generateSVGFeImage = (sourceImageId : string,
-                                   filterElement : SVGElement,
-                                   isDestinationIn? : boolean) : SVGFEImageElement[] => {
+export const generateSVGFeImage = (sourceImageId: string,
+                                   filterElement: SVGElement,
+                                   isDestinationIn?: boolean): SVGFEImageElement[] => {
         const fImage = document.createElementNS(SVG_NS, 'feImage');
-        const filterImageArray : SVGFEImageElement[] = [];
-        const feImageId : string = uuidv4().toString();
+        const filterImageArray: SVGFEImageElement[] = [];
+        const feImageId: string = uuidv4().toString();
         fImage.setAttributeNS('', 'href', sourceImageId);
         fImage.setAttributeNS('', 'result', feImageId);
         fImage.setAttributeNS('', 'x', '0');
@@ -96,7 +96,7 @@ export const generateSVGFeImage = (sourceImageId : string,
  * @param imageArrayLength length of image source array
  * @returns boolean, if true, ignore this filter stage and continue.
  */
-export const isIndexOutOfBound = (index : number, imageArrayLength : number) : boolean => {
+export const isIndexOutOfBound = (index: number, imageArrayLength: number): boolean => {
     if (index >= 0 && index > imageArrayLength - 1) {
         return true;
     }

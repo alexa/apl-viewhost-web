@@ -34,7 +34,7 @@ export class PlayMedia extends Event {
         this.destroy();
     }
 
-    private convertAudioTrack(cat : CommandAudioTrack) : AudioTrack {
+    private convertAudioTrack(cat: CommandAudioTrack): AudioTrack {
         switch (cat) {
             case CommandAudioTrack.kCommandAudioTrackForeground:
                 return AudioTrack.kAudioTrackForeground;

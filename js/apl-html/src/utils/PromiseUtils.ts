@@ -11,9 +11,9 @@
  * @internal
  */
 export class PromiseContainer<T> {
-  public promise : Promise<T>;
-  public accept : (result : T) => void;
-  public reject : (reason? : any) => void;
+  public promise: Promise<T>;
+  public accept: (result: T) => void;
+  public reject: (reason?: any) => void;
 
   constructor() {
     this.promise = new Promise<T>((accept, reject) => {
@@ -29,11 +29,11 @@ export class PromiseContainer<T> {
  * @internal
  */
 export class CancelablePromise<T> {
-  protected cancelled : boolean;
-  protected hasRun : boolean;
+  protected cancelled: boolean;
+  protected hasRun: boolean;
 
-  constructor(innerPromise : Promise<T>, accept : (result : T) => void, reject? : (reason? : any) => void) {
-    innerPromise.then((value : T) => {
+  constructor(innerPromise: Promise<T>, accept: (result: T) => void, reject?: (reason?: any) => void) {
+    innerPromise.then((value: T) => {
       if (!this.cancelled) {
         accept(value);
       }

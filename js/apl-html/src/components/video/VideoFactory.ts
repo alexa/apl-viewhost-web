@@ -13,10 +13,10 @@ import { Video } from './Video';
 import { VideoHolder } from './VideoHolder';
 
 export class VideoFactory implements IVideoFactory {
-    public create(renderer : APLRenderer,
-                  component : APL.Component,
-                  factory : FactoryFunction,
-                  parent? : Component) : AbstractVideoComponent {
+    public create(renderer: APLRenderer,
+                  component: APL.Component,
+                  factory: FactoryFunction,
+                  parent?: Component): AbstractVideoComponent {
         if ((renderer.options as IAPLOptions).environment.disallowVideo) {
             return new VideoHolder(renderer, component, factory, parent);
         } else {

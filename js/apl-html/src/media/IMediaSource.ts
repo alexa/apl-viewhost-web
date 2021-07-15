@@ -11,25 +11,25 @@ export interface IMediaSource {
     /**
      * The actual URL to load the video from
      */
-    url : string;
+    url: string;
 
     /**
      * Optional description of this source
      */
-    description : string;
+    description: string;
 
     /**
      * Duration of the track in milliseconds
      */
-    duration : number;
+    duration: number;
 
     /**
      * Number of times to repeat. -1 is repeat forever
      */
-    repeatCount : number;
+    repeatCount: number;
 
     /**
      * Milliseconds from the start of the track to play from
      */
-    offset : number;
+    offset: number;
 }

@@ -13,20 +13,20 @@ import { IImageFilterElement, IBaseFilter, BITMAP_IMAGE_REGEX_CHECK } from './Im
  * @ignore
  */
 export interface IGrayscale extends IBaseFilter {
-    amount : number;
-    source : number;
+    amount: number;
+    source: number;
 }
 
 /*
  * The Grayscale filter converts the input image to grayscale and appends it to the end of the image array.
- * Specs: https://aplspec.aka.corp.amazon.com/release-1.5/html/filters.html#grayscale
+ * Specs: https://developer.amazon.com/en-US/docs/alexa/alexa-presentation-language/apl-filters.html#grayscale
  * Utilize svg <feColorMatrix> filter
  * https://developer.mozilla.org/en-US/docs/Web/SVG/Element/feColorMatrix
  */
-export function getGrayscaleFilter(filter : Filter, imageSrcArray : string[]) : IImageFilterElement | undefined {
-    const grayscaleId : string = uuidv4().toString();
-    let filterImageArray : SVGFEImageElement[] = [];
-    const grayscale : SVGElement = document.createElementNS(SVG_NS, 'feColorMatrix');
+export function getGrayscaleFilter(filter: Filter, imageSrcArray: string[]): IImageFilterElement | undefined {
+    const grayscaleId: string = uuidv4().toString();
+    let filterImageArray: SVGFEImageElement[] = [];
+    const grayscale: SVGElement = document.createElementNS(SVG_NS, 'feColorMatrix');
     grayscale.setAttribute('type', 'matrix');
     grayscale.setAttribute('values', getGrayscaleMatrix((filter as IGrayscale).amount));
     grayscale.setAttributeNS('', 'result', grayscaleId);
@@ -34,7 +34,7 @@ export function getGrayscaleFilter(filter : Filter, imageSrcArray : string[]) : 
     /*
      * The source image must be a bitmap
      */
-    let index : number = (filter as IGrayscale).source;
+    let index: number = (filter as IGrayscale).source;
 
     // Negative case : index outside source array bounds. return undefined
     if (isIndexOutOfBound(index, imageSrcArray.length)) {
@@ -43,7 +43,7 @@ export function getGrayscaleFilter(filter : Filter, imageSrcArray : string[]) : 
     if (index < 0) {
         index += imageSrcArray.length;
     }
-    const imageId : string = imageSrcArray[index];
+    const imageId: string = imageSrcArray[index];
     if (imageId.match(BITMAP_IMAGE_REGEX_CHECK)) {
         filterImageArray = generateSVGFeImage(imageId, grayscale);
     } else {
@@ -57,7 +57,7 @@ export function getGrayscaleFilter(filter : Filter, imageSrcArray : string[]) : 
  * Reference https://www.w3.org/TR/filter-effects-1/#grayscaleEquivalent
  * @return {string} grayscale matrix
  */
-export function getGrayscaleMatrix(amount : number) : string {
+export function getGrayscaleMatrix(amount: number): string {
     const r1 = 0.2126 + 0.7874 * (1 - amount);
     const r2 = 0.7152 - 0.7152 * (1 - amount);
     const r3 = 0.0722 - 0.0722 * (1 - amount);

@@ -14,37 +14,37 @@ export interface ILineRange {
   /**
    * Inclusive start index of text for this line
    */
-  start : number;
+  start: number;
 
   /**
    * Inclusive end index of text for this line
    */
-  end : number;
+  end: number;
 
   /**
    * Top offset from top of containing element
    */
-  top : number;
+  top: number;
 
   /**
    * Height of line
    */
-  height : number;
+  height: number;
 
   /**
    * Bottom offset from top of containing element
    * (same as top + height)
    */
-  bottom : number;
+  bottom: number;
 }
 
 export interface IAxis {
-  top : number;
-  bottom : number;
-  height : number;
+  top: number;
+  bottom: number;
+  height: number;
 }
 
-const isNewLine = (boxA : IAxis, boxB : IAxis) : boolean => {
+const isNewLine = (boxA: IAxis, boxB: IAxis): boolean => {
   const halfHeight = boxA.height / 2;
   const midpoint = boxA.top + halfHeight;
   const floatingBottom = boxA.bottom + halfHeight;
@@ -99,8 +99,8 @@ const isNewLine = (boxA : IAxis, boxB : IAxis) : boolean => {
   return (boxB.top > midpoint) || (boxB.bottom > floatingBottom);
 };
 
-const adjustBoundingBox = ( existingBox : IAxis, newBox : IAxis) : IAxis => {
-  let rect : IAxis = undefined;
+const adjustBoundingBox = ( existingBox: IAxis, newBox: IAxis): IAxis => {
+  let rect: IAxis = undefined;
   const halfHeight = existingBox.height / 2;
 
   /*
@@ -142,16 +142,16 @@ const adjustBoundingBox = ( existingBox : IAxis, newBox : IAxis) : IAxis => {
  * Measures and re-arranges text by line
  */
 export class Geometry {
-  private element : HTMLElement;
-  private scalingY : number;
-  private parentY : number;
-  private parentPadding : number;
-  private offsetTop : number;
+  private element: HTMLElement;
+  private scalingY: number;
+  private parentY: number;
+  private parentPadding: number;
+  private offsetTop: number;
 
   /**
    * @param element A text containing element
    */
-  public constructor(element : HTMLElement, offsetTop : number) {
+  public constructor(element: HTMLElement, offsetTop: number) {
     this.element = element;
     this.scalingY = this.element.offsetHeight / this.element.getBoundingClientRect().height;
     this.parentY = this.element.getBoundingClientRect().top;
@@ -159,7 +159,7 @@ export class Geometry {
     this.offsetTop = offsetTop;
   }
 
-  protected createLineRange(start : number, end : number, box : IAxis) : ILineRange {
+  protected createLineRange(start: number, end: number, box: IAxis): ILineRange {
     const top = (this.parentPadding + box.top - this.parentY) * this.scalingY;
     const height = box.height * this.scalingY;
     const bottom = (this.parentPadding + box.bottom - this.parentY) * this.scalingY;
@@ -183,12 +183,12 @@ export class Geometry {
    *
    * @returns {ILineRange[]} A list of line ranges
    */
-  public splitByLine() : ILineRange[] {
-    const ret : ILineRange[] = [];
+  public splitByLine(): ILineRange[] {
+    const ret: ILineRange[] = [];
     const nodes = allTextNodes(this.element);
     const range = document.createRange();
     const parentRect = this.element.getBoundingClientRect();
-    let prev : IAxis = undefined;
+    let prev: IAxis = undefined;
     let lineStart = 0;
     let offset = 0;
 
@@ -204,7 +204,7 @@ export class Geometry {
         const clientRect = range.getBoundingClientRect();
         const boundingBoxTop = clientRect.top - parentRect.top + this.offsetTop;
         const boundingBoxBottom = clientRect.bottom - parentRect.top + this.offsetTop;
-        const boundingBox : IAxis = {
+        const boundingBox: IAxis = {
             top : boundingBoxTop,
             bottom: boundingBoxBottom,
             height: boundingBoxBottom - boundingBoxTop
@@ -254,16 +254,16 @@ export class Geometry {
     return ret;
   }
 
-  protected split(lineRanges : ILineRange[]) : void {
+  protected split(lineRanges: ILineRange[]): void {
     const range = document.createRange();
     let offset = 0;
-    const lines : Node[] = [];
+    const lines: Node[] = [];
 
     // tslint:disable-next-line
     for (let i = 0; i < lineRanges.length; i++) {
       // for any given lineRange.end, find the that node that encloses it
       const lineRange = lineRanges[i];
-      let node : Node = undefined;
+      let node: Node = undefined;
       const nodes = textNodes(this.element); // use generator
       for (const n of nodes) {
         if (lineRange.end < (offset + n.textContent.length)) {
@@ -300,7 +300,7 @@ export class Geometry {
       this.element.removeChild(this.element.firstChild);
     }
 
-    lines.forEach((line : Node) => {
+    lines.forEach((line: Node) => {
       const dataElement = document.createElement('data');
       dataElement.appendChild(line);
       this.element.appendChild(dataElement);

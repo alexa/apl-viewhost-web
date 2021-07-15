@@ -4,7 +4,6 @@
  */
 
 const path = require('path');
-const webpack = require('webpack');
 const DtsPackerPlugin = require('dts-packer').default;
 
 module.exports = {
@@ -19,7 +18,7 @@ module.exports = {
             {
                 test: /\.tsx?$/,
                 use: 'ts-loader',
-                exclude: path.resolve(__dirname, 'node_modules')
+                exclude: /node_modules/
             },
             {
                 test: /apl-wasm\.js$/,
@@ -55,9 +54,6 @@ module.exports = {
         libraryTarget: "umd"
     },
     plugins: [
-        new webpack.DefinePlugin({
-            HLS_SUPPORT: false,
-        }),
         new DtsPackerPlugin({require})
     ]
 };

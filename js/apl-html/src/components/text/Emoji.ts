@@ -20,7 +20,7 @@ export class Emoji {
      *
      * @param content
      */
-    public static getEmojiOffset(content : string) : number {
+    public static getEmojiOffset(content: string): number {
         return content.length - content.replace(Emoji.EmojiRegex, ' ').length;
     }
 }

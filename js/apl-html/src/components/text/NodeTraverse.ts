@@ -17,7 +17,7 @@ const NODE_TYPE_TEXT = 3;
  *
  * @param root Containing node
  */
-export function* textNodes(root : Node) {
+export function* textNodes(root: Node) {
   const nodesToVisit = [root];
 
   while (nodesToVisit.length > 0) {
@@ -37,6 +37,6 @@ export function* textNodes(root : Node) {
  *
  * @param root Containing node
  */
-export const allTextNodes = (root : Node) : Node[] => {
+export const allTextNodes = (root: Node): Node[] => {
   return [...textNodes(root)];
 };

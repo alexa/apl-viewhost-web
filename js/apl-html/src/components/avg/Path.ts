@@ -14,15 +14,19 @@ const lineCaps = new Map([
     [GraphicLineCap.kGraphicLineCapRound, 'round'],
     [GraphicLineCap.kGraphicLineCapSquare, 'square']
 ]);
-const lineJoins : Map<number, string> = new Map([
+const lineJoins: Map<number, string> = new Map([
     [GraphicLineJoin.kGraphicLineJoinBevel, 'bevel'],
     [GraphicLineJoin.kGraphicLineJoinMiter, 'miter'],
     [GraphicLineJoin.kGraphicLineJoinRound, 'round']
 ]);
 
 export class Path extends AVG {
-    constructor(graphic : APL.GraphicElement, parent : Element, logger : ILogger) {
-        super(graphic, parent, logger);
+    constructor(graphic: APL.GraphicElement, parent: Element, logger: ILogger) {
+        super({
+            graphic,
+            parent,
+            logger
+        });
         this.graphicKeysToSetters = new Map([
             [GraphicPropertyKey.kGraphicPropertyFillOpacity, this.setAttribute('fill-opacity')],
             [GraphicPropertyKey.kGraphicPropertyStrokeWidth, this.setAttribute('stroke-width')],
@@ -43,7 +47,7 @@ export class Path extends AVG {
     }
 
     private setPathLength() {
-        return (key : GraphicPropertyKey) => {
+        return (key: GraphicPropertyKey) => {
             const pathLength = this.graphic.getValue<number>(key);
             if (pathLength && typeof pathLength === 'number' && pathLength > 0) {
                 this.element.setAttributeNS('', 'pathLength', pathLength.toString());

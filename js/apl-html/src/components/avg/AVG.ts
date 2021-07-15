@@ -3,24 +3,40 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { GraphicElementType } from '../../enums/GraphicElementType';
-import { GraphicPropertyKey } from '../../enums/GraphicPropertyKey';
-import { ILogger } from '../../logging/ILogger';
-import { Component, IValueWithReference, SVG_NS } from '../Component';
-import { AVGFilter, createAndGetFilterElement } from './Filter';
-import { FontUtils } from '../..';
+import {GraphicElementType} from '../../enums/GraphicElementType';
+import {GraphicPropertyKey} from '../../enums/GraphicPropertyKey';
+import {ILogger} from '../../logging/ILogger';
+import {IValueWithReference, SVG_NS} from '../Component';
+import {AVGFilter, createAndGetFilterElement} from './Filter';
+import {FontUtils} from '../../utils/FontUtils';
+import {fillAndStrokeConverter} from './GraphicsUtils';
+
+export interface AVGArgs {
+    graphic: APL.GraphicElement;
+    parent: Element;
+    logger: ILogger;
+    lang?: string;
+}
 
 export abstract class AVG {
     /**  The svg element rendered */
-    public element : Element;
-    /** Elements that properties on this element require. */
-    private referencedElements : Map<GraphicPropertyKey, Element> = new Map();
+    public element: Element;
+    public graphic: APL.GraphicElement;
+    protected parent: Element;
+    protected logger: ILogger;
+    protected lang: string;
     /** Functions to set each graphic property */
-    protected graphicKeysToSetters : Map<GraphicPropertyKey, (key : GraphicPropertyKey) => void>;
+    protected graphicKeysToSetters: Map<GraphicPropertyKey, (key: GraphicPropertyKey) => void>;
+    /** Elements that properties on this element require. */
+    private referencedElements: Map<GraphicPropertyKey, Element> = new Map();
 
-    protected constructor(public graphic : APL.GraphicElement,
-                          protected parent : Element, protected logger : ILogger) {
-        let tag : string;
+    protected constructor({graphic, parent, logger, lang}: AVGArgs) {
+        this.graphic = graphic;
+        this.parent = parent;
+        this.logger = logger;
+        this.lang = lang || '';
+
+        let tag: string;
         if (graphic.getType() === GraphicElementType.kGraphicElementTypeGroup) {
             tag = 'g';
         } else if (graphic.getType() === GraphicElementType.kGraphicElementTypePath) {
@@ -46,8 +62,8 @@ export abstract class AVG {
     }
 
     protected updateProperties(
-        graphicSetters : Map<GraphicPropertyKey, (graphicPropertyKey : GraphicPropertyKey) => void>,
-        keysToUpdate : Set<GraphicPropertyKey>) {
+        graphicSetters: Map<GraphicPropertyKey, (graphicPropertyKey: GraphicPropertyKey) => void>,
+        keysToUpdate: Set<GraphicPropertyKey>) {
         keysToUpdate.forEach((graphicPropertyKey) => {
             const updateProperty = graphicSetters.get(graphicPropertyKey);
             if (updateProperty) {
@@ -58,18 +74,18 @@ export abstract class AVG {
         });
     }
 
-    protected setAttribute(attributeName : string) : (key : GraphicPropertyKey) => void {
-        return (key : GraphicPropertyKey) => {
+    protected setAttribute(attributeName: string): (key: GraphicPropertyKey) => void {
+        return (key: GraphicPropertyKey) => {
             const graphicPropertyValue = this.graphic.getValue(key);
             this.element.setAttributeNS('', attributeName, graphicPropertyValue.toString());
         };
     }
 
     protected setAttributeFromMap(
-        attributeName : string,
-        map : Map<number, string>,
-        defaultValue : string) {
-        return (key : GraphicPropertyKey) => {
+        attributeName: string,
+        map: Map<number, string>,
+        defaultValue: string) {
+        return (key: GraphicPropertyKey) => {
             const graphicValue = this.graphic.getValue<number>(key);
             let elementValue = map.get(graphicValue);
             if (!elementValue) {
@@ -79,14 +95,18 @@ export abstract class AVG {
         };
     }
 
-    private setFillAndStroke(transformKey : GraphicPropertyKey,
-                             valueKey : GraphicPropertyKey,
-                             attributeName : string) : (key : GraphicPropertyKey) => void {
+    private setFillAndStroke(transformKey: GraphicPropertyKey,
+                             valueKey: GraphicPropertyKey,
+                             attributeName: string): (key: GraphicPropertyKey) => void {
         const create = () => {
             const transform = this.graphic.getValue<string>(transformKey);
-            return Component.fillAndStrokeConverter(
-                this.graphic.getValue<object>(valueKey),
-                transform, this.parent, this.logger);
+            return fillAndStrokeConverter({
+                value: this.graphic.getValue<object>(valueKey),
+                transform,
+                parent: this.parent,
+                logger: this.logger,
+                lang: this.lang
+            });
         };
         return this.createElementForAttribute(attributeName, create);
     }
@@ -98,6 +118,13 @@ export abstract class AVG {
             'fill');
     }
 
+    protected setFillTransform() {
+        return this.setFillAndStroke(
+            GraphicPropertyKey.kGraphicPropertyFillTransform,
+            GraphicPropertyKey.kGraphicPropertyFill,
+            'fillTransform');
+    }
+
     protected setStroke() {
         return this.setFillAndStroke(
             GraphicPropertyKey.kGraphicPropertyStrokeTransform,
@@ -105,8 +132,8 @@ export abstract class AVG {
             'stroke');
     }
 
-    protected setFontStyle(attributeName : string) {
-        return (key : GraphicPropertyKey) => {
+    protected setFontStyle(attributeName: string) {
+        return (key: GraphicPropertyKey) => {
             const fontStyle = this.graphic.getValue<number>(key);
             const convertedValue = FontUtils.getFontStyle(fontStyle);
             this.element.setAttributeNS('', attributeName, convertedValue.toString());
@@ -131,8 +158,8 @@ export abstract class AVG {
         return this.createElementForAttribute('filter', createFilterElement());
     }
 
-    protected createElementForAttribute(attributeName : string, createElement : () => IValueWithReference) {
-        return (key : GraphicPropertyKey) => {
+    protected createElementForAttribute(attributeName: string, createElement: () => IValueWithReference) {
+        return (key: GraphicPropertyKey) => {
             if (this.referencedElements.has(key)
                 && this.element.parentElement.contains(this.referencedElements.get(key))) {
                 this.element.parentElement.removeChild(this.referencedElements.get(key));

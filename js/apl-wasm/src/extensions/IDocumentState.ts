@@ -11,12 +11,12 @@ import { ConfigurationChange } from '../ConfigurationChange';
   * be re-inflated and restored.  i.e. as when used in Backstack navigation.
   */
 export interface IDocumentState {
-    id : string;
-    token : string;
-    context : APL.Context;
-    content : Content;
-    background : APL.IBackground;
-    configurationChange : ConfigurationChange | undefined;
+    id: string;
+    token: string;
+    context: APL.Context;
+    content: Content;
+    background: APL.IBackground;
+    configurationChange: ConfigurationChange | undefined;
 }
 
 /**
@@ -27,10 +27,10 @@ export interface IDocumentState {
  * @param id The id for the IDocumentState.
  */
 export function createDocumentState(
-    context : APL.Context,
-    content : Content,
-    token? : string,
-    id? : string) : IDocumentState {
+    context: APL.Context,
+    content: Content,
+    token?: string,
+    id?: string): IDocumentState {
     const documentState = {
         id,
         token,

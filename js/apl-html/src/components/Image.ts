@@ -20,30 +20,32 @@ import { Noise } from './filters/Noise';
 import { ILogger } from '../logging/ILogger';
 import { Filter, generateSVGDefsAndUseElement } from '../utils/FilterUtils';
 import { isINoise } from './filters/Noise';
+import {createStylesApplier, CssUnitType} from './helpers/StylesApplier';
+import { createAligner } from './helpers/ImageAligner';
 
 /**
  * @ignore
  */
 export interface IGradient {
-    angle : number;
-    colorRange : number[];
-    inputRange : number[];
-    type : GradientType;
+    angle: number;
+    colorRange: number[];
+    inputRange: number[];
+    type: GradientType;
 }
 
 /**
  * @ignore
  */
 export interface IImageProperties extends IComponentProperties {
-    [PropertyKey.kPropertySource] : string;
-    [PropertyKey.kPropertyAlign] : ImageAlign;
-    [PropertyKey.kPropertyBorderRadius] : number;
-    [PropertyKey.kPropertyBorderWidth] : number;
-    [PropertyKey.kPropertyOverlayColor] : number;
-    [PropertyKey.kPropertyBorderColor] : number;
-    [PropertyKey.kPropertyFilters] : Filter[];
-    [PropertyKey.kPropertyOverlayGradient] : IGradient;
-    [PropertyKey.kPropertyScale] : ImageScale;
+    [PropertyKey.kPropertySource]: string;
+    [PropertyKey.kPropertyAlign]: ImageAlign;
+    [PropertyKey.kPropertyBorderRadius]: number;
+    [PropertyKey.kPropertyBorderWidth]: number;
+    [PropertyKey.kPropertyOverlayColor]: number;
+    [PropertyKey.kPropertyBorderColor]: number;
+    [PropertyKey.kPropertyFilters]: Filter[];
+    [PropertyKey.kPropertyOverlayGradient]: IGradient;
+    [PropertyKey.kPropertyScale]: ImageScale;
 }
 
 /**
@@ -51,28 +53,28 @@ export interface IImageProperties extends IComponentProperties {
  */
 export class Image extends Component<IImageProperties> {
 
-    private imgPlaceHolder : HTMLDivElement = document.createElement('div');
+    private imgPlaceHolder: HTMLDivElement = document.createElement('div');
     private $imgPlaceHolder = $(this.imgPlaceHolder);
-    private imageOverlay : HTMLDivElement = document.createElement('div');
+    private imageOverlay: HTMLDivElement = document.createElement('div');
     private $imageOverlay = $(this.imageOverlay);
     // the original image is used to apply customized filter on canvas and scale the svg images.
     // it shall be hidden from the final render result.
-    private originalImageElement : HTMLImageElement = document.createElement('img');
+    private originalImageElement: HTMLImageElement = document.createElement('img');
     private $originalImageElement = $(this.originalImageElement);
     // canvasElement is used to modify imageData defined in APL-filter/3P filter extension.
-    private canvasElement : HTMLCanvasElement = document.createElement('canvas');
+    private canvasElement: HTMLCanvasElement = document.createElement('canvas');
     // the image element inside svg
-    private imageElement : SVGElement = document.createElementNS(SVG_NS, 'image');
-    private svgDefsElement : SVGDefsElement | undefined = undefined;
-    private svgUseElement : SVGUseElement | undefined = undefined;
-    private svg : SVGElement = document.createElementNS(SVG_NS, 'svg') as SVGElement;
+    private imageElement: SVGElement = document.createElementNS(SVG_NS, 'image');
+    private svgDefsElement: SVGDefsElement | undefined = undefined;
+    private svgUseElement: SVGUseElement | undefined = undefined;
+    private svg: SVGElement = document.createElementNS(SVG_NS, 'svg') as SVGElement;
     private $svg = $(this.svg);
     // this flag indicates if the filter needs to be performed using canvas.
-    private hasFiltersInCanvas : boolean = false;
-    private setSvgImageHrefTimeout : any;
-    private isShadowHolderAdded : boolean = false;
+    private hasFiltersInCanvas: boolean = false;
+    private setSvgImageHrefTimeout: any;
+    private isShadowHolderAdded: boolean = false;
 
-    constructor(renderer : APLRenderer, component : APL.Component, factory : FactoryFunction, parent? : Component) {
+    constructor(renderer: APLRenderer, component: APL.Component, factory: FactoryFunction, parent?: Component) {
         super(renderer, component, factory, parent);
         this.initSvgElement();
         this.$originalImageElement.css({
@@ -140,7 +142,7 @@ export class Image extends Component<IImageProperties> {
         this.$imgPlaceHolder.css('border-radius', borderRadius);
     }
 
-    protected applyCssShadow = (shadowParams : string) => {
+    protected applyCssShadow = (shadowParams: string) => {
         if (ImageScale.kImageScaleNone === this.props[PropertyKey.kPropertyScale]) {
             this.$originalImageElement.css('box-shadow', shadowParams);
         }
@@ -158,8 +160,8 @@ export class Image extends Component<IImageProperties> {
         this.$svg.css('border-width', css);
     }
 
-    private setFilters = (imageArray : string[]) => {
-        const filters : Filter[] = this.props[PropertyKey.kPropertyFilters];
+    private setFilters = (imageArray: string[]) => {
+        const filters: Filter[] = this.props[PropertyKey.kPropertyFilters];
         this.checkFilters(filters);
         if (this.hasFiltersInCanvas) {
             // If implementing any filter in canvas, we draw image onto a canvas 2D context and invoke
@@ -188,10 +190,10 @@ export class Image extends Component<IImageProperties> {
             // reset svg
             this.initSvgElement();
             // get images from source.
-            let imageSrcArray : string[] | string = this.props[PropertyKey.kPropertySource];
+            let imageSrcArray: string[] | string = this.props[PropertyKey.kPropertySource];
             imageSrcArray = imageSrcArray instanceof Array ? imageSrcArray : [imageSrcArray];
             // Need make a copy of source image array, otherwise it will be mutated by filter operations
-            const imageArray : string [] = imageSrcArray.slice(0);
+            const imageArray: string [] = imageSrcArray.slice(0);
             this.setFilters(imageArray);
             // the original image is used to apply customized filter and will be hidden from the final render result.
             // workaround for firefox to draw on canvas : image's crossOrigin attribute is set to 'anonymous'
@@ -222,7 +224,7 @@ export class Image extends Component<IImageProperties> {
         }
     }
 
-    private getImageSource = (source : string, cors : boolean) : string => {
+    private getImageSource = (source: string, cors: boolean): string => {
         if (!cors) {
             return source;
         }
@@ -235,7 +237,7 @@ export class Image extends Component<IImageProperties> {
             this.applyFiltersToSvgImageHref();
         } else {
             // no filter need to perform on canvas, directly set image source.
-            let imageSrcArray : string[] | string = this.props[PropertyKey.kPropertySource];
+            let imageSrcArray: string[] | string = this.props[PropertyKey.kPropertySource];
             imageSrcArray = imageSrcArray instanceof Array ? imageSrcArray : [imageSrcArray];
             // per specs, the last one from image array should be rendered.
             this.imageElement.setAttribute('href', imageSrcArray[imageSrcArray.length - 1]);
@@ -248,13 +250,13 @@ export class Image extends Component<IImageProperties> {
         // set the css properties of the cloned div and make it cover imgPlaceHolder
         imgShadowHolder.css('overflow', 'unset');
         imgShadowHolder.css('margin-top', -this.$imgPlaceHolder.height());
-        const DEFAULT_ZINDEX : number = -1;
+        const DEFAULT_ZINDEX: number = -1;
         imgShadowHolder.css('z-index', DEFAULT_ZINDEX);
         imgShadowHolder.appendTo(this.$imgPlaceHolder.parent());
         imgShadowHolder.css('box-shadow', this.getCssShadow());
     }
 
-    private hasShadowPropertyDefined = () : boolean => {
+    private hasShadowPropertyDefined = (): boolean => {
         return (this.props[PropertyKey.kPropertyShadowHorizontalOffset] !== 0
             || this.props[PropertyKey.kPropertyShadowVerticalOffset] !== 0
             || this.props[PropertyKey.kPropertyShadowRadius] > 0
@@ -265,7 +267,7 @@ export class Image extends Component<IImageProperties> {
      * Check filters.
      * If there is any filter to be implemented in canvas, set hasFiltersInCanvas to true.
      */
-    private checkFilters = (filters : Filter[]) => {
+    private checkFilters = (filters: Filter[]) => {
         filters.forEach((filter) => {
             // Noise filter is performed using canvas.
             if (isINoise(filter)) {
@@ -274,7 +276,7 @@ export class Image extends Component<IImageProperties> {
         });
     }
 
-    private addSVGFilters(filters : Filter[], imageSourceArray : string[]) : void {
+    private addSVGFilters(filters: Filter[], imageSourceArray: string[]): void {
         // substring the CORE ID from :1000 -> 1000, otherwise, HTML will not recognize.
         // this id will map to filter id in the definition
         const filterId = this.component.getUniqueId().substring(1);
@@ -302,9 +304,9 @@ export class Image extends Component<IImageProperties> {
         if (w <= 0 || h <= 0) { return; }
 
         const ctx = this.canvasElement.getContext('2d');
-        const filters : Filter[] = this.props[PropertyKey.kPropertyFilters];
+        const filters: Filter[] = this.props[PropertyKey.kPropertyFilters];
         ctx.drawImage(this.originalImageElement, 0, 0, w, h);
-        let imageData : ImageData;
+        let imageData: ImageData;
         try {
             imageData = ctx.getImageData(0, 0, w, h);
         } catch (e) {
@@ -315,7 +317,7 @@ export class Image extends Component<IImageProperties> {
         filters.forEach((filter) => {
             // skip other filters because it will leverage SVG filter.
             if (isINoise(filter)) {
-                const noise : Noise = new Noise(filter.useColor, filter.kind, filter.sigma);
+                const noise: Noise = new Noise(filter.useColor, filter.kind, filter.sigma);
                 noise.addNoise(imageData);
             } else {
                 this.logger.warn('unknown filter for canvas');
@@ -326,7 +328,7 @@ export class Image extends Component<IImageProperties> {
         this.imageElement.setAttribute('href', this.canvasElement.toDataURL());
     }
 
-    public static getCssGradient(gradient : IGradient, logger : ILogger) : string {
+    public static getCssGradient(gradient: IGradient, logger: ILogger): string {
         if (!gradient) {
             return '';
         }
@@ -368,13 +370,13 @@ export class Image extends Component<IImageProperties> {
         return gradientCss;
     }
 
-    public static getCssPureColorGradient(color : string) {
+    public static getCssPureColorGradient(color: string) {
         return `linear-gradient(${color}, ${color})`;
     }
 
     private setImageScale() {
-        const width : number = this.originalImageElement.naturalWidth as number;
-        const height : number = this.originalImageElement.naturalHeight as number;
+        const width: number = this.originalImageElement.naturalWidth as number;
+        const height: number = this.originalImageElement.naturalHeight as number;
         this.$originalImageElement.css('width', width);
         this.$originalImageElement.css('height', height);
         this.$originalImageElement.css('display', '');
@@ -400,7 +402,7 @@ export class Image extends Component<IImageProperties> {
         }
     }
 
-    private getImageScale() : string {
+    private getImageScale(): string {
         // tslint:disable-next-line:switch-default
         switch (this.props[PropertyKey.kPropertyScale]) {
             case ImageScale.kImageScaleBestFill:
@@ -420,60 +422,19 @@ export class Image extends Component<IImageProperties> {
     }
 
     private setImageHolderAlignment() {
-        const parentWidth = this.innerBounds.width;
-        const parentHeight = this.innerBounds.height;
-        const imageWidth = $(this.originalImageElement).width();
-        const imageHeight = $(this.originalImageElement).height();
-        let left = (parentWidth - imageWidth) / 2;
-        let top = (parentHeight - imageHeight) / 2;
-        switch (this.props[PropertyKey.kPropertyAlign]) {
-            case ImageAlign.kImageAlignBottom: {
-                top = parentHeight - imageHeight;
-                break;
-            }
-            case ImageAlign.kImageAlignBottomLeft: {
-                top = parentHeight - imageHeight;
-                left = 0;
-                break;
-            }
-            case ImageAlign.kImageAlignBottomRight: {
-                top = parentHeight - imageHeight;
-                left = parentWidth - imageWidth;
-                break;
-            }
-            case ImageAlign.kImageAlignCenter: {
-                break;
-            }
-            case ImageAlign.kImageAlignLeft: {
-                left = 0;
-                break;
-            }
-            case ImageAlign.kImageAlignRight: {
-                left = parentWidth - imageWidth;
-                break;
-            }
-            case ImageAlign.kImageAlignTop: {
-                top = 0;
-                break;
-            }
-            case ImageAlign.kImageAlignTopLeft: {
-                top = 0;
-                left = 0;
-                break;
-            }
-            case ImageAlign.kImageAlignTopRight: {
-                top = 0;
-                left = parentWidth - imageWidth;
-                break;
-            }
-            default: {
-                this.logger.error('Bad image alignment property key', this.props[PropertyKey.kPropertyAlign]);
-                break;
-            }
-        }
-        top = Math.max(top, 0);
-        left = Math.max(left, 0);
-        $(this.imgPlaceHolder).css({top, left});
+        const imageAligner = createAligner({
+            parentBounds: this.innerBounds,
+            element: this.originalImageElement,
+            layoutDirection: this.layoutDirection,
+            imageAlign: this.props[PropertyKey.kPropertyAlign]
+        });
+        const alignment = imageAligner.getAlignment();
+
+        createStylesApplier({
+            element: this.imgPlaceHolder,
+            properties: alignment,
+            cssUnitType: CssUnitType.Pixels
+        }).applyStyle();
     }
 
     private setImageAndSvgAlignment() {

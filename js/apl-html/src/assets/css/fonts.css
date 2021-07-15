@@ -3,124 +3,284 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
- @font-face {
+/* Ember Default */
+@font-face {
+    font-family: "amazon-ember";
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/AmazonEmber_Rg_v2.ttf');
+}
+
+/* Ember Thin */
+@font-face {
+    font-family: "amazon-ember";
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/Amazon-Ember-Thin.ttf');
+    font-weight: 100;
+}
+
+/* Ember Extra Light - remap to Light */
+@font-face {
+    font-family: "amazon-ember";
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/Amazon-Ember-Light.ttf');
+    font-weight: 200;
+}
+
+/* Ember Light */
+@font-face {
+    font-family: "amazon-ember";
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/Amazon-Ember-Light.ttf');
+    font-weight: 300;
+}
+
+/* Ember Normal (Regular) - v2 */
+@font-face {
+    font-family: 'amazon-ember';
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/AmazonEmber_Rg_v2.ttf');
+    font-weight: 400;
+}
+
+/* Ember Medium - v2 */
+@font-face {
+    font-family: 'amazon-ember';
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/AmazonEmber_Md_v2.ttf');
+    font-weight: 500;
+}
+
+/* Ember SemiBold */
+@font-face {
+    font-family: "amazon-ember";
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/Amazon-Ember-SemiBold.ttf');
+    font-weight: 600;
+}
+
+/* Ember Bold */
+@font-face {
+    font-family: 'amazon-ember';
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/AmazonEmber_Bd_v2.ttf');
+    font-weight: 700;
+}
+
+/* Ember Extra Bold - remap to Heavy */
+@font-face {
+    font-family: "amazon-ember";
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/Amazon-Ember-Heavy.ttf');
+    font-weight: 800;
+}
+
+/* Ember Heavy (Black) */
+@font-face {
+    font-family: "amazon-ember";
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/Amazon-Ember-Heavy.ttf');
+    font-weight: 900;
+}
+
+/* Ember Thin Italic */
+@font-face {
+    font-family: 'amazon-ember';
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/Amazon-Ember-ThinItalic.ttf');
+    font-weight: 100;
+    font-style: italic;
+}
+
+/* Ember Extra Light Italic - remap to Light Italic */
+@font-face {
+    font-family: 'amazon-ember';
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/Amazon-Ember-LightItalic.ttf');
+    font-weight: 200;
+    font-style: italic;
+}
+
+/* Ember Light Italic */
+@font-face {
+    font-family: 'amazon-ember';
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/Amazon-Ember-LightItalic.ttf');
+    font-weight: 300;
+    font-style: italic;
+}
+
+/* Ember Italic */
+@font-face {
+    font-family: 'amazon-ember';
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/Amazon-Ember-RegularItalic.ttf');
+    font-weight: 400;
+    font-style: italic;
+}
+
+/* Ember Medium Italic */
+@font-face {
+    font-family: 'amazon-ember';
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/Amazon-Ember-MediumItalic.ttf');
+    font-weight: 500;
+    font-style: italic;
+}
+
+/* Ember SemiBold Italic */
+@font-face {
+    font-family: 'amazon-ember';
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/Amazon-Ember-SemiBoldItalic.ttf');
+    font-weight: 600;
+    font-style: italic;
+}
+
+/* Ember Bold Italic */
+@font-face {
+    font-family: 'amazon-ember';
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/Amazon-Ember-BoldItalic.ttf');
+    font-weight: 700;
+    font-style: italic;
+}
+
+/* Ember Extra Bold Italic - remap to Heavy Italic */
+@font-face {
+    font-family: 'amazon-ember';
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/Amazon-Ember-HeavyItalic.ttf');
+    font-weight: 800;
+    font-style: italic;
+}
+
+/* Ember HeavyItalic */
+@font-face {
+    font-family: 'amazon-ember';
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/Amazon-Ember-HeavyItalic.ttf');
+    font-weight: 900;
+    font-style: italic;
+}
+
+/* Ember Display Default */
+@font-face {
     font-family: 'amazon-ember-display';
     src: url('https://d1gkjrhppbyzyh.cloudfront.net/AmazonEmberDisplay_Rg.ttf');
 }
 
+/* Ember Display Thin - remap to Light */
 @font-face {
     font-family: 'amazon-ember-display';
     src: url('https://d1gkjrhppbyzyh.cloudfront.net/AmazonEmberDisplay_Lt.ttf');
     font-weight: 100;
 }
 
+/* Ember Display Extra Light - remap to Light */
 @font-face {
     font-family: 'amazon-ember-display';
     src: url('https://d1gkjrhppbyzyh.cloudfront.net/AmazonEmberDisplay_Lt.ttf');
     font-weight: 200;
 }
 
+/* Ember Display Light */
 @font-face {
     font-family: 'amazon-ember-display';
     src: url('https://d1gkjrhppbyzyh.cloudfront.net/AmazonEmberDisplay_Lt.ttf');
     font-weight: 300;
 }
 
+/* Ember Display Normal (Regular) */
 @font-face {
     font-family: 'amazon-ember-display';
     src: url('https://d1gkjrhppbyzyh.cloudfront.net/AmazonEmberDisplay_Rg.ttf');
     font-weight: 400;
 }
 
+/* Ember Display Medium */
 @font-face {
     font-family: 'amazon-ember-display';
     src: url('https://d1gkjrhppbyzyh.cloudfront.net/AmazonEmberDisplay_Md.ttf');
     font-weight: 500;
 }
 
+/* Ember Display SemiBold - remap to Bold */
 @font-face {
     font-family: 'amazon-ember-display';
-    src: url('https://d1gkjrhppbyzyh.cloudfront.net/AmazonEmberDisplay_Md.ttf');
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/AmazonEmberDisplay_Bd.ttf');
     font-weight: 600;
 }
 
+/* Ember Display Bold */
 @font-face {
     font-family: 'amazon-ember-display';
     src: url('https://d1gkjrhppbyzyh.cloudfront.net/AmazonEmberDisplay_Bd.ttf');
     font-weight: 700;
 }
 
+/* Ember Display Extra Bold - remap to Heavy */
 @font-face {
     font-family: 'amazon-ember-display';
-    src: url('https://d1gkjrhppbyzyh.cloudfront.net/AmazonEmberDisplay_Bd.ttf');
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/AmazonEmberDisplay_He.ttf');
     font-weight: 800;
 }
 
+/* Ember Display Heavy */
 @font-face {
     font-family: 'amazon-ember-display';
     src: url('https://d1gkjrhppbyzyh.cloudfront.net/AmazonEmberDisplay_He.ttf');
     font-weight: 900;
 }
 
+/* Ember Display Thin Italic - remap to Light Italic */
 @font-face {
     font-family: 'amazon-ember-display';
-    src: url('https://d1gkjrhppbyzyh.cloudfront.net/Amazon-Ember-LightItalic.ttf');
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/AmazonEmberDisplay_Lt_It.ttf');
     font-weight: 100;
     font-style: italic;
 }
 
+/* Ember Display Extra Light Italic - remap to Light Italic */
 @font-face {
     font-family: 'amazon-ember-display';
-    src: url('https://d1gkjrhppbyzyh.cloudfront.net/Amazon-Ember-LightItalic.ttf');
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/AmazonEmberDisplay_Lt_It.ttf');
     font-weight: 200;
     font-style: italic;
 }
 
+/* Ember Display Light Italic */
 @font-face {
     font-family: 'amazon-ember-display';
-    src: url('https://d1gkjrhppbyzyh.cloudfront.net/Amazon-Ember-LightItalic.ttf');
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/AmazonEmberDisplay_Lt_It.ttf');
     font-weight: 300;
     font-style: italic;
 }
 
+/* Ember Display Italic */
 @font-face {
     font-family: 'amazon-ember-display';
-    src: url('https://d1gkjrhppbyzyh.cloudfront.net/Amazon-Ember-RegularItalic.ttf');
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/AmazonEmberDisplay_Rg_It.ttf');
     font-weight: 400;
     font-style: italic;
 }
 
+/* Ember Display Medium Italic */
 @font-face {
     font-family: 'amazon-ember-display';
-    src: url('https://d1gkjrhppbyzyh.cloudfront.net/Amazon-Ember-MediumItalic.ttf');
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/AmazonEmberDisplay_Md_It.ttf');
     font-weight: 500;
     font-style: italic;
 }
 
+/* Ember Display SemiBold Italic - remap to Bold Italic */
 @font-face {
     font-family: 'amazon-ember-display';
-    src: url('https://d1gkjrhppbyzyh.cloudfront.net/Amazon-Ember-MediumItalic.ttf');
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/AmazonEmberDisplay_Bd_It.ttf');
     font-weight: 600;
     font-style: italic;
 }
 
+/* Ember Display Bold Italic */
 @font-face {
     font-family: 'amazon-ember-display';
-    src: url('https://d1gkjrhppbyzyh.cloudfront.net/Amazon-Ember-BoldItalic.ttf');
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/AmazonEmberDisplay_Bd_It.ttf');
     font-weight: 700;
     font-style: italic;
 }
 
+/* Ember Display Extra Bold Italic - remap to Heavy Italic */
 @font-face {
     font-family: 'amazon-ember-display';
-    src: url('https://d1gkjrhppbyzyh.cloudfront.net/Amazon-Ember-BoldItalic.ttf');
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/AmazonEmberDisplay_He_It.ttf');
     font-weight: 800;
     font-style: italic;
 }
 
+/* Ember Display HeavyItalic */
 @font-face {
     font-family: 'amazon-ember-display';
-    src: url('https://d1gkjrhppbyzyh.cloudfront.net/Amazon-Ember-BoldItalic.ttf');
+    src: url('https://d1gkjrhppbyzyh.cloudfront.net/AmazonEmberDisplay_He_It.ttf');
     font-weight: 900;
     font-style: italic;
 }
@@ -128,13 +288,6 @@
 @font-face {
     font-family: 'Bookerly';
     src: url('https://d1gkjrhppbyzyh.cloudfront.net/Bookerly-Regular.ttf');
-}
-
-@font-face {
-    font-family: 'Bookerly';
-    src: url('https://d1gkjrhppbyzyh.cloudfront.net/Bookerly-Regular.ttf');
-    font-weight: 100;
-    font-style: normal;
 }
 
 @font-face {
@@ -147,15 +300,8 @@
 @font-face {
     font-family: 'Bookerly';
     src: url('https://d1gkjrhppbyzyh.cloudfront.net/Bookerly-Bold.ttf');
-    font-weight: 500;
+    font-weight: 600;
     font-style: normal;
-}
-
-@font-face {
-    font-family: 'Bookerly';
-    src: url('https://d1gkjrhppbyzyh.cloudfront.net/Bookerly-Italic.ttf');
-    font-weight: 100;
-    font-style: italic;
 }
 
 @font-face {
@@ -168,6 +314,6 @@
 @font-face {
     font-family: 'Bookerly';
     src: url('https://d1gkjrhppbyzyh.cloudfront.net/Bookerly-BoldItalic.ttf');
-    font-weight: 500;
+    font-weight: 600;
     font-style: italic;
 }

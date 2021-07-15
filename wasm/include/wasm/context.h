@@ -29,6 +29,7 @@ struct ContextMethods {
     static std::string getTheme(const apl::RootContextPtr& context);
     static emscripten::val getBackground(const apl::RootContextPtr& context);
     static void setBackground(const apl::RootContextPtr& context, emscripten::val background);
+    static std::string getDataSourceContext(const apl::RootContextPtr& context);
     static std::string getVisualContext(const apl::RootContextPtr& context);
     static void clearPending(const apl::RootContextPtr& context);
     static bool isDirty(const apl::RootContextPtr& context);
@@ -59,6 +60,13 @@ struct ContextMethods {
     static void setFocus(const apl::RootContextPtr& context, int direction, const apl::Rect& origin, const std::string& targetId);
     static std::string getFocused(const apl::RootContextPtr& context);
     static emscripten::val getFocusableAreas(const apl::RootContextPtr& context);
+
+private:
+    static void applyScalingOptions(emscripten::val& scalingOptions,
+                                    std::vector<ViewportSpecification>& specs,
+                                    Metrics& coreMetrics,
+                                    bool& shapeOverridesCost,
+                                    double& k);
 };
 } // namespace internal
 

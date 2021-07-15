@@ -12,7 +12,7 @@ import { Component } from '../components/Component';
  */
 export class RequestFirstLineBounds extends Event {
 
-    private component : Component | undefined;
+    private component: Component | undefined;
 
     public async execute() {
         this.component = this.renderer.componentMap[this.event.getComponent().getUniqueId()];

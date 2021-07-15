@@ -28,7 +28,7 @@ add_executable(apl-wasm
         src/wasmmetrics.cpp
         src/metrics.cpp
         src/session.cpp
-    )
+        src/utils/jsparser.cpp)
 target_link_libraries(apl-wasm apl)
 target_link_libraries(apl-wasm ${YOGA_LIB})
 target_include_directories(apl-wasm PRIVATE include)
@@ -85,6 +85,7 @@ add_custom_target(generate-wasm-enums ALL
         -f "GraphicElementType"
         -f "GraphicFilterType"
         -f "GraphicFilterProperty"
+        -f "GraphicLayoutDirection"
         -f "GraphicLineCap"
         -f "GraphicLineJoin"
         -f "GraphicTextAnchor"
@@ -93,6 +94,7 @@ add_custom_target(generate-wasm-enums ALL
         -f "ImageAlign"
         -f "ImageScale"
         -f "KeyboardType"
+        -f "LayoutDirection"
         -f "LogLevel"
         -f "Navigation"
         -f "NoiseFilterKind"
@@ -103,12 +105,12 @@ add_custom_target(generate-wasm-enums ALL
         -f "ScreenShape"
         -f "ScrollDirection"
         -f "Snap"
+        -f "SpanAttributeName"
         -f "SpanType"
         -f "SubmitKeyType"
         -f "TextAlign"
         -f "TextAlignVertical"
         -f "UpdateType"
-        -f "VectorGraphicAlign"
         -f "VectorGraphicScale"
         -f "VideoScale"
         -l typescript -o ${JS_DIR}/apl-html/src/enums

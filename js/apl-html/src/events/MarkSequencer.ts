@@ -12,23 +12,23 @@ const decode = require('utf8-decode');
  * @ignore
  */
 export interface IFragmentCallback {
-  (marker : IFragmentMarker);
+  (marker: IFragmentMarker);
 }
 
 /**
  * @ignore
  */
 export class MarkSequencer {
-  protected epoch : number;
-  protected markers : IBaseMarker[];
-  protected timerId : number;
-  protected callback : IFragmentCallback;
+  protected epoch: number;
+  protected markers: IBaseMarker[];
+  protected timerId: number;
+  protected callback: IFragmentCallback;
 
-  constructor(markers : IBaseMarker[], callback : IFragmentCallback) {
+  constructor(markers: IBaseMarker[], callback: IFragmentCallback) {
     this.epoch = Date.now();
     this.callback = callback;
 
-    this.markers = markers.reduce((markerSet : IBaseMarker[], marker : IBaseMarker) => {
+    this.markers = markers.reduce((markerSet: IBaseMarker[], marker: IBaseMarker) => {
       if (marker.type === 'word') {
         markerSet.push(
           {

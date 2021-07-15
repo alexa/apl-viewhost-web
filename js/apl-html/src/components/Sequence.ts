@@ -11,7 +11,7 @@ import { MultiChildScrollable} from './MultiChildScrollable';
  * @ignore
  */
 export class Sequence extends MultiChildScrollable {
-    constructor(renderer : APLRenderer, component : APL.Component, factory : FactoryFunction, parent? : Component) {
+    constructor(renderer: APLRenderer, component: APL.Component, factory: FactoryFunction, parent?: Component) {
         super(renderer, component, factory, parent);
     }
 }

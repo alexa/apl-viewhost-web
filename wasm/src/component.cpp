@@ -124,6 +124,13 @@ ComponentMethods::getDisplayedChildCount(const apl::ComponentPtr& component) {
     return component->getDisplayedChildCount();
 }
 
+apl::ComponentPtr
+ComponentMethods::getDisplayedChildAt(const apl::ComponentPtr& component, size_t index) {
+    auto child = component->getDisplayedChildAt(index);
+    child->setUserData(component->getUserData());
+    return child;
+}
+
 std::string
 ComponentMethods::getDisplayedChildId(const apl::ComponentPtr& component, size_t displayIndex) {
     if (component->getDisplayedChildCount() > displayIndex) {
@@ -241,7 +248,8 @@ EMSCRIPTEN_BINDINGS(apl_wasm_component) {
         .function("isCharacterValid", &internal::ComponentMethods::isCharacterValid)
         .function("provenance", &internal::ComponentMethods::provenance)
         .function("getDisplayedChildCount", &internal::ComponentMethods::getDisplayedChildCount)
-        .function("getDisplayedChildId", &internal::ComponentMethods::getDisplayedChildId);
+        .function("getDisplayedChildId", &internal::ComponentMethods::getDisplayedChildId)
+        .function("getDisplayedChildAt", &internal::ComponentMethods::getDisplayedChildAt);
 }
 
 } // namespace wasm

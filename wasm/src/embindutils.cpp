@@ -167,6 +167,14 @@ getValFromObject(const apl::StyledText& styledText, WASMMetrics* m) {
         spanObject.set("type", emscripten::val(static_cast<int>(span.type)));
         spanObject.set("start", emscripten::val(span.start));
         spanObject.set("end", emscripten::val(span.end));
+        emscripten::val attributes = emscripten::val::array();
+        for (auto& attribute : span.attributes) {
+            emscripten::val attributeObject = emscripten::val::object();
+            attributeObject.set("name", emscripten::val(static_cast<int>(attribute.name)));
+            attributeObject.set("value", emscripten::val(getValFromObject(attribute.value, m)));
+            attributes.call<void>("push", attributeObject);
+        }
+        spanObject.set("attributes", attributes);
         spans.call<void>("push", spanObject);
     }
     propObject.set("spans", spans);

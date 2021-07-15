@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as $ from 'jquery';
 import APLRenderer from '../APLRenderer';
 import { ScrollDirection } from '../enums/ScrollDirection';
 import { Component, FactoryFunction, IComponentProperties } from './Component';
@@ -13,18 +12,13 @@ import { UpdateType } from '../enums/UpdateType';
 /**
  * @ignore
  */
-export type ScrollHandler = (pos : number) => void;
-
-/**
- * @ignore
- */
 export interface IScollOptions {
-    suppressScrollX? : boolean;
-    suppressScrollY? : boolean;
-    useBothWheelAxes? : boolean;
-    scrollXMarginOffset? : number;
-    scrollYMarginOffset? : number;
-    handlers? : string[];
+    suppressScrollX?: boolean;
+    suppressScrollY?: boolean;
+    useBothWheelAxes?: boolean;
+    scrollXMarginOffset?: number;
+    scrollYMarginOffset?: number;
+    handlers?: string[];
 }
 
 /**
@@ -33,29 +27,21 @@ export interface IScollOptions {
 export abstract class Scrollable<ScrollableProps = IComponentProperties>
     extends ActionableComponent<ScrollableProps> {
 
-    public static FOCUS_SCROLL_VELOCITY : number = 5.0;
+    public static FOCUS_SCROLL_VELOCITY: number = 5.0;
 
-    public direction : ScrollDirection = ScrollDirection.kScrollDirectionVertical;
+    public direction: ScrollDirection = ScrollDirection.kScrollDirectionVertical;
     protected scrollbar;
-    protected length : 'width' | 'height' = 'height';
-    protected scrollSize : 'scrollHeight' | 'scrollWidth' = 'scrollHeight';
-    protected scrollSide : 'scrollTop' | 'scrollLeft' = 'scrollTop';
-    protected side : 'left' | 'top' = 'top';
-    protected hasFocusableChildren : boolean = false;
+    protected length: 'width' | 'height' = 'height';
+    protected scrollSize: 'scrollHeight' | 'scrollWidth' = 'scrollHeight';
+    protected scrollSide: 'scrollTop' | 'scrollLeft' = 'scrollTop';
+    protected side: 'left' | 'top' = 'top';
+    protected hasFocusableChildren: boolean = false;
 
-    // Other gap to allow scrolling in backwards direction
-    protected startGap : HTMLDivElement = document.createElement('div');
-    protected $startGap = $(this.startGap);
-
-    // Provides a gap so we can scroll through the innerbounds
-    protected endGap : HTMLDivElement = document.createElement('div');
-    protected $endGap = $(this.endGap);
-
-    constructor(renderer : APLRenderer, component : APL.Component, factory : FactoryFunction, parent? : Component) {
+    constructor(renderer: APLRenderer, component: APL.Component, factory: FactoryFunction, parent?: Component) {
         super(renderer, component, factory, parent);
-        const onScroll = async (event : WheelEvent) => {
+        const onScroll = async (event: WheelEvent) => {
             const scrollPosition = this.getScrollPosition();
-            function getLargerAbsoluteValue(deltaX : number, deltaY : number) {
+            function getLargerAbsoluteValue(deltaX: number, deltaY: number) {
                 if (Math.abs(deltaX) > Math.abs(deltaY)) {
                     return deltaX;
                 }
@@ -68,27 +54,27 @@ export abstract class Scrollable<ScrollableProps = IComponentProperties>
         this.container.addEventListener('wheel', onScroll);
     }
 
-    protected isLayout() : boolean {
+    protected isLayout(): boolean {
         return true;
     }
 
-    protected allowFocus(requestedDistance : number, moveTo : HTMLDivElement) {
+    protected allowFocus(requestedDistance: number, moveTo: HTMLDivElement) {
         return !(requestedDistance > this.getPageSize() + parseInt(moveTo.style[this.length], 10));
     }
 
-    public getScrollPosition() : number {
+    public getScrollPosition(): number {
         return this.container[this.scrollSide];
     }
 
-    public getScrollLength() : number {
+    public getScrollLength(): number {
         return this.container[this.scrollSize];
     }
 
-    public getPageSize() : number {
+    public getPageSize(): number {
         return this.bounds[this.length];
     }
 
-    public getDirection() : ScrollDirection {
+    public getDirection(): ScrollDirection {
         return this.direction;
     }
 }

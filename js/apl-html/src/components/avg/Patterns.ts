@@ -3,22 +3,50 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { AVG } from './AVG';
-import { Path } from './Path';
-import { Group } from './Group';
-import { AVGText } from './AVGText';
-import { ILogger } from '../../logging/ILogger';
-import { GraphicElementType } from '../../enums/GraphicElementType';
-import { IDENTITY_TRANSFORM, IValueWithReference, SVG_NS } from '../Component';
+import {AVG} from './AVG';
+import {Path} from './Path';
+import {Group} from './Group';
+import {AVGText} from './AVGText';
+import {ILogger} from '../../logging/ILogger';
+import {GraphicElementType} from '../../enums/GraphicElementType';
+import {IDENTITY_TRANSFORM, IValueWithReference, SVG_NS} from '../Component';
 
-export function createPatternElement(graphicPattern : APL.GraphicPattern, transform : string,
-                                     parent : Element, logger : ILogger) : IValueWithReference | undefined {
+export interface PatternElementArgs {
+    graphicPattern: APL.GraphicPattern;
+    transform: string;
+    logger: ILogger;
+    lang: string;
+}
 
-    const avgElements : AVG[] = [];
+function getOrCreateSVGElementById(id: string): SVGElement {
+    const element = document.getElementById(id);
+    if (element && element instanceof SVGElement) {
+        return element;
+    }
+    return document.createElementNS(SVG_NS, 'pattern');
+}
+
+/**
+ * @deprecated use getOrCreatePatternElementWithArgs
+ */
+export function createPatternElementWithArgs(args: PatternElementArgs) {
+    return getOrCreatePatternElementWithArgs(args);
+}
+
+export function getOrCreatePatternElementWithArgs(args: PatternElementArgs) {
+    const {
+        graphicPattern,
+        transform,
+        logger,
+        lang
+    } = args;
+
+    const avgElements: AVG[] = [];
     const defs = document.createElementNS(SVG_NS, 'defs');
 
+    const id = graphicPattern.getId();
     // Pattern creation
-    const patternElement : SVGPatternElement = document.createElementNS(SVG_NS, 'pattern');
+    const patternElement: Element = getOrCreateSVGElementById(id);
 
     // Pattern height and width
     patternElement.setAttributeNS('', 'id', graphicPattern.getId());
@@ -36,14 +64,24 @@ export function createPatternElement(graphicPattern : APL.GraphicPattern, transf
     for (let i = 0; i < size; i++) {
         const item = (graphicPattern.getItemAt(i)) as APL.GraphicElement;
         if (item.getType() === GraphicElementType.kGraphicElementTypeGroup) {
-            const group = new Group(item, patternElement, logger);
+            const group = new Group({
+                graphic: item,
+                parent: patternElement,
+                logger,
+                lang
+            });
             avgElements.push(group);
             group.bootStrapChildren(item, logger);
         } else if (item.getType() === GraphicElementType.kGraphicElementTypePath) {
             const path = new Path(item, patternElement, logger);
             avgElements.push(path);
         } else if (item.getType() === GraphicElementType.kGraphicElementTypeText) {
-            const text = new AVGText(item, patternElement, logger);
+            const text = new AVGText({
+                graphic: item,
+                parent: patternElement,
+                logger,
+                lang
+            });
             avgElements.push(text);
         }
     }
@@ -55,4 +93,17 @@ export function createPatternElement(graphicPattern : APL.GraphicPattern, transf
         value: `url('#${graphicPattern.getId()}')`,
         reference: defs
     };
+}
+
+/**
+ * @Deprecated use createPatternElementWithArgs
+ */
+export function createPatternElement(graphicPattern: APL.GraphicPattern, transform: string,
+                                     parent: Element, logger: ILogger): IValueWithReference | undefined {
+    return getOrCreatePatternElementWithArgs({
+        graphicPattern,
+        transform,
+        logger,
+        lang: ''
+    });
 }

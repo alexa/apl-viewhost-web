@@ -35,6 +35,7 @@ struct ComponentMethods {
     static apl::ComponentPtr getChildAt(const apl::ComponentPtr& component, size_t index);
 
     static size_t getDisplayedChildCount(const apl::ComponentPtr& component);
+    static apl::ComponentPtr getDisplayedChildAt(const apl::ComponentPtr& component, size_t index);
     static std::string getDisplayedChildId(const apl::ComponentPtr& component, size_t displayIndex);
 
     static bool appendChild(const apl::ComponentPtr& component, const apl::ComponentPtr& child);

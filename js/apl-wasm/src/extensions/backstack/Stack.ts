@@ -4,14 +4,14 @@
  */
 
 import { IDocumentState } from '../IDocumentState';
-import { LiveArray } from '../../LiveArray';
+import { LiveArray } from 'apl-html';
 
 /**
  * A stack which keeps track of the ids of all constituent items.
  */
 export class Stack {
-    private stackedItems : IDocumentState[];
-    private idStack : LiveArray;
+    private stackedItems: IDocumentState[];
+    private idStack: LiveArray;
 
     public constructor() {
         this.idStack = LiveArray.create();
@@ -22,7 +22,7 @@ export class Stack {
      * Add an item to the top of the stack
      * @param item the item to add
      */
-    public push(id : string, item : IDocumentState) {
+    public push(id: string, item: IDocumentState) {
         this.idStack.push_back(id);
         this.stackedItems.push(item);
     }
@@ -30,7 +30,7 @@ export class Stack {
     /**
      * Remove the top item from the stack.
      */
-    public pop() : IDocumentState | undefined {
+    public pop(): IDocumentState | undefined {
         this.idStack.remove(this.idStack.size() - 1, 1);
         return this.stackedItems.pop();
     }
@@ -38,14 +38,14 @@ export class Stack {
     /**
      * Returns the current size of the stack.
      */
-    public size() : number {
+    public size(): number {
         return this.stackedItems.length;
     }
 
     /**
      * Clears all items from the stack.
      */
-    public clear() : void {
+    public clear(): void {
         this.stackedItems = [];
         this.idStack.clear();
     }
@@ -53,15 +53,15 @@ export class Stack {
     /**
      * The ids for all items currently in the stack.
      */
-    public getIds() : string[] {
-        const ids : string[] = [];
+    public getIds(): string[] {
+        const ids: string[] = [];
         for (const item of this.stackedItems) {
             ids.push(item.id);
         }
         return ids;
     }
 
-    public getLiveIds() : LiveArray {
+    public getLiveIds(): LiveArray {
         return this.idStack;
     }
 }

@@ -18,4 +18,4 @@ import { LogLevel } from './LogLevel';
  * @param loggerName Name of the logger. Usually same as component/class name.
  * @param message Actual log message.
  */
-export type LogTransport = (level : LogLevel, loggerName : string, message : string) => void;
+export type LogTransport = (level: LogLevel, loggerName: string, message: string) => void;

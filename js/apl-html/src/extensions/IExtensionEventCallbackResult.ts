@@ -7,5 +7,5 @@
  * Callback function for the resolution of an ExtensionEvent
  */
 export interface IExtensionEventCallbackResult {
-    onExtensionEventResult(succeeded : boolean);
+    onExtensionEventResult(succeeded: boolean);
 }

@@ -13,8 +13,6 @@ const EVENT_TYPE_MAP = {
     [EventType.kEventTypeSendEvent]: 'SendEvent',
     [EventType.kEventTypeControlMedia]: 'ControlMedia',
     [EventType.kEventTypePlayMedia]: 'PlayMedia',
-    [EventType.kEventTypeScrollTo]: 'ScrollTo',
-    [EventType.kEventTypeSetPage]: 'SetPage',
     [EventType.kEventTypeRequestFirstLineBounds]: 'RequestFirstLineBounds',
     [EventType.kEventTypePreroll]: 'Preroll',
     [EventType.kEventTypeSpeak]: 'Speak',
@@ -27,13 +25,13 @@ const EVENT_TYPE_MAP = {
 
 export abstract class Event {
     /// Logger to be used for this component logs.
-    protected type : string;
+    protected type: string;
 
-    protected logger : ILogger;
+    protected logger: ILogger;
 
-    protected isTerminated : boolean = false;
+    protected isTerminated: boolean = false;
 
-    constructor(protected event : APL.Event, protected renderer : APLRenderer) {
+    constructor(protected event: APL.Event, protected renderer: APLRenderer) {
         this.type = EVENT_TYPE_MAP[event.getType()] || 'Event';
         this.logger = LoggerFactory.getLogger(this.type);
         event.addTerminateCallback(() => {
@@ -51,7 +49,7 @@ export abstract class Event {
         this.event.resolve();
     }
 
-    protected async waitForValidLayout(component : APL.Component) : Promise<void> {
+    protected async waitForValidLayout(component: APL.Component): Promise<void> {
         while (true) {
             const bounds = component.getCalculatedByKey<APL.Rect>(PropertyKey.kPropertyBounds);
             if (bounds.width > 0 && bounds.width < 1000000) {
@@ -61,13 +59,13 @@ export abstract class Event {
         }
     }
 
-    protected wait(duration : number) : Promise<void> {
+    protected wait(duration: number): Promise<void> {
         return new Promise((res) => {
             setTimeout(res, duration);
         });
     }
 
-    protected waitAFrame() : Promise<number> {
+    protected waitAFrame(): Promise<number> {
         const time = Date.now();
         return new Promise((res) => {
             requestAnimationFrame(() => {

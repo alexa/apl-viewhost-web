@@ -20,27 +20,27 @@ import APLRenderer from '../APLRenderer';
  * @internal
  */
 export class HighlightSequencer {
-  protected align : CommandScrollAlign;
-  protected markSequencer : MarkSequencer;
-  protected textComponent : Text;
-  protected lookAheadOffset : number = 0;
-  protected lineRanges : ILineRange[];
-  protected renderer : APLRenderer;
+  protected align: CommandScrollAlign;
+  protected markSequencer: MarkSequencer;
+  protected textComponent: Text;
+  protected lookAheadOffset: number = 0;
+  protected lineRanges: ILineRange[];
+  protected renderer: APLRenderer;
 
   public static shouldUseSequencer(
-    markers : IBaseMarker[],
-    componentType : number,
-    highlightMode : CommandHighlightMode) {
+    markers: IBaseMarker[],
+    componentType: number,
+    highlightMode: CommandHighlightMode) {
     return markers
       && componentType === ComponentType.kComponentTypeText
       && highlightMode === CommandHighlightMode.kCommandHighlightModeLine;
   }
 
   constructor(
-    textComponent : Text,
-    align : CommandScrollAlign,
-    markers : IBaseMarker[],
-    renderer : APLRenderer) {
+    textComponent: Text,
+    align: CommandScrollAlign,
+    markers: IBaseMarker[],
+    renderer: APLRenderer) {
     this.textComponent = textComponent;
     this.lineRanges = textComponent.getLineRanges();
     this.align = align;
@@ -53,7 +53,7 @@ export class HighlightSequencer {
     this.textComponent.unhighlight();
   }
 
-  protected onMarker(marker : IFragmentMarker) {
+  protected onMarker(marker: IFragmentMarker) {
     const plainText = this.textComponent.getPlainText();
     const plainTextIndex = plainText.indexOf(
       marker.value,
@@ -66,14 +66,14 @@ export class HighlightSequencer {
     }
 
     this.lookAheadOffset = plainTextIndex + marker.value.length;
-    const line = this.lineRanges.findIndex((lineRange : ILineRange) => {
+    const line = this.lineRanges.findIndex((lineRange: ILineRange) => {
       return (plainTextIndex >= lineRange.start) && (plainTextIndex <= lineRange.end);
     });
 
     if (line < 0) {
       return;
     }
-    const range : ILineRange = this.lineRanges[line];
+    const range: ILineRange = this.lineRanges[line];
     this.textComponent.highlight(line);
     this.renderer.context.scrollToRectInComponent(this.textComponent.component,
       0,

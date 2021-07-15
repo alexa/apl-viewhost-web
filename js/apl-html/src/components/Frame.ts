@@ -11,10 +11,10 @@ import { Component, FactoryFunction, IComponentProperties } from './Component';
  * @ignore
  */
 export interface IFrameProperties extends IComponentProperties {
-    [PropertyKey.kPropertyBackgroundColor] : number;
-    [PropertyKey.kPropertyBorderRadii] : APL.Radii;
-    [PropertyKey.kPropertyBorderColor] : number;
-    [PropertyKey.kPropertyBorderWidth] : number;
+    [PropertyKey.kPropertyBackgroundColor]: number;
+    [PropertyKey.kPropertyBorderRadii]: APL.Radii;
+    [PropertyKey.kPropertyBorderColor]: number;
+    [PropertyKey.kPropertyBorderWidth]: number;
 }
 
 /**
@@ -22,7 +22,7 @@ export interface IFrameProperties extends IComponentProperties {
  */
 export class Frame extends Component<IFrameProperties> {
 
-    constructor(renderer : APLRenderer, component : APL.Component, factory : FactoryFunction, parent? : Component) {
+    constructor(renderer: APLRenderer, component: APL.Component, factory: FactoryFunction, parent?: Component) {
         super(renderer, component, factory, parent);
         this.$container.css({
             'border-style': 'solid',
@@ -35,7 +35,7 @@ export class Frame extends Component<IFrameProperties> {
             (this.setBorderWidth, PropertyKey.kPropertyBorderWidth);
     }
 
-    protected isLayout() : boolean {
+    protected isLayout(): boolean {
         return true;
     }
 
