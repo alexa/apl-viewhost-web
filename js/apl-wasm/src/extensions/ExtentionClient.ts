@@ -7,9 +7,9 @@
  * The extensionClient communicate with APLCoreEngine.
  */
 export interface IExtensionClient {
-    createRegistrationRequest(content : APL.Content) : string;
-    processMessage(context : APL.Context | null, message : string) : boolean;
-    processCommand(event : APL.Event) : string;
+    createRegistrationRequest(content: APL.Content): string;
+    processMessage(context: APL.Context | null, message: string): boolean;
+    processCommand(event: APL.Event): string;
 }
 
 /**
@@ -17,22 +17,22 @@ export interface IExtensionClient {
  */
 export class ExtensionClient implements IExtensionClient {
 
-    public extensionClient : APL.ExtensionClient;
+    public extensionClient: APL.ExtensionClient;
 
-    public constructor(config : APL.RootConfig, uri : string) {
+    public constructor(config: APL.RootConfig, uri: string) {
         this.extensionClient = Module.ExtensionClient.create(config, uri);
         return this;
     }
 
-    public createRegistrationRequest(content : APL.Content) : string {
+    public createRegistrationRequest(content: APL.Content): string {
         return this.extensionClient.createRegistrationRequest(content);
     }
 
-    public processCommand(event : APL.Event) : string {
+    public processCommand(event: APL.Event): string {
         return this.extensionClient.processCommand(event);
     }
 
-    public processMessage(context : APL.Context | null, message : string) : boolean {
+    public processMessage(context: APL.Context | null, message: string): boolean {
         return this.extensionClient.processMessage(context, message);
     }
 }

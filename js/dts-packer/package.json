@@ -6,7 +6,8 @@
   "license": "SEE LICENSE IN LICENSE.txt",
   "scripts": {
     "build": "npx webpack --config webpack.js",
-    "clean": "rimraf node_modules lib"
+    "clean": "rimraf node_modules lib",
+    "lint": "echo \"No Op\""
   },
   "devDependencies": {
     "@types/node": "^12.0.2",

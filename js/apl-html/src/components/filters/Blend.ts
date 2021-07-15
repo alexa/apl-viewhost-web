@@ -14,22 +14,22 @@ import { IBaseFilter, IImageFilterElement, BITMAP_IMAGE_REGEX_CHECK } from './Im
  * @ignore
  */
 export interface IBlend extends IBaseFilter {
-    mode : BlendMode;
-    source : number;
-    destination : number;
+    mode: BlendMode;
+    source: number;
+    destination: number;
 }
 
 /*
  * The Blend filter merges two images from the image array and appends the new image to the end of the array.
- * Specs: https://aplspec.aka.corp.amazon.com/release-1.5/html/filters.html#blend
+ * Specs: https://developer.amazon.com/en-US/docs/alexa/alexa-presentation-language/apl-filters.html#blend
  * Utilize svg <feBlend> filter
  * https://developer.mozilla.org/en-US/docs/Web/SVG/Element/feBlend
  */
 
-export function getBlendFilter(filter : Filter, imageSrcArray : string[]) : IImageFilterElement | undefined {
-    const blendId : string = uuidv4().toString();
-    let filterImageArray : SVGFEImageElement[] = [];
-    const blend : SVGElement = document.createElementNS(SVG_NS, 'feBlend');
+export function getBlendFilter(filter: Filter, imageSrcArray: string[]): IImageFilterElement | undefined {
+    const blendId: string = uuidv4().toString();
+    let filterImageArray: SVGFEImageElement[] = [];
+    const blend: SVGElement = document.createElementNS(SVG_NS, 'feBlend');
     blend.setAttributeNS('', 'mode', getBlendMode((filter as IBlend).mode));
     blend.setAttributeNS('', 'result', blendId);
 
@@ -38,7 +38,7 @@ export function getBlendFilter(filter : Filter, imageSrcArray : string[]) : IIma
      * If none of the images are bitmaps then no blending is performed;
      * the result is just the destination image.
      */
-    let sourceIndex : number = (filter as IBlend).source;
+    let sourceIndex: number = (filter as IBlend).source;
 
     // Negative case : index outside source array bounds. return undefined
     if (isIndexOutOfBound(sourceIndex, imageSrcArray.length)) {
@@ -48,7 +48,7 @@ export function getBlendFilter(filter : Filter, imageSrcArray : string[]) : IIma
         sourceIndex += imageSrcArray.length;
     }
 
-    let destinationIndex : number = (filter as IBlend).destination;
+    let destinationIndex: number = (filter as IBlend).destination;
 
     if (isIndexOutOfBound(destinationIndex, imageSrcArray.length)) {
         return undefined;
@@ -57,8 +57,8 @@ export function getBlendFilter(filter : Filter, imageSrcArray : string[]) : IIma
         destinationIndex += imageSrcArray.length;
     }
 
-    const sourceImageId : string = imageSrcArray[sourceIndex];
-    const destinationImageId : string = imageSrcArray[destinationIndex];
+    const sourceImageId: string = imageSrcArray[sourceIndex];
+    const destinationImageId: string = imageSrcArray[destinationIndex];
 
     if (sourceImageId.match(BITMAP_IMAGE_REGEX_CHECK)) {
         filterImageArray = generateSVGFeImage(sourceImageId, blend);
@@ -78,7 +78,7 @@ export function getBlendFilter(filter : Filter, imageSrcArray : string[]) : IIma
  * Return Blend Mode
  * https://codepen.io/yoksel/pen/BiExv
  */
-export function getBlendMode(mode : BlendMode) : string {
+export function getBlendMode(mode: BlendMode): string {
     switch (mode) {
         case BlendMode.kBlendModeNormal:
             return 'normal';

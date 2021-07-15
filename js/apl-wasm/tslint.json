@@ -29,12 +29,12 @@
             true,
             {
                 "match": "Copyright(\\s\\d{4}(-\\d{4})?)? Amazon.com, Inc. or its affiliates. All Rights Reserved.[\\s\\S]*",
-                "default": "Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved."
+                "default": "Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.\nSPDX-License-Identifier: Apache-2.0"
             }
         ],
         "forin": true,
         "indent": [true, "spaces"],
-        "interface-name": [true, "always-prefix"],
+        "interface-name": [false, "always-prefix"],
         "jsdoc-format": true,
         "label-position": true,
         "max-classes-per-file": [false, 1],
@@ -105,11 +105,11 @@
         "triple-equals": [true, "allow-null-check"],
         "typedef": [false],
         "typedef-whitespace": [true, {
-            "call-signature": "onespace",
-            "index-signature": "onespace",
-            "parameter": "onespace",
-            "property-declaration": "onespace",
-            "variable-declaration": "onespace"
+            "call-signature": "nospace",
+            "index-signature": "nospace",
+            "parameter": "nospace",
+            "property-declaration": "nospace",
+            "variable-declaration": "nospace"
         }, {
             "call-signature": "onespace",
             "index-signature": "onespace",

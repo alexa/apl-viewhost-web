@@ -13,12 +13,12 @@ import { ILogger } from '../../logging/ILogger';
  * @ignore
  */
 export class RichTextNode {
-    private static logger : ILogger = LoggerFactory.getLogger('RichTextNode');
-    public parser : RichTextParser;
-    public lines : Map<number, ILine> = new Map<number, ILine>();
-    public originalText : string;
+    private static logger: ILogger = LoggerFactory.getLogger('RichTextNode');
+    public parser: RichTextParser;
+    public lines: Map<number, ILine> = new Map<number, ILine>();
+    public originalText: string;
     private isHighlighted = false;
-    constructor(public element : HTMLElement) {
+    constructor(public element: HTMLElement) {
         this.parser = new RichTextParser();
         this.originalText = element.textContent as string;
     }
@@ -26,7 +26,7 @@ export class RichTextNode {
      * Highlights the part of this leaf node that resides on line `lineNumber`
      * @param lineNumber The line number to highlight
      */
-    public highlight(lineNumber : number) : boolean {
+    public highlight(lineNumber: number): boolean {
         if (!this.lines.has(lineNumber)) {
             return false;
         }
@@ -34,7 +34,7 @@ export class RichTextNode {
             throw new Error(`Cannot highlight text that doesn't have a parent`);
         }
         const line = this.lines.get(lineNumber) as ILine;
-        const styledText : APL.StyledText = {text: this.originalText, spans: []};
+        const styledText: APL.StyledText = {text: this.originalText, spans: []};
         let parent = this.element.parentElement;
         // decorations live higher up the node heirarchy, so we need to search for them
         // and add the markup at the correct location

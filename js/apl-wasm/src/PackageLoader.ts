@@ -8,8 +8,8 @@
 import { LoggerFactory } from 'apl-html';
 import { ILogger } from 'apl-html';
 
-const PREDEFINED_HOST : string = 'https://d2na8397m465mh.cloudfront.net/packages';
-const PREDEFINED_FILE_NAME : string = 'document.json';
+const PREDEFINED_HOST: string = 'https://arl.assets.apl-alexa.com/packages';
+const PREDEFINED_FILE_NAME: string = 'document.json';
 
 /**
  *
@@ -20,7 +20,7 @@ const PREDEFINED_FILE_NAME : string = 'document.json';
  */
 export class PackageLoader {
     /// Logger to be used for this component logs.
-    private logger : ILogger;
+    private logger: ILogger;
 
     /**
      * The packages map connects package name to data. It stores:
@@ -32,7 +32,7 @@ export class PackageLoader {
      * @type {Map<string, ILoadingProcessData>}
      * @memberOf PackageLoader
      */
-    private loadPackages : Map<string, ILoadingProcessData>;
+    private loadPackages: Map<string, ILoadingProcessData>;
 
     /**
      * Initialize PackageLoader attributes
@@ -49,7 +49,7 @@ export class PackageLoader {
      * @returns ILoadedResult[]
      * @memberOf PackageLoader
      */
-    public async load(importRequests : APL.ImportRequest[]) : Promise<ILoadedResult[]> {
+    public async load(importRequests: APL.ImportRequest[]): Promise<ILoadedResult[]> {
         if (importRequests) {
             await this.ensureLoaded(importRequests);
             return this.namesToData(importRequests);
@@ -69,7 +69,7 @@ export class PackageLoader {
     /**
      * Walk a list of packages until all of them have been loaded.
      */
-    private async ensureLoaded(importRequests : APL.ImportRequest[]) : Promise<any> {
+    private async ensureLoaded(importRequests: APL.ImportRequest[]): Promise<any> {
         return new Promise((resolve, reject) => {
             let count = importRequests.length;
 
@@ -91,10 +91,10 @@ export class PackageLoader {
     /*
      * Execute a package load.
      */
-    private async loadPackage(name : string, version : string, url : string) : Promise<any> {
+    private async loadPackage(name: string, version: string, url: string): Promise<any> {
         const key = `${name}/${version}`;
         if (this.loadPackages.get(key)) {
-            const data : ILoadingProcessData | undefined = this.loadPackages.get(key);
+            const data: ILoadingProcessData | undefined = this.loadPackages.get(key);
             if (data && data.state === LoadState.done) {
                 return Promise.resolve();
             }
@@ -103,7 +103,7 @@ export class PackageLoader {
                 state: LoadState.load,
                 json: {}
             });
-            const pkg : ILoadingProcessData | undefined = this.loadPackages.get(key);
+            const pkg: ILoadingProcessData | undefined = this.loadPackages.get(key);
 
             if (!url) {
                 url = `${PREDEFINED_HOST}/${name}/${version}/${PREDEFINED_FILE_NAME}`;
@@ -139,10 +139,10 @@ export class PackageLoader {
      *   ...
      * ]
      */
-    private namesToData(importRequests : APL.ImportRequest[]) : ILoadedResult[] {
+    private namesToData(importRequests: APL.ImportRequest[]): ILoadedResult[] {
         return importRequests.map((ir) => {
             const key = `${ir.reference().name()}/${ir.reference().version()}`;
-            const pkgdoc : ILoadingProcessData | undefined = this.loadPackages.get(key);
+            const pkgdoc: ILoadingProcessData | undefined = this.loadPackages.get(key);
             return {
                 json: pkgdoc ? pkgdoc.json : {},
                 justLoaded: pkgdoc ? true : false,
@@ -154,7 +154,7 @@ export class PackageLoader {
     /**
      *   Deep-freeze object to ensure JSON is never modified
      */
-    private deepFreeze(obj : object) {
+    private deepFreeze(obj: object) {
         return JSON.parse(JSON.stringify(obj));
     }
 }
@@ -166,8 +166,8 @@ export class PackageLoader {
  * @interface ILoadingProcessData
  */
 export interface ILoadingProcessData {
-    json : object;
-    state : LoadState;
+    json: object;
+    state: LoadState;
 }
 
 /**
@@ -190,7 +190,7 @@ export enum LoadState {
  * @interface ILoadedResult
  */
 export interface ILoadedResult {
-    json : object;
-    justLoaded : boolean;
-    importRequest : APL.ImportRequest;
+    json: object;
+    justLoaded: boolean;
+    importRequest: APL.ImportRequest;
 }

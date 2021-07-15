@@ -4,353 +4,192 @@
  */
 
 import APLRenderer from '../../APLRenderer';
-import { AudioTrack } from '../../enums/AudioTrack';
-import { CommandControlMedia } from '../../enums/CommandControlMedia';
-import { PropertyKey } from '../../enums/PropertyKey';
-import { VideoScale } from '../../enums/VideoScale';
-import { IMediaEventListener } from '../../media/IMediaEventListener';
-import { IMediaSource } from '../../media/IMediaSource';
-import { IMediaResource, PlaybackManager } from '../../media/PlaybackManager';
-import { PlaybackState } from '../../media/Resource';
-import { HLSVideoPlayer as VideoPlayer } from '../../media/video/HLSVideoPlayer';
-import { Component, FactoryFunction } from '../Component';
-import { AbstractVideoComponent } from './AbstractVideoComponent';
+import {AudioTrack} from '../../enums/AudioTrack';
+import {CommandControlMedia} from '../../enums/CommandControlMedia';
+import {VideoScale} from '../../enums/VideoScale';
+import {IMediaSource} from '../../media/IMediaSource';
+import {PlaybackState} from '../../media/Resource';
+import {Component, FactoryFunction} from '../Component';
+import {AbstractVideoComponent} from './AbstractVideoComponent';
+import {createVideoEventSequencer, VideoEventSequencer, VideoInterface} from './VideoEventSequencer';
+import {ILogger} from '../../logging/ILogger';
+import {LoggerFactory} from '../../logging/LoggerFactory';
+import {createVideoEventProcessor} from './VideoEventProcessor';
 
-type CallbackFunction = () => void;
+const logger: ILogger = LoggerFactory.getLogger('Video');
 
-/**
- * @ignore
- */
+// Shell Interface to Core
+// If a command gets invoked externally, put in the queue and tell the sequencer to process
 export class Video extends AbstractVideoComponent {
-    protected player = new VideoPlayer(this as IMediaEventListener);
-    protected playbackManager : PlaybackManager;
-    protected currentMediaResource : IMediaResource;
-    protected currentMediaState : APL.IMediaState = {
-        currentTime: 0,
-        duration: 0,
-        ended: false,
-        paused: true,
-        trackCount: 0,
-        trackIndex: 0
-    };
-    protected audioTrack : AudioTrack;
+    private readonly videoEventProcessor: any;
+    private readonly videoEventSequencer: VideoEventSequencer;
+    private fromEvent: boolean = false;
+    private isSettingSource: boolean = false;
 
-    private videoState : PlaybackState = PlaybackState.IDLE;
-
-    private playPromise : Promise<void>;
-    private pausePromise : Promise<void>;
-    private loadPromise : Promise<void>;
-
-    private playCallback : undefined | CallbackFunction;
-    private pauseCallback : undefined | CallbackFunction;
-    private loadCallback : undefined | CallbackFunction;
-
-    private isSettingSource : boolean = false;
-    private fromEvent : boolean = false;
-    private trackCurrentTime : number = 0;
-    constructor(renderer : APLRenderer, component : APL.Component, factory : FactoryFunction, parent? : Component) {
+    constructor(renderer: APLRenderer, component: APL.Component, factory: FactoryFunction, parent?: Component) {
         super(renderer, component, factory, parent);
-        this.player = new VideoPlayer(this as IMediaEventListener);
-        this.playbackManager = new PlaybackManager();
+        this.videoEventProcessor = createVideoEventProcessor({
+            videoComponent: this,
+            logger
+        });
+        this.videoEventSequencer = createVideoEventSequencer({
+            videoEventProcessor: this.videoEventProcessor,
+            logger
+        });
     }
 
-    public onEvent(event : PlaybackState) : void {
-        switch (event) {
-            case PlaybackState.PLAYING:
-                this.currentMediaState.ended = false;
-                this.currentMediaState.paused = false;
-                break;
-            case PlaybackState.PAUSED:
-                this.currentMediaState.paused = true;
-                break;
-            case PlaybackState.ENDED:
-                if (this.playbackManager.repeat()) {
-                    // Just rewind and play it again
-                    this.rewind().then(() => this.play());
-                } else if (this.playbackManager.hasNext()) {
-                    this.next().then(() => this.play());
-                } else {
-                    this.currentMediaState.ended = true;
-                }
-                break;
-            case PlaybackState.ERROR:
-                this.logger.error('Playback error.');
-                this.currentMediaState.ended = true;
-                this.currentMediaState.paused = true;
-                break;
-            case PlaybackState.LOADED:
-                this.currentMediaResource.loaded = true;
-                break;
-            case PlaybackState.BUFFERING: // FALLTHROUGH
-            case PlaybackState.IDLE: // FALLTHROUGH
-            default:
-                return;
-        }
-        this.videoState = event;
-        this.updateMediaState();
+    public onEvent(event: PlaybackState): void {
+        this.videoEventSequencer.enqueueForProcessing(VideoInterface.ON_EVENT, {
+            event,
+            fromEvent: this.fromEvent,
+            isSettingSource: this.isSettingSource
+        });
     }
 
-    protected applyCssShadow = (shadowParams : string) => {
-        if (this.player) {
-            this.player.applyCssShadow(shadowParams);
-        }
+    // Event Methods
+    public async playMedia(source: IMediaSource | IMediaSource[], audioTrack: AudioTrack) {
+        await this.videoEventSequencer.processExclusively(VideoInterface.PLAY_MEDIA, {
+            source,
+            audioTrack
+        });
     }
 
-    public async playMedia(source : IMediaSource | IMediaSource[], audioTrack : AudioTrack) {
-        this.fromEvent = true;
-        this.playbackManager.setup(source);
-        this.audioTrack = audioTrack;
-        this.currentMediaResource = this.playbackManager.getCurrent();
-        await this.seek(this.currentMediaResource.offset);
-        await this.play(this.audioTrack === AudioTrack.kAudioTrackForeground);
-        this.fromEvent = false;
+    public async controlMedia(operation: CommandControlMedia, optionalValue: number) {
+        this.videoEventSequencer.enqueueForProcessing(VideoInterface.CONTROL_MEDIA, {
+            operation,
+            optionalValue
+        });
     }
 
-    public async controlMedia(operation : CommandControlMedia, optionalValue : number) {
-        this.fromEvent = true;
-        switch (operation) {
-            case CommandControlMedia.kCommandControlMediaPlay:
-                await this.play();
-                break;
-            case CommandControlMedia.kCommandControlMediaPause:
-                await this.pause();
-                break;
-            case CommandControlMedia.kCommandControlMediaNext:
-                await this.next();
-                break;
-            case CommandControlMedia.kCommandControlMediaPrevious:
-                await this.previous();
-                break;
-            case CommandControlMedia.kCommandControlMediaRewind:
-                await this.rewind();
-                break;
-            case CommandControlMedia.kCommandControlMediaSeek:
-                await this.seek(optionalValue);
-                break;
-            case CommandControlMedia.kCommandControlMediaSetTrack:
-                await this.setTrack(optionalValue);
-                break;
-            default:
-                this.logger.warn('Incorrect CommandControlMedia operation type');
-                break;
-        }
-        this.fromEvent = false;
+    // Playback Control Methods
+    public async play(waitForFinish?: boolean): Promise<any> {
+        this.videoEventSequencer.enqueueForProcessing(VideoInterface.PLAY, {
+            waitForFinish,
+            fromEvent: this.fromEvent,
+            isSettingSource: this.isSettingSource
+        });
     }
 
-    public async play(waitForFinish : boolean = false) {
-        this.currentMediaResource = this.playbackManager.getCurrent();
-        if (this.audioTrack === AudioTrack.kAudioTrackNone) {
-            this.player.mute();
-        } else {
-            this.player.unmute();
-        }
-
-        this.resetPlayPromise();
-
-        await this.ensureLoaded();
-
-        if (this.currentMediaResource.duration > 0) {
-            this.player.setEndTime((this.currentMediaResource.offset + this.currentMediaResource.duration) / 1000);
-        }
-        await this.player.play(this.currentMediaResource.id, this.currentMediaResource.url,
-            this.currentMediaResource.offset);
-        await this.playPromise;
-        if (waitForFinish) {
-            this.resetPausePromise();
-            await this.pausePromise;
-        }
+    public async pause(): Promise<any> {
+        this.videoEventSequencer.enqueueForProcessing(VideoInterface.PAUSE, {
+            fromEvent: this.fromEvent
+        });
     }
 
-    public async pause() {
-        if (this.videoState === PlaybackState.PLAYING || this.videoState === PlaybackState.BUFFERING) {
-            this.resetPausePromise();
-            this.player.pause();
-            await this.pausePromise;
-        }
+    public async seek(offset: number): Promise<any> {
+        this.videoEventSequencer.enqueueForProcessing(VideoInterface.SEEK, {
+            offset,
+            fromEvent: this.fromEvent
+        });
     }
 
-    public async next() {
-        await this.pause();
-        if (!this.playbackManager.hasNext()) {
-            await this.player.setCurrentTime(this.player.getDuration() - 0.001);
-            this.updateMediaState();
-        } else {
-            this.currentMediaResource = this.playbackManager.next();
-            await this.ensureLoaded();
-        }
+    public async rewind(): Promise<any> {
+        this.videoEventSequencer.enqueueForProcessing(VideoInterface.REWIND, {
+            fromEvent: this.fromEvent
+        });
     }
 
-    public async previous() {
-        await this.pause();
-        this.currentMediaResource = this.playbackManager.previous();
-        await this.ensureLoaded();
+    public async previous(): Promise<any> {
+        this.videoEventSequencer.enqueueForProcessing(VideoInterface.PREVIOUS, {
+            fromEvent: this.fromEvent
+        });
     }
 
-    public async rewind() {
-        await this.seek(this.currentMediaResource.offset);
+    public async next(): Promise<any> {
+        this.videoEventSequencer.enqueueForProcessing(VideoInterface.NEXT, {
+            fromEvent: this.fromEvent
+        });
     }
 
-    public async seek(offset : number) {
-        const shouldPauseAtSeek = this.shouldPauseAtSeek(offset);
-        await this.pause();
-        const mediaResource : IMediaResource = this.playbackManager.getCurrent();
-        const startOffset : number = mediaResource.offset;
-        const desireOffset : number = startOffset + offset;
-
-        await this.ensureLoaded();
-
-        if (this.player.getDuration() <= desireOffset / 1000) {
-            // minus unit time otherwise will rollover to start
-            this.player.setCurrentTime(this.player.getDuration() - 0.001);
-        } else {
-            this.player.setCurrentTime(desireOffset / 1000);
-        }
-        // video restore from previous state, check whether we should start play or remain pause
-        this.currentMediaState.paused = shouldPauseAtSeek;
-        if (!this.currentMediaState.paused) {
-            await this.play();
-        }
-        this.updateMediaState();
+    public async setTrack(trackIndex: number): Promise<any> {
+        this.videoEventSequencer.enqueueForProcessing(VideoInterface.SET_TRACK, {
+            trackIndex,
+            fromEvent: this.fromEvent
+        });
     }
 
-    public async setTrack(trackIndex : number) {
-        await this.pause();
-        this.playbackManager.setCurrent(trackIndex);
-        this.currentMediaResource = this.playbackManager.getCurrent();
-        await this.ensureLoaded();
+    protected setAudioTrack(audioTrack: AudioTrack) {
+        this.videoEventSequencer.enqueueForProcessing(VideoInterface.SET_AUDIO_TRACK, {
+            audioTrack
+        });
     }
 
-    protected setScale(scale : VideoScale) {
-        let scaleType : 'contain' | 'cover' = 'contain';
-        switch (scale) {
-            case VideoScale.kVideoScaleBestFit:
-                scaleType = 'contain';
-                break;
-            case VideoScale.kVideoScaleBestFill:
-                scaleType = 'cover';
-                break;
-            default:
-                this.logger.warn('Incorrect VideoScale type');
-                break;
-        }
-        this.player.configure(this.container, scaleType);
+    protected async setSource(source: IMediaSource | IMediaSource[]): Promise<any> {
+        this.videoEventSequencer.enqueueForProcessing(VideoInterface.SET_SOURCE, {
+            source
+        });
     }
 
-    protected setAudioTrack(audioTrack : AudioTrack) {
-        this.audioTrack = audioTrack;
+    protected setTrackCurrentTime(trackCurrentTime: number) {
+        this.videoEventSequencer.enqueueForProcessing(VideoInterface.SET_TRACK_CURRENT_TIME, {
+            trackCurrentTime
+        });
     }
 
-    protected async setSource(source : IMediaSource | IMediaSource[]) {
-        this.isSettingSource = true;
-        this.playbackManager.setup(source);
-        await this.play();
-        this.isSettingSource = false;
-        await this.seek(this.trackCurrentTime);
+    protected setTrackIndex(trackIndex: number) {
+        this.videoEventSequencer.enqueueForProcessing(VideoInterface.SET_TRACK_INDEX, {
+            trackIndex
+        });
     }
 
-    protected setTrackCurrentTime(trackCurrentTime : number) {
-        this.trackCurrentTime = trackCurrentTime;
-        this.player.setCurrentTime(this.trackCurrentTime / 1000);
+    protected setScale(scale: VideoScale) {
+        this.videoEventSequencer.enqueueForProcessing(VideoInterface.SET_SCALE, {
+            scale
+        });
     }
 
-    protected setTrackIndex(trackIndex : number) {
-        if (this.props[PropertyKey.kPropertyTrackIndex]) {
-            this.setTrack(trackIndex);
-        }
+    protected setTrackPaused(isPaused: boolean) {
+        this.videoEventSequencer.enqueueForProcessing(VideoInterface.SET_TRACK_PAUSED, {
+            shouldBePaused: isPaused
+        });
     }
 
+    // Video Component Methods
     protected updateMediaState() {
-        if (this.player === undefined) {
-            return;
-        }
-        this.currentMediaState.currentTime = Math.round(this.player.getCurrentPlaybackPosition() * 1000);
-        this.currentMediaState.duration = Math.round(this.player.getDuration() * 1000);
-        this.currentMediaState.trackCount = this.playbackManager.getTrackCount();
-        this.currentMediaState.trackIndex = this.playbackManager.getCurrentIndex();
-        if (!this.isSettingSource) {
-            this.component.updateMediaState(this.currentMediaState, this.fromEvent);
-            this.emit('onUpdateMediaState', this.currentMediaState, this.fromEvent);
-        }
-
-        if (this.loadPromise &&
-            this.currentMediaResource.loaded) {
-            this.loadPromise = undefined;
-            this.loadCallback();
-        }
-
-        if (this.playPromise &&
-            (this.currentMediaState.ended === false && this.currentMediaState.paused === false)) {
-            this.playPromise = undefined;
-            this.playCallback();
-        }
-
-        if (this.pausePromise &&
-            (this.currentMediaState.paused === true || this.currentMediaState.ended === true)) {
-            this.pausePromise = undefined;
-            this.pauseCallback();
-        }
-    }
-
-    private resetPausePromise() {
-        if (this.pausePromise) {
-            this.pauseCallback();
-        }
-        this.pausePromise = new Promise<void>((res) => {
-            this.pauseCallback = res;
+        this.videoEventSequencer.enqueueForProcessing(VideoInterface.UPDATE_MEDIA_STATE, {
+            fromEvent: this.fromEvent,
+            isSettingSource: this.isSettingSource
         });
-    }
-
-    private resetPlayPromise() {
-        if (this.playPromise) {
-            this.playCallback();
-        }
-        this.playPromise = new Promise<void>((res) => {
-            this.playCallback = res;
-        });
-    }
-
-    private resetLoadPromise() {
-        if (this.loadPromise) {
-            this.loadCallback();
-        }
-        this.loadPromise = new Promise<void>((res) => {
-            this.loadCallback = res;
-        });
-    }
-
-    private async ensureLoaded() {
-        if (!this.currentMediaResource.loaded) {
-            this.resetLoadPromise();
-            await this.player.load(this.currentMediaResource.id, this.currentMediaResource.url);
-            await this.loadPromise;
-        } else {
-            this.updateMediaState();
-        }
-    }
-
-    /**
-     * Return if the video should be paused when seeking to an offset.
-     * The play/pause should depend on kPropertyAutoplay at initial load - offset == 0.
-     * The play/pause should depend on kPropertyTrackPaused once video has been played - offset > 0.
-     *
-     * @param seekOffset
-     * @private
-     */
-    private shouldPauseAtSeek(seekOffset : number) : boolean {
-        let shouldPauseAtSeek = true;
-        if (this.props[PropertyKey.kPropertyAutoplay]) {
-            shouldPauseAtSeek = false;
-        }
-        if (seekOffset > 0) {
-            shouldPauseAtSeek = this.props[PropertyKey.kPropertyTrackPaused];
-        }
-        return shouldPauseAtSeek;
     }
 
     public destroy() {
+        logger.info('#destroy');
         super.destroy();
-        // to prevent component go destroy before saving media state
-        this.updateMediaState();
-        this.player = undefined;
+        this.videoEventSequencer.destroy();
+        this.videoEventProcessor.destroy();
+    }
+
+    // Component Methods
+    protected applyCssShadow = (shadowParams: string) => {
+        this.videoEventSequencer.enqueueForProcessing(VideoInterface.APPLY_CSS_SHADOW, {
+            shadowParams
+        });
+    }
+
+    /*
+     * Previously Exposed Properties
+     *
+     * Ideally we wouldn't expose these, but they were previously exposed and developers have already taken a dependency
+     * on these properties in their implementations
+     */
+
+    protected get player() {
+        return this.videoEventProcessor.player;
+    }
+
+    protected get audioTrack() {
+        return this.videoEventProcessor.audioTrack;
+    }
+
+    protected get playbackManager() {
+        return this.videoEventProcessor.playbackManager;
+    }
+
+    protected get currentMediaResource() {
+        return this.videoEventProcessor.currentMediaResource;
+    }
+
+    protected get currentMediaState() {
+        return this.videoEventProcessor.currentMediaState;
     }
 }

@@ -19,17 +19,17 @@ export interface IBaseMarker {
     /**
      * Marker type
      */
-    type : SpeechMarkType;
+    type: SpeechMarkType;
 
     /**
      * Time offset in milliseconds
      */
-    time : number;
+    time: number;
 
     /**
      * Value of the marker (defined by type)
      */
-    value : string;
+    value: string;
 }
 
 /**
@@ -40,10 +40,10 @@ export interface IFragmentMarker extends IBaseMarker {
     /**
      * Start index in the sentence of this fragment
      */
-    start : number;
+    start: number;
 
     /**
      * End index ( +1 ) in the sentence of this fragment
      */
-    end : number;
+    end: number;
 }

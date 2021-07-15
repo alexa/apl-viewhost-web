@@ -16,11 +16,11 @@ import { LogLevel } from './LogLevel';
  */
 export class LoggerFactory {
     /// Root logger object.
-    private static rootLogger : loglevel.RootLogger = loglevel;
-    private static originalFactory : MethodFactory = LoggerFactory.rootLogger.methodFactory;
+    private static rootLogger: loglevel.RootLogger = loglevel;
+    private static originalFactory: MethodFactory = LoggerFactory.rootLogger.methodFactory;
 
     /// Flag to specify if logger was initialized.
-    private static initialized : boolean = false;
+    private static initialized: boolean = false;
 
     /**
      * Initialize logger
@@ -28,15 +28,15 @@ export class LoggerFactory {
      * @param logLevel one of 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'silent'
      * @param transport optional parameter for custom log transport. @see LogTransport
      */
-    public static initialize(logLevel : LogLevel, transport? : LogTransport) : void {
+    public static initialize(logLevel: LogLevel, transport?: LogTransport): void {
         this.rootLogger.setDefaultLevel(logLevel);
 
         this.rootLogger.methodFactory =
-            (methodName : string,
-             level : LogLevelNumbers,
-             loggerName : string) => {
+            (methodName: string,
+             level: LogLevelNumbers,
+             loggerName: string) => {
                 const rawMethod = LoggerFactory.originalFactory(methodName, level, loggerName);
-                return (message : string) => {
+                return (message: string) => {
                     if (transport) {
                         transport(methodName as LogLevel, loggerName, message);
                     } else {
@@ -53,7 +53,7 @@ export class LoggerFactory {
      *
      * @param name Name of the requesting component.
      */
-    public static getLogger(name : string) : ILogger {
+    public static getLogger(name: string): ILogger {
         if (!this.initialized) {
             this.initialize('info');
         }

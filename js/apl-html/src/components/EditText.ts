@@ -3,53 +3,54 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import APLRenderer, { IAsyncKeyboardEvent } from '../APLRenderer';
-import { ActionableComponent } from './ActionableComponent';
-import { Component, FactoryFunction, IComponentProperties, fitElementToRectangle } from './Component';
-import { FontStyle } from '../enums/FontStyle';
-import { PropertyKey } from '../enums/PropertyKey';
+import APLRenderer, {IAsyncKeyboardEvent} from '../APLRenderer';
+import {ActionableComponent} from './ActionableComponent';
+import {Component, FactoryFunction, IComponentProperties} from './Component';
+import {FontStyle} from '../enums/FontStyle';
+import {PropertyKey} from '../enums/PropertyKey';
 import * as $ from 'jquery';
-import { FontUtils } from '../utils/FontUtils';
-import { UpdateType } from '../enums/UpdateType';
-import { KeyboardType } from '../enums/KeyboardType';
-import { ARROW_RIGHT, ARROW_LEFT, ARROW_DOWN, ARROW_UP, ENTER_KEY } from '../utils/Constant';
+import {applyAplRectToStyle} from './helpers/StylesUtil';
+import {FontUtils} from '../utils/FontUtils';
+import {UpdateType} from '../enums/UpdateType';
+import {KeyboardType} from '../enums/KeyboardType';
+import {ARROW_RIGHT, ARROW_LEFT, ARROW_DOWN, ARROW_UP, ENTER_KEY} from '../utils/Constant';
 
 /**
  * @ignore
  */
 export interface IEditTextProperties extends IComponentProperties {
-    [PropertyKey.kPropertyBorderColor] : number;
-    [PropertyKey.kPropertyBorderStrokeWidth] : number;
-    [PropertyKey.kPropertyBorderWidth] : number;
-    [PropertyKey.kPropertyColor] : number;
-    [PropertyKey.kPropertyFontFamily] : string;
-    [PropertyKey.kPropertyFontSize] : number;
-    [PropertyKey.kPropertyFontStyle] : FontStyle;
-    [PropertyKey.kPropertyFontWeight] : string | number;
-    [PropertyKey.kPropertyHighlightColor] : number;
-    [PropertyKey.kPropertyHint] : string;
-    [PropertyKey.kPropertyHintColor] : number;
-    [PropertyKey.kPropertyHintStyle] : FontStyle;
-    [PropertyKey.kPropertyHintWeight] : string | number;
-    [PropertyKey.kPropertyKeyboardType] : KeyboardType;
-    [PropertyKey.kPropertyMaxLength] : number;
-    [PropertyKey.kPropertySecureInput] : boolean;
-    [PropertyKey.kPropertySelectOnFocus] : boolean;
-    [PropertyKey.kPropertySize] : number;
-    [PropertyKey.kPropertySubmitKeyType] : string; // this depends on OS Keyboard through inputmode/input type in html.
-    [PropertyKey.kPropertyText] : string;
-    [PropertyKey.kPropertyValidCharacters] : string;
+    [PropertyKey.kPropertyBorderColor]: number;
+    [PropertyKey.kPropertyBorderStrokeWidth]: number;
+    [PropertyKey.kPropertyBorderWidth]: number;
+    [PropertyKey.kPropertyColor]: number;
+    [PropertyKey.kPropertyFontFamily]: string;
+    [PropertyKey.kPropertyFontSize]: number;
+    [PropertyKey.kPropertyFontStyle]: FontStyle;
+    [PropertyKey.kPropertyFontWeight]: string | number;
+    [PropertyKey.kPropertyHighlightColor]: number;
+    [PropertyKey.kPropertyHint]: string;
+    [PropertyKey.kPropertyHintColor]: number;
+    [PropertyKey.kPropertyHintStyle]: FontStyle;
+    [PropertyKey.kPropertyHintWeight]: string | number;
+    [PropertyKey.kPropertyKeyboardType]: KeyboardType;
+    [PropertyKey.kPropertyMaxLength]: number;
+    [PropertyKey.kPropertySecureInput]: boolean;
+    [PropertyKey.kPropertySelectOnFocus]: boolean;
+    [PropertyKey.kPropertySize]: number;
+    [PropertyKey.kPropertySubmitKeyType]: string; // this depends on OS Keyboard through inputmode/input type in html.
+    [PropertyKey.kPropertyText]: string;
+    [PropertyKey.kPropertyValidCharacters]: string;
 }
 
 export class EditText extends ActionableComponent<IEditTextProperties> {
-    public formElement : HTMLFormElement;
-    public inputElement : HTMLInputElement;
-    private localFocused : boolean = false;
+    public formElement: HTMLFormElement;
+    public inputElement: HTMLInputElement;
+    private localFocused: boolean = false;
     // Current press state
-    private enterPressedDown : boolean = false;
-    private isEdge : boolean = /msie\s|trident\/|edge\//i.test(window.navigator.userAgent);
+    private enterPressedDown: boolean = false;
+    private isEdge: boolean = /msie\s|trident\/|edge\//i.test(window.navigator.userAgent);
 
-    constructor(renderer : APLRenderer, component : APL.Component, factory : FactoryFunction, parent? : Component) {
+    constructor(renderer: APLRenderer, component: APL.Component, factory: FactoryFunction, parent?: Component) {
         super(renderer, component, factory, parent);
         this.initEditTextHtmlComponent();
 
@@ -65,6 +66,7 @@ export class EditText extends ActionableComponent<IEditTextProperties> {
         (this.setBorderWidth, PropertyKey.kPropertyDrawnBorderWidth)
         (this.setColor, PropertyKey.kPropertyColor)
         (this.setDisabled, PropertyKey.kPropertyDisabled)
+        (this.setLang, PropertyKey.kPropertyLang)
         (this.setFontFamily, PropertyKey.kPropertyFontFamily)
         (this.setFontSize, PropertyKey.kPropertyFontSize)
         (this.setFontStyle, PropertyKey.kPropertyFontStyle)
@@ -110,7 +112,10 @@ export class EditText extends ActionableComponent<IEditTextProperties> {
     private setInnerBounds() {
         const innerBounds = this.component.getCalculatedByKey<APL.Rect>(PropertyKey.kPropertyInnerBounds);
         if (innerBounds) {
-            fitElementToRectangle(this.inputElement, innerBounds);
+            applyAplRectToStyle({
+                domElement: this.inputElement,
+                rectangle: innerBounds
+            });
         } else {
             $(this.inputElement).css('max-width', '100%');
             $(this.inputElement).css('max-height', '100%');
@@ -135,22 +140,36 @@ export class EditText extends ActionableComponent<IEditTextProperties> {
         this.inputElement.disabled = this.props[PropertyKey.kPropertyDisabled];
     }
 
+    private setLang = () => {
+        this.container.lang = this.lang;
+    }
+
+    private setFontStyle = () => {
+        FontUtils.setFontStyle({
+            element: this.inputElement,
+            fontStyle: this.props[PropertyKey.kPropertyFontStyle],
+            lang: this.lang
+        });
+    }
+
+    private setFontWeight = () => {
+        FontUtils.setFontWeight({
+            element: this.inputElement,
+            fontWeight: this.props[PropertyKey.kPropertyFontWeight],
+            lang: this.lang
+        });
+    }
+
     private setFontFamily = () => {
-        const fontFamily = FontUtils.getFont(this.props[PropertyKey.kPropertyFontFamily]);
-        $(this.inputElement).css('font-family', fontFamily);
+        FontUtils.setFontFamily({
+            element: this.inputElement,
+            fontFamily: this.props[PropertyKey.kPropertyFontFamily],
+            lang: this.lang
+        });
     }
 
     private setFontSize = () => {
         $(this.inputElement).css('font-size', this.props[PropertyKey.kPropertyFontSize]);
-    }
-
-    private setFontStyle = () => {
-        const fontStyle = FontUtils.getFontStyle(this.props[PropertyKey.kPropertyFontStyle]);
-        $(this.inputElement).css('font-style', fontStyle);
-    }
-
-    private setFontWeight = () => {
-        $(this.inputElement).css('font-weight', this.props[PropertyKey.kPropertyFontWeight]);
     }
 
     private setHighlightColor = () => {
@@ -165,21 +184,21 @@ export class EditText extends ActionableComponent<IEditTextProperties> {
     private setHintColor = () => {
         // per https://caniuse.com/css-placeholder
         this.addRuleToAvailableStyleSheet('#\\' + this.component.getUniqueId() +
-                ' input' + (this.isEdge ? '::-ms-input-placeholder' : '::placeholder'),
-                'color: ' + Component.numberToColor(this.props[PropertyKey.kPropertyHintColor]));
+            ' input' + (this.isEdge ? '::-ms-input-placeholder' : '::placeholder'),
+            'color: ' + Component.numberToColor(this.props[PropertyKey.kPropertyHintColor]));
     }
 
     private setHintStyle = () => {
         const fontStyle = FontUtils.getFontStyle(this.props[PropertyKey.kPropertyHintStyle]);
         this.addRuleToAvailableStyleSheet('#\\' + this.component.getUniqueId() +
-                ' input' + (this.isEdge ? '::-ms-input-placeholder' : '::placeholder'),
-                'font-style: ' + fontStyle);
+            ' input' + (this.isEdge ? '::-ms-input-placeholder' : '::placeholder'),
+            'font-style: ' + fontStyle);
     }
 
     private setHintWeight = () => {
         this.addRuleToAvailableStyleSheet('#\\' + this.component.getUniqueId() +
-                ' input' + (this.isEdge ? '::-ms-input-placeholder' : '::placeholder'),
-                'font-weight: ' + this.props[PropertyKey.kPropertyHintWeight]);
+            ' input' + (this.isEdge ? '::-ms-input-placeholder' : '::placeholder'),
+            'font-weight: ' + this.props[PropertyKey.kPropertyHintWeight]);
     }
 
     private setKeyboardType = () => {
@@ -275,7 +294,7 @@ export class EditText extends ActionableComponent<IEditTextProperties> {
         event.preventDefault();
     }
 
-    private onKeyup = (event : IAsyncKeyboardEvent) => {
+    private onKeyup = (event: IAsyncKeyboardEvent) => {
         // only deal with this component event. Do not listen on dispatched event from Root.
         if (event.key === ENTER_KEY && this.enterPressedDown === true && !event.asyncChecked) {
             this.update(UpdateType.kUpdateSubmit, 0);
@@ -284,7 +303,7 @@ export class EditText extends ActionableComponent<IEditTextProperties> {
         this.filterEventPropagation(event, this.inputElement);
     }
 
-    private onKeydown = (event : IAsyncKeyboardEvent) => {
+    private onKeydown = (event: IAsyncKeyboardEvent) => {
         if (event.key === ENTER_KEY && !event.asyncChecked) {
             this.enterPressedDown = true;
         }
@@ -292,14 +311,14 @@ export class EditText extends ActionableComponent<IEditTextProperties> {
     }
 
     // filter the text based on validCharacters
-    private async filterText(text : string) : Promise<string> {
+    private async filterText(text: string): Promise<string> {
         // cannot use filter directly as async in filter does not work.
         const promises = await text.split('').map(async (char) => await this.component.isCharacterValid(char));
         const charValidList = await Promise.all(promises);
         return text.split('').filter((char, index) => charValidList[index] === true).join('');
     }
 
-    private addRuleToAvailableStyleSheet(selector : string, style : string) {
+    private addRuleToAvailableStyleSheet(selector: string, style: string) {
         const sheets = document.styleSheets;
         for (let i = 0; i < sheets.length; i++) {
             try {
@@ -311,14 +330,14 @@ export class EditText extends ActionableComponent<IEditTextProperties> {
         }
     }
 
-    private filterEventPropagation(event : IAsyncKeyboardEvent, inputElement : HTMLInputElement) {
+    private filterEventPropagation(event: IAsyncKeyboardEvent, inputElement: HTMLInputElement) {
         if (this.shouldStopPropagation(event, inputElement)) {
             event.stopPropagation();
             event.cancelBubble = true;
         }
     }
 
-    private shouldStopPropagation(event : IAsyncKeyboardEvent, inputElement : HTMLInputElement) {
+    private shouldStopPropagation(event: IAsyncKeyboardEvent, inputElement: HTMLInputElement) {
         if (inputElement.selectionStart !== inputElement.selectionEnd) {
             return true;
         }

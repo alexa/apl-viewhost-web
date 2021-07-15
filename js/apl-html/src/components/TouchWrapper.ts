@@ -13,14 +13,14 @@ import { ChildAction } from '../utils/Constant';
  * @ignore
  */
 export interface ITouchWrapperProperties extends IComponentProperties {
-    [PropertyKey.kPropertyNotifyChildrenChanged] : any;
+    [PropertyKey.kPropertyNotifyChildrenChanged]: any;
 }
 
 /**
  * @ignore
  */
 export class TouchWrapper extends ActionableComponent<ITouchWrapperProperties> {
-    constructor(renderer : APLRenderer, component : APL.Component, factory : FactoryFunction, parent? : Component) {
+    constructor(renderer: APLRenderer, component: APL.Component, factory: FactoryFunction, parent?: Component) {
         super(renderer, component, factory, parent);
 
         // override or add more propExecutors
@@ -28,7 +28,7 @@ export class TouchWrapper extends ActionableComponent<ITouchWrapperProperties> {
             (this.updateUponChildrenChange, PropertyKey.kPropertyNotifyChildrenChanged);
     }
 
-    protected isLayout() : boolean {
+    protected isLayout(): boolean {
         return true;
     }
 

@@ -8,15 +8,16 @@ import { DocumentBuilder } from './DocumentBuilder';
 import { Emoji } from './Emoji';
 
 export interface IRichTextStyles {
-    markColor : string;
+    markColor: string;
 }
 
 export interface ISpannedTextNode {
-    type : SpanType|'root'|'text'|'mark';
-    start : number;
-    end : number;
-    text? : string;
-    children? : ISpannedTextNode[];
+    type: SpanType|'root'|'text'|'mark';
+    start: number;
+    end: number;
+    text?: string;
+    children?: ISpannedTextNode[];
+    attributes?: APL.SpanAttribute[];
 }
 
 /**
@@ -24,7 +25,7 @@ export interface ISpannedTextNode {
  * @class StyledTextParser
  */
 export class RichTextParser {
-    private static spanCompare(a : ISpannedTextNode, b : ISpannedTextNode) : number {
+    private static spanCompare(a: ISpannedTextNode, b: ISpannedTextNode): number {
         if (a.start > b.start) {
             return 1;
         } else if (a.start < b.start) {
@@ -46,7 +47,7 @@ export class RichTextParser {
         return 0;
     }
 
-    public styles : IRichTextStyles = {
+    public styles: IRichTextStyles = {
         markColor: 'red'
     };
 
@@ -56,28 +57,33 @@ export class RichTextParser {
      * @param existing optional existing element to attach text to.
      * @returns Resulting Rich text element.
      */
-    public processStyledText(styledText : APL.StyledText, existing? : HTMLElement) : HTMLElement {
-        const targetElement : HTMLElement = existing ? existing : document.createElement('p');
+    public processStyledText(styledText: APL.StyledText, existing?: HTMLElement): HTMLElement {
+        const targetElement: HTMLElement = existing ? existing : document.createElement('p');
         if (existing) {
             while (targetElement.firstChild) {
                 targetElement.removeChild(targetElement.firstChild);
             }
         }
         const outputText = styledText.text;
-        const styleSpans : APL.TextSpan[] = styledText.spans;
+        const styleSpans: APL.TextSpan[] = styledText.spans;
 
         if (outputText) {
-            const builder : DocumentBuilder = new DocumentBuilder(this.styles, outputText.length);
+            const builder: DocumentBuilder = new DocumentBuilder(this.styles, outputText.length);
             if (styleSpans.length !== 0) {
-                const spannedNodes : ISpannedTextNode[] = [];
+                const spannedNodes: ISpannedTextNode[] = [];
                 const spanStops = new Set<number>();
 
                 // Get text breaks and record existing spans.
                 styleSpans.forEach((styleSpan) => {
                     spanStops.add(styleSpan.start);
                     spanStops.add(styleSpan.end);
-                    spannedNodes.push(
-                        {type: styleSpan.type, start: styleSpan.start, end: styleSpan.end, children: [] });
+                    spannedNodes.push({
+                        type: styleSpan.type,
+                        start: styleSpan.start,
+                        end: styleSpan.end,
+                        children: [],
+                        attributes: styleSpan.attributes
+                    });
                 });
                 spanStops.add(0);
                 spanStops.add(outputText.length);
@@ -85,11 +91,11 @@ export class RichTextParser {
                 // Extract text nodes.
                 const sortedSpanStops = Array.from(spanStops).sort( (a, b) => a - b );
                 const stopsLen = sortedSpanStops.length - 1;
-                let emojiOffsetSum : number = 0;
+                let emojiOffsetSum: number = 0;
                 for (let i = 0; i < stopsLen; i++) {
-                    const start : number = sortedSpanStops[i] + emojiOffsetSum;
-                    let end : number = sortedSpanStops[i + 1] + (i + 1 === stopsLen ? 0 : emojiOffsetSum);
-                    const spanEmojiOffset : number = Emoji.getEmojiOffset(outputText.slice(start, end));
+                    const start: number = sortedSpanStops[i] + emojiOffsetSum;
+                    let end: number = sortedSpanStops[i + 1] + (i + 1 === stopsLen ? 0 : emojiOffsetSum);
+                    const spanEmojiOffset: number = Emoji.getEmojiOffset(outputText.slice(start, end));
                     emojiOffsetSum += spanEmojiOffset;
                     end += (i + 1 === stopsLen) ? 0 : spanEmojiOffset;
                     spannedNodes.push(

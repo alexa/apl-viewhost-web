@@ -3,25 +3,24 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { IExtensionConnection, IExtensionService, IExtensionConnectionMessage } from './IExtension';
 import { ExtensionManager } from './ExtensionManager';
-import { ILogger, LoggerFactory } from 'apl-html';
+import { IExtensionConnection, IExtensionService, IExtensionConnectionMessage, ILogger, LoggerFactory } from 'apl-html';
 
 /**
  * The connection to local service.
  */
 export class ExtensionLocalConnection implements IExtensionConnection {
-    private extensionService : IExtensionService | undefined;
-    private extensionManager : ExtensionManager | undefined;
-    protected logger : ILogger;
+    private extensionService: IExtensionService | undefined;
+    private extensionManager: ExtensionManager | undefined;
+    protected logger: ILogger;
 
-    public constructor(extensionManager : ExtensionManager, extensionService : IExtensionService) {
+    public constructor(extensionManager: ExtensionManager, extensionService: IExtensionService) {
         this.extensionManager = extensionManager;
         this.extensionService = extensionService;
         this.logger = LoggerFactory.getLogger('ExtensionLocalConnection');
     }
 
-    public connect(settings : string) : boolean {
+    public connect(settings: string): boolean {
         if (this.extensionService) {
             this.extensionService.onConnect(settings, this);
             return true;
@@ -29,16 +28,16 @@ export class ExtensionLocalConnection implements IExtensionConnection {
         return false;
     }
 
-    public reconnect(extensionManager : ExtensionManager,
-                     extensionService : IExtensionService,
-                     configuration : string) : boolean {
+    public reconnect(extensionManager: ExtensionManager,
+                     extensionService: IExtensionService,
+                     configuration: string): boolean {
         this.extensionManager = extensionManager;
         this.extensionService = extensionService;
         this.extensionService.onConnect(configuration, this);
         return true;
     }
 
-    public disconnect() : boolean {
+    public disconnect(): boolean {
         if (this.extensionService) {
             this.extensionService.onDisconnect();
         }
@@ -47,15 +46,15 @@ export class ExtensionLocalConnection implements IExtensionConnection {
         return true;
     }
 
-    public onClose(event : any) : void {
+    public onClose(event: any): void {
         this.extensionService = undefined;
     }
 
-    public onError(event : any) : void {
+    public onError(event: any): void {
         this.logger.error(event);
     }
 
-    public onMessage(message : IExtensionConnectionMessage) : void {
+    public onMessage(message: IExtensionConnectionMessage): void {
         if (message) {
             if (this.extensionManager) {
                 this.extensionManager.onMessageReceived(message.uri, message.payload);
@@ -63,10 +62,10 @@ export class ExtensionLocalConnection implements IExtensionConnection {
         }
     }
 
-    public onOpen(event : any) : void {
+    public onOpen(event: any): void {
     }
 
-    public sendMessage(message : IExtensionConnectionMessage) : void {
+    public sendMessage(message: IExtensionConnectionMessage): void {
         if (this.extensionService) {
             this.extensionService.onMessage(message);
         }

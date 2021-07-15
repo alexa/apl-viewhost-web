@@ -24,7 +24,7 @@ import { ExtensionEvent } from './events/ExtensionEvent';
  * @param renderer A reference to the renderer instance
  * @internal
  */
-export const commandFactory = (event : APL.Event, renderer : APLRenderer) => {
+export const commandFactory = (event: APL.Event, renderer: APLRenderer) => {
     if (factoryMap[event.getType()]) {
         return factoryMap[event.getType()](event, renderer);
     }
@@ -32,62 +32,62 @@ export const commandFactory = (event : APL.Event, renderer : APLRenderer) => {
 };
 
 const factoryMap = {
-    [EventType.kEventTypeSendEvent]: (event : APL.Event, renderer : APLRenderer) => {
+    [EventType.kEventTypeSendEvent]: (event: APL.Event, renderer: APLRenderer) => {
         const command = new SendEvent(event, renderer);
         command.execute();
         return command;
     },
-    [EventType.kEventTypeControlMedia]: (event : APL.Event, renderer : APLRenderer) => {
+    [EventType.kEventTypeControlMedia]: (event: APL.Event, renderer: APLRenderer) => {
         const command = new ControlMedia(event, renderer);
         command.execute();
         return command;
     },
-    [EventType.kEventTypePlayMedia]: (event : APL.Event, renderer : APLRenderer) => {
+    [EventType.kEventTypePlayMedia]: (event: APL.Event, renderer: APLRenderer) => {
         const command = new PlayMedia(event, renderer);
         command.execute();
         return command;
     },
-    [EventType.kEventTypeRequestFirstLineBounds]: (event : APL.Event, renderer : APLRenderer) => {
+    [EventType.kEventTypeRequestFirstLineBounds]: (event: APL.Event, renderer: APLRenderer) => {
         const command = new RequestFirstLineBounds(event, renderer);
         command.execute();
         return command;
     },
-    [EventType.kEventTypePreroll]: (event : APL.Event, renderer : APLRenderer) => {
+    [EventType.kEventTypePreroll]: (event: APL.Event, renderer: APLRenderer) => {
         const command = new Preroll(event, renderer);
         command.execute();
         return command;
     },
-    [EventType.kEventTypeReinflate]: (event : APL.Event, renderer : APLRenderer) => {
+    [EventType.kEventTypeReinflate]: (event: APL.Event, renderer: APLRenderer) => {
         const command = new ReInflate(event, renderer);
         command.execute();
         return command;
     },
-    [EventType.kEventTypeSpeak]: (event : APL.Event, renderer : APLRenderer) => {
+    [EventType.kEventTypeSpeak]: (event: APL.Event, renderer: APLRenderer) => {
         const command = new Speak(event, renderer);
         command.execute();
         return command;
     },
-    [EventType.kEventTypeFinish]: (event : APL.Event, renderer : APLRenderer) => {
+    [EventType.kEventTypeFinish]: (event: APL.Event, renderer: APLRenderer) => {
         const command = new Finish(event, renderer);
         command.execute();
         return command;
     },
-    [EventType.kEventTypeFocus]: (event : APL.Event, renderer : APLRenderer) => {
+    [EventType.kEventTypeFocus]: (event: APL.Event, renderer: APLRenderer) => {
         const command = new Focus(event, renderer);
         command.execute();
         return command;
     },
-    [EventType.kEventTypeOpenURL]: (event : APL.Event, renderer : APLRenderer) => {
+    [EventType.kEventTypeOpenURL]: (event: APL.Event, renderer: APLRenderer) => {
         const command = new OpenUrl(event, renderer);
         command.execute();
         return command;
     },
-    [EventType.kEventTypeDataSourceFetchRequest]: (event : APL.Event, renderer : APLRenderer) => {
+    [EventType.kEventTypeDataSourceFetchRequest]: (event: APL.Event, renderer: APLRenderer) => {
         const command = new DataSourceFetchRequest(event, renderer);
         command.execute();
         return command;
     },
-    [EventType.kEventTypeExtension]: (event : APL.Event, renderer : APLRenderer) => {
+    [EventType.kEventTypeExtension]: (event: APL.Event, renderer: APLRenderer) => {
         const command = new ExtensionEvent(event, renderer);
         command.execute();
         return command;

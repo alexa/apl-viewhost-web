@@ -4,10 +4,16 @@
  */
 
 declare namespace APL {
+    export interface SpanAttribute {
+        name : number;
+        value: any;
+    }
+
     export interface TextSpan {
         type : number|'mark';
         start : number;
         end : number;
+        attributes : SpanAttribute[];
     }
 
     export class StyledText {

@@ -22,13 +22,14 @@ import { ARROW_DOWN, ARROW_LEFT, ARROW_RIGHT, ARROW_UP, ENTER_KEY } from './util
 import { IExtensionManager } from './extensions/IExtensionManager';
 import { FocusDirection } from './enums/FocusDirection';
 import throttle = require('lodash.throttle');
+import { ActionableComponent } from './components/ActionableComponent';
 
 const agentName = 'AplWebRenderer';
 const agentVersion = '1.0.0';
 // For touch enabled browser, touch event will be followed by a mouse event after 300ms-500ms up to browser.
 // This will cause issue which triggers click or press events twice.
 // setup a 500ms gap between two events.
-const pointerEventGap : number = 500;
+const pointerEventGap: number = 500;
 
 /**
  * Device viewport mode
@@ -50,15 +51,15 @@ export type ScreenMode = 'normal' | 'high-contrast';
  */
 export interface IViewportCharacteristics {
     /** Width in pixels */
-    width : number;
+    width: number;
     /** Height in pixels */
-    height : number;
+    height: number;
     /** `true` if the screen is round */
-    isRound : boolean;
+    isRound: boolean;
     /** Viewport shape. If undefined than decided by "isRound" */
-    shape? : ViewportShape;
+    shape?: ViewportShape;
     /** Dots per inch */
-    dpi : number;
+    dpi: number;
 }
 
 /**
@@ -66,15 +67,15 @@ export interface IViewportCharacteristics {
  */
 export interface IEnvironment {
     /** Agent Name */
-    agentName : string;
+    agentName: string;
     /** Agent Version */
-    agentVersion : string;
+    agentVersion: string;
     /** `true` if OpenURL command is supported. Defaults to `false` */
-    allowOpenUrl? : boolean;
+    allowOpenUrl?: boolean;
     /** `true` if video is not supported. Defaults to `false` */
-    disallowVideo? : boolean;
+    disallowVideo?: boolean;
     /** Level of animation quality. Defaults to `AnimationQuality.kAnimationQualityNormal` */
-    animationQuality? : AnimationQuality;
+    animationQuality?: AnimationQuality;
 }
 
 /**
@@ -84,19 +85,19 @@ export interface IEnvironment {
  */
 export interface IConfigurationChangeOptions {
     /** Viewport Width in pixels */
-    width? : number;
+    width?: number;
     /** Viewport Height in pixels */
-    height? : number;
+    height?: number;
     /** APL theme. Usually 'light' or 'dark' */
-    docTheme? : string;
+    docTheme?: string;
     /** Device mode. If no provided "HUB" is used. */
-    mode? : DeviceMode;
+    mode?: DeviceMode;
     /** Relative size of fonts to display as specified by the OS accessibility settings */
-    fontScale? : number;
+    fontScale?: number;
     /** The accessibility settings for how colors should be displayed. */
-    screenMode? : ScreenMode;
+    screenMode?: ScreenMode;
     /** Indicates if a screen reader has been enabled for the user. */
-    screenReader? : boolean;
+    screenReader?: boolean;
 }
 
 /**
@@ -107,36 +108,37 @@ export interface IConfigurationChangeOptions {
  */
 export interface IDeveloperToolOptions {
     /** Key to use to create component mapping */
-    mappingKey : string;
+    mappingKey: string;
 
     /** Keys to export as data- attributes in the DOM */
-    writeKeys : string[];
+    writeKeys: string[];
 }
 
 /**
  * Event coming from APL.
- * See https://aplspec.aka.corp.amazon.com/release-1.1/html/standard_commands.html#user-event for more information.
+ * See https://developer.amazon.com/en-US/docs/alexa/alexa-presentation-language/apl-interface.html#userevent-request \
+ * for more information.
  */
 export interface ISendEvent {
-    source : any;
-    arguments : string[];
-    components : any[];
+    source: any;
+    arguments: string[];
+    components: any[];
 }
 
 /**
  * Event coming from APL to request data fetch for any of registered DataSources.
  */
 export interface IDataSourceFetchRequest {
-    type : string;
-    payload : any;
+    type: string;
+    payload: any;
 }
 
 export interface IExtensionEvent {
-    uri : string;
-    name : string;
-    source : any;
-    params : any;
-    event? : APL.Event;
+    uri: string;
+    name: string;
+    source: any;
+    params: any;
+    event?: APL.Event;
 }
 
 /**
@@ -151,7 +153,7 @@ export enum KeyHandlerType {
  * Async keyboardEvent.
  */
 export interface IAsyncKeyboardEvent extends KeyboardEvent {
-    asyncChecked : boolean;
+    asyncChecked: boolean;
 }
 
 /**
@@ -159,127 +161,128 @@ export interface IAsyncKeyboardEvent extends KeyboardEvent {
  */
 export interface IAPLOptions {
     /** Contains all the information on environment suport and options */
-    environment : IEnvironment;
+    environment: IEnvironment;
     /** APL theme. Usually 'light' or 'dark' */
-    theme : string;
+    theme: string;
     /** Optional Video player factory. If no player is provided, a default player will be used */
-    videoFactory? : IVideoFactory;
+    videoFactory?: IVideoFactory;
     /** The HTMLElement to draw onto */
-    view : HTMLElement;
+    view: HTMLElement;
     /** Physical viewport characteristics */
-    viewport : IViewportCharacteristics;
+    viewport: IViewportCharacteristics;
     /** Device mode. If no provided "HUB" is used. */
-    mode? : DeviceMode;
+    mode?: DeviceMode;
 
     /** Optional externalized audio player */
-    audioPlayerFactory? : AudioPlayerFactory;
+    audioPlayerFactory?: AudioPlayerFactory;
 
     /** Callback for executed SendEvent commands */
-    onSendEvent? : (event : ISendEvent) => void;
+    onSendEvent?: (event: ISendEvent) => void;
 
     /** Callback for logging PEGTL Parsing Session Error */
-    onPEGTLError? : (error : string) => void;
+    onPEGTLError?: (error: string) => void;
 
     /** Callback for Finish command */
-    onFinish? : () => void;
+    onFinish?: () => void;
 
     /** Callback for Extension command */
-    onExtensionEvent? : (event : IExtensionEvent) => Promise<boolean>;
+    onExtensionEvent?: (event: IExtensionEvent) => Promise<boolean>;
 
     /** Callback when speakPlayback starts */
-    onSpeakEventEnd? : (type : string) => void;
+    onSpeakEventEnd?: (type: string) => void;
 
     /** Callback when speakPlayback ends */
-    onSpeakEventStart? : (type : string) => void;
+    onSpeakEventStart?: (type: string) => void;
 
     /** Callback for Data Source fetch requests */
-    onDataSourceFetchRequest? : (event : IDataSourceFetchRequest) => void;
+    onDataSourceFetchRequest?: (event: IDataSourceFetchRequest) => void;
 
     /** Callback for pending errors from APLCore Library */
-    onRunTimeError? : (pendingErrors : object[]) => void;
+    onRunTimeError?: (pendingErrors: object[]) => void;
 
     /** Callback for ignoring resize config change */
-    onResizingIgnored? : (ignoredWidth : number, ignoredHeight : number) => void;
+    onResizingIgnored?: (ignoredWidth: number, ignoredHeight: number) => void;
 
     /**
      * Callback when a AVG source needs to be retreived by the consumer
      * If this is not provided, this viewhost will use the fetch API to
      * retreive graphic content from sources.
      */
-    onRequestGraphic? : (source : string) => Promise<string | undefined>;
+    onRequestGraphic?: (source: string) => Promise<string | undefined>;
     /**
      * Callback to open a URL. Return `false` if this call fails
      */
-    onOpenUrl? : (source : string) => Promise<boolean>;
+    onOpenUrl?: (source: string) => Promise<boolean>;
 
     /**
      * Contains developer tool options
      */
-    developerToolOptions? : IDeveloperToolOptions;
+    developerToolOptions?: IDeveloperToolOptions;
 
     /** Starting UTC time in milliseconds since 1/1/1970 */
-    utcTime : number;
+    utcTime: number;
 
     /** Offset of the local time zone from UTC in milliseconds */
-    localTimeAdjustment : number;
+    localTimeAdjustment: number;
 }
 
 /**
  * The main renderer. Create a new one with `const renderer = APLRenderer.create(content);`
  */
 export default abstract class APLRenderer<Options = {}> {
-    private static mappingKeyExpression : RegExp = /:\d+$/;
-    private static mousePointerId : number = 0;
+    private static mappingKeyExpression: RegExp = /:\d+$/;
+    private static mousePointerId: number = 0;
 
-    private lastPointerEventTimestamp : number = (new Date()).getTime();
+    private lastPointerEventTimestamp: number = (new Date()).getTime();
 
     /// Logger to be used for this component logs.
-    protected logger : ILogger;
+    protected logger: ILogger;
 
     /**
      * Map of unique ID to component instance
      * @internal
      * @ignore
      */
-    public componentMap : {[key : string] : Component} = {};
+    public componentMap: { [key: string]: Component } = {};
 
     /**
      * Map of user assigned IDs to component instance
      * @internal
      * @ignore
      */
-    public componentIdMap : {[id : string] : Component} = {};
+    public componentIdMap: { [id: string]: Component } = {};
 
-    public componentByMappingKey : Map<string, Component> = new Map<string, Component>();
-
-    /**
-     * @internal
-     * @ignore
-     */
-    public videoFactory : IVideoFactory;
+    public componentByMappingKey: Map<string, Component> = new Map<string, Component>();
 
     /**
      * @internal
      * @ignore
      */
-    public abstract getLegacyKaraoke() : boolean;
+    public videoFactory: IVideoFactory;
+    private viewEventListeners: any;
+
+    /**
+     * @internal
+     * @ignore
+     */
+    public abstract getLegacyKaraoke(): boolean;
 
     /** A reference to the APL root context */
-    public context : APL.Context;
+    public context: APL.Context;
 
     /** Root renderer component */
-    public top : Component;
+    public top: Component;
 
     /** A reference to the APL extension manager */
-    public extensionManager : IExtensionManager;
+    public extensionManager: IExtensionManager;
 
     /** Configuration Change handler */
-    protected handleConfigurationChange : (configurationChangeOption : IConfigurationChangeOptions) => void;
+    protected handleConfigurationChange: (configurationChangeOption: IConfigurationChangeOptions) => void;
 
     /** Document set flag for allowing config change driven resizing */
-    protected supportsResizing : boolean = false;
+    protected supportsResizing: boolean = false;
 
-    private configChangeThrottle = throttle((configurationChangeOptions : IConfigurationChangeOptions) => {
+    private configChangeThrottle = throttle((configurationChangeOptions: IConfigurationChangeOptions) => {
         this.handleConfigurationChange(configurationChangeOptions);
     }, 200);
 
@@ -287,83 +290,83 @@ export default abstract class APLRenderer<Options = {}> {
      * @internal
      * @ignore
      */
-    private view : HTMLElement | undefined;
+    private view: HTMLElement | undefined;
 
     /**
      * @internal
      * @ignore
      */
-    private startTime : number = Number.NaN;
+    private startTime: number = Number.NaN;
 
     /**
      * @internal
      * @ignore
      */
-    private requestId : number = undefined;
+    private requestId: number = undefined;
 
     /**
      * @internal
      * @ignore
      */
-    private lastDSTCheck : number = 0;
+    private lastDSTCheck: number = 0;
 
     /**
      * @internal
      * @ignore
      */
-    private screenLocked : boolean = false;
+    private screenLocked: boolean = false;
 
     /**
      * @internal
      * @ignore
      */
-    private readonly MAXFPS : number = 60;
+    private readonly MAXFPS: number = 60;
 
     /**
      * @internal
      * @ignore
      */
-    private readonly TOLERANCE : number = 1.2;
+    private readonly TOLERANCE: number = 1.2;
 
     /**
      * @internal
      * @ignore
      */
-    private readonly maxTimeDeltaBetweenFrames : number;
+    private readonly maxTimeDeltaBetweenFrames: number;
 
     /**
      * @internal
      * @ignore
      */
-    private previousTimeStamp : number = undefined;
+    private previousTimeStamp: number = undefined;
 
     /**
      * @internal
      * @ignore
      */
-    private dropFrameCount : number = 0;
+    private dropFrameCount: number = 0;
 
-    private isEdge : boolean = /msie\s|trident\/|edge\//i.test(window.navigator.userAgent);
+    private isEdge: boolean = /msie\s|trident\/|edge\//i.test(window.navigator.userAgent);
 
-    public get options() : Options {
+    public get options(): Options {
         return this.mOptions as any as Options;
     }
 
-    public audioPlayer : AudioPlayerWrapper;
+    public audioPlayer: AudioPlayerWrapper;
 
     /**
      * THis constructor is private
      * @param mOptions options passed in through `create`
      * @ignore
      */
-    protected constructor(private mOptions : IAPLOptions) {
+    protected constructor(private mOptions: IAPLOptions) {
         this.logger = LoggerFactory.getLogger('APLRenderer');
         this.videoFactory = mOptions.videoFactory ? mOptions.videoFactory : new VideoFactory();
         if (!mOptions.mode) {
             mOptions.mode = 'HUB';
         }
         if (!mOptions.viewport.shape) {
-            mOptions.viewport.shape = mOptions.viewport.isRound  ? 'ROUND' : 'RECTANGLE';
+            mOptions.viewport.shape = mOptions.viewport.isRound ? 'ROUND' : 'RECTANGLE';
         }
 
         this.view = mOptions.view;
@@ -376,17 +379,24 @@ export default abstract class APLRenderer<Options = {}> {
         this.view.style.display = 'flex';
         this.view.style.overflow = 'hidden';
         this.view.tabIndex = 0;
-        this.view.addEventListener('keydown', this.handleKeyDown, false);
-        this.view.addEventListener('keyup', this.handleKeyUp, false);
+        this.viewEventListeners = {
+            keydown: this.handleKeyDown,
+            keyup: this.handleKeyUp,
+            touchstart: this.onPointerDown,
+            touchmove: this.onPointerMove,
+            touchend: this.onPointerUp,
+            touchcancel: this.onPointerLeave,
+            mousedown: this.onPointerDown,
+            mousemove: this.onPointerMove,
+            mouseup: this.onPointerUp,
+            mouseleave: this.onPointerLeave
+        };
 
-        this.view.addEventListener('touchstart', this.onPointerDown);
-        this.view.addEventListener('touchmove', this.onPointerMove);
-        this.view.addEventListener('touchend', this.onPointerUp);
-        this.view.addEventListener('touchcancel', this.onPointerLeave);
-        this.view.addEventListener('mousedown', this.onPointerDown);
-        this.view.addEventListener('mousemove', this.onPointerMove);
-        this.view.addEventListener('mouseup', this.onPointerUp);
-        this.view.addEventListener('mouseleave', this.onPointerLeave);
+        for (const eventName in this.viewEventListeners) {
+            if (this.viewEventListeners.hasOwnProperty(eventName)) {
+                this.view.addEventListener(eventName, this.viewEventListeners[eventName]);
+            }
+        }
 
         mOptions.environment.agentName = mOptions.environment.agentName ?
             mOptions.environment.agentName : agentName;
@@ -439,10 +449,9 @@ export default abstract class APLRenderer<Options = {}> {
         this.maxTimeDeltaBetweenFrames = (1000 * this.TOLERANCE / this.MAXFPS);
     }
 
-    public init(metricRecorder? : (m : APL.DisplayMetric) => void) {
+    public init(metricRecorder?: (m: APL.DisplayMetric) => void) {
         const startTime = performance.now();
         if (this.mOptions.mode === 'TV') {
-            this.focusTopLeft();
             window.addEventListener('keydown', this.passWindowEventsToCore);
         }
         this.renderComponents();
@@ -455,7 +464,7 @@ export default abstract class APLRenderer<Options = {}> {
             });
         }
 
-        let docTheme : string = this.context.getTheme();
+        let docTheme: string = this.context.getTheme();
         if (docTheme !== 'light' && docTheme !== 'dark') {
             // treat themes other than dark and light as dark
             docTheme = 'dark';
@@ -472,7 +481,7 @@ export default abstract class APLRenderer<Options = {}> {
      * @param width width in pixels
      * @param height height in pixels
      */
-    public setViewSize(width : number, height : number) {
+    public setViewSize(width: number, height: number) {
         if (!this.view) {
             return;
         }
@@ -485,7 +494,7 @@ export default abstract class APLRenderer<Options = {}> {
      * Sets if the renderer supports resizing as defined by the APL document settings
      * @param supportsResizing - True if the document supports resizing.  Defaults to false.
      */
-    public setSupportsResizing(supportsResizing : boolean) {
+    public setSupportsResizing(supportsResizing: boolean) {
         this.supportsResizing = supportsResizing;
     }
 
@@ -493,7 +502,7 @@ export default abstract class APLRenderer<Options = {}> {
      * Process Configuration Change. ViewHost will resize/reinflate upon configuration change if supported.
      * @param configurationChangeOptions The configuration change options to provide to core.
      */
-    public onConfigurationChange(configurationChangeOptions : IConfigurationChangeOptions) : void {
+    public onConfigurationChange(configurationChangeOptions: IConfigurationChangeOptions): void {
         if (!this.supportsResizing && (configurationChangeOptions.width || configurationChangeOptions.height)) {
             this.onResizingIgnored(configurationChangeOptions.width, configurationChangeOptions.height);
             configurationChangeOptions.width = undefined;
@@ -502,11 +511,11 @@ export default abstract class APLRenderer<Options = {}> {
         this.configChangeThrottle(configurationChangeOptions);
     }
 
-    public getComponentCount() : number {
+    public getComponentCount(): number {
         return Object.keys(this.componentMap).length;
     }
 
-    private setBackground(docTheme : string) {
+    private setBackground(docTheme: string) {
         const background = this.context.getBackground();
         const backgroundColors = {
             dark: 'black',
@@ -516,15 +525,15 @@ export default abstract class APLRenderer<Options = {}> {
         // the default background color of the device will show through
         this.view.style.backgroundColor = backgroundColors[docTheme];
         this.view.style.backgroundImage = background.gradient ?
-                                        Image.getCssGradient(background.gradient, this.logger) :
-                                        Image.getCssPureColorGradient(background.color);
+            Image.getCssGradient(background.gradient, this.logger) :
+            Image.getCssPureColorGradient(background.color);
     }
 
     /**
      * Get developer tool options (if defined)
      */
-    public getDeveloperToolOptions() : IDeveloperToolOptions | undefined {
-      return this.mOptions.developerToolOptions;
+    public getDeveloperToolOptions(): IDeveloperToolOptions | undefined {
+        return this.mOptions.developerToolOptions;
     }
 
     /**
@@ -533,7 +542,7 @@ export default abstract class APLRenderer<Options = {}> {
      * @ignore
      * @internal
      */
-    public async onRequestGraphic(source : string) : Promise<string | undefined> {
+    public async onRequestGraphic(source: string): Promise<string | undefined> {
         const res = await fetch(source, {
             headers: {
                 'Accept': 'application/json',
@@ -555,7 +564,7 @@ export default abstract class APLRenderer<Options = {}> {
      * @internal
      * @ignore
      */
-    public async onOpenUrl(source : string) : Promise<boolean> {
+    public async onOpenUrl(source: string): Promise<boolean> {
         if (!this.mOptions.environment.allowOpenUrl) {
             return false;
         }
@@ -571,7 +580,7 @@ export default abstract class APLRenderer<Options = {}> {
      * @internal
      * @ignore
      */
-    public onSendEvent(event : ISendEvent) : void {
+    public onSendEvent(event: ISendEvent): void {
         this.logger.info(`SendEvent: ${JSON.stringify(event)}`);
     }
 
@@ -579,7 +588,7 @@ export default abstract class APLRenderer<Options = {}> {
      * @internal
      * @ignore
      */
-    public onPEGTLError(error : string) : void {
+    public onPEGTLError(error: string): void {
         this.logger.info(`PEGTLError: ${error}`);
     }
 
@@ -587,7 +596,7 @@ export default abstract class APLRenderer<Options = {}> {
      * @internal
      * @ignore
      */
-    public onDataSourceFetchRequest(event : IDataSourceFetchRequest) : void {
+    public onDataSourceFetchRequest(event: IDataSourceFetchRequest): void {
         this.logger.info(`DataSourceFetchRequest: ${JSON.stringify(event)}`);
     }
 
@@ -595,18 +604,22 @@ export default abstract class APLRenderer<Options = {}> {
      * @internal
      * @ignore
      */
-    public onFinish() : void {
+    public onFinish(): void {
     }
 
     /**
      * @internal
      * @ignore
      */
-    public async onExtensionEvent(event : IExtensionEvent) : Promise<boolean> {
+    public async onExtensionEvent(event: IExtensionEvent): Promise<boolean> {
         if (this.extensionManager) {
             return new Promise<boolean>((res) => {
                 this.extensionManager.onExtensionEvent(event.uri, event.event, event.name, event.source, event.params,
-                    { onExtensionEventResult : (succeeded : boolean) => { res(succeeded); } });
+                    {
+                        onExtensionEventResult: (succeeded: boolean) => {
+                            res(succeeded);
+                        }
+                    });
             });
         } else {
             this.logger.info(`ExtensionEvent: ${JSON.stringify(event)}`);
@@ -618,7 +631,7 @@ export default abstract class APLRenderer<Options = {}> {
      * @internal
      * @ignore
      */
-    public onSpeakEventEnd(type : string) : void {
+    public onSpeakEventEnd(type: string): void {
         this.logger.info(`onSpeakEventEnd: ${JSON.stringify(type)}`);
     }
 
@@ -626,16 +639,16 @@ export default abstract class APLRenderer<Options = {}> {
      * @internal
      * @ignore
      */
-    public onSpeakEventStart(type : string) : void {
+    public onSpeakEventStart(type: string): void {
         this.logger.info(`onSpeakEventStart: ${JSON.stringify(type)}`);
 
     }
 
-    public onRunTimeError(pendingErrors : object[]) : void {
+    public onRunTimeError(pendingErrors: object[]): void {
         this.logger.warn(`onRunTimeError: ${JSON.stringify(pendingErrors)}`);
     }
 
-    public onResizingIgnored(ignoredWidth : number, ignoredHeight : number) : void {
+    public onResizingIgnored(ignoredWidth: number, ignoredHeight: number): void {
         this.logger.warn(`onResizeIgnored: width: ${ignoredWidth}, height: ${ignoredHeight}`);
     }
 
@@ -648,9 +661,9 @@ export default abstract class APLRenderer<Options = {}> {
      * @param heightMode Mode to measure height
      * @ignore
      */
-    public onMeasure(component : APL.Component, measureWidth : number, widthMode : MeasureMode,
-                     measureHeight : number, heightMode : MeasureMode) {
-        const { width , height } = this.mOptions.viewport;
+    public onMeasure(component: APL.Component, measureWidth: number, widthMode: MeasureMode,
+                     measureHeight: number, heightMode: MeasureMode) {
+        const {width, height} = this.mOptions.viewport;
         const comp = new TextMeasurement(component, width, height);
         comp.init();
         return comp.onMeasure(measureWidth, widthMode, measureHeight, heightMode);
@@ -663,14 +676,14 @@ export default abstract class APLRenderer<Options = {}> {
      * @param height specified height
      * @ignore
      */
-    public onBaseline(component : APL.Component, width : number, height : number) : number {
+    public onBaseline(component: APL.Component, width: number, height: number): number {
         return height * 0.5;
     }
 
     /**
      * Rerender the same template with current content, config and context.
      */
-    public reRenderComponents() : void {
+    public reRenderComponents(): void {
         this.removeRenderingComponents();
         this.renderComponents();
     }
@@ -678,7 +691,7 @@ export default abstract class APLRenderer<Options = {}> {
     /**
      * Cleans up this instance
      */
-    public destroy(preserveContext? : boolean) {
+    public destroy(preserveContext?: boolean) {
         if (this.context) {
             this.context.handleDisplayMetrics([{
                 kind: 'counter',
@@ -693,16 +706,20 @@ export default abstract class APLRenderer<Options = {}> {
         }
         this.removeRenderingComponents();
         if (this.view) {
+            for (const eventName in this.viewEventListeners) {
+                if (this.viewEventListeners.hasOwnProperty(eventName)) {
+                    this.view.removeEventListener(eventName, this.viewEventListeners[eventName]);
+                }
+            }
             this.view = undefined;
         }
         window.removeEventListener('keydown', this.passWindowEventsToCore);
-
     }
 
     /**
      * @ignore
      */
-    public getBackgroundColor() : string {
+    public getBackgroundColor(): string {
         return `grey`;
     }
 
@@ -710,14 +727,14 @@ export default abstract class APLRenderer<Options = {}> {
      * Gets a component by its developer assigned ID.
      * @param id The developer assigned component ID
      */
-    public getComponentById(id : string) : Component {
+    public getComponentById(id: string): Component {
         return this.componentIdMap[id];
     }
 
     /**
      * @returns true if is in screenLock state, false otherwise.
      */
-    public screenLock() : boolean {
+    public screenLock(): boolean {
         return this.screenLocked;
     }
 
@@ -725,7 +742,7 @@ export default abstract class APLRenderer<Options = {}> {
     /**
      * Cancel Animation Frame
      */
-    public async stopUpdate() : Promise<void> {
+    public async stopUpdate(): Promise<void> {
         window.cancelAnimationFrame(this.requestId);
         this.requestId = undefined;
         return Promise.resolve();
@@ -737,7 +754,7 @@ export default abstract class APLRenderer<Options = {}> {
      *
      * Note: mappingKeys are configured via developerToolOptions and come from -user- attributes
      */
-    public getComponentsByMappingKey(mappingKey : string) : Map<string, Component> {
+    public getComponentsByMappingKey(mappingKey: string): Map<string, Component> {
         return new Map(
             Array.from(this.componentByMappingKey).filter(
                 /*
@@ -755,7 +772,7 @@ export default abstract class APLRenderer<Options = {}> {
      * @param componentData json string containing component definition.
      * @returns virtual component.
      */
-    public addComponent(parent : Component, childIndex : number, componentData : string) : Component | undefined {
+    public addComponent(parent: Component, childIndex: number, componentData: string): Component | undefined {
         return parent.inflateAndAddChild(childIndex, componentData);
     }
 
@@ -765,7 +782,7 @@ export default abstract class APLRenderer<Options = {}> {
      * @param component Virtual component to remove.
      * @returns true if removed, false otherwise.
      */
-    public deleteComponent(component : Component) : boolean {
+    public deleteComponent(component: Component): boolean {
         return component.remove();
     }
 
@@ -777,7 +794,7 @@ export default abstract class APLRenderer<Options = {}> {
      * @param componentData Json string containing component definition.
      * @returns virtual component.
      */
-    public updateComponent(component : Component, componentData : string) : Component | undefined {
+    public updateComponent(component: Component, componentData: string): Component | undefined {
         const parent = component.parent;
         if (!parent) {
             return undefined;
@@ -790,7 +807,7 @@ export default abstract class APLRenderer<Options = {}> {
     /**
      * Destroy current rendering component from top.
      */
-    public destroyRenderingComponents() : void {
+    public destroyRenderingComponents(): void {
         if (this.context.topComponent()) {
             const root = this.componentMap[this.context.topComponent().getUniqueId()];
             if (root) {
@@ -803,7 +820,7 @@ export default abstract class APLRenderer<Options = {}> {
      * @internal
      * @ignore
      */
-    private updateTime() : void {
+    private updateTime(): void {
         const now = Date.now();
         if (isNaN(this.startTime)) {
             this.startTime = now;
@@ -824,7 +841,7 @@ export default abstract class APLRenderer<Options = {}> {
      * @internal
      * @ignore
      */
-    private setScreenLock(lock : boolean) : void {
+    private setScreenLock(lock: boolean): void {
         this.screenLocked = lock;
     }
 
@@ -840,7 +857,7 @@ export default abstract class APLRenderer<Options = {}> {
      * @internal
      * @ignore
      */
-    private coreFrameUpdate() : void {
+    private coreFrameUpdate(): void {
         this.updateTime();
 
         this.context.clearPending();
@@ -869,7 +886,7 @@ export default abstract class APLRenderer<Options = {}> {
      * @internal
      * @ignore
      */
-    private update = (timestamp : number) => {
+    private update = (timestamp: number) => {
         if (this.context) {
             this.coreFrameUpdate();
             if (this.context) {
@@ -888,19 +905,19 @@ export default abstract class APLRenderer<Options = {}> {
      * @internal
      * @ignore
      */
-    private dropFrameTick = (timestamp : number) => {
+    private dropFrameTick = (timestamp: number) => {
         if (this.previousTimeStamp === undefined) {
             this.previousTimeStamp = timestamp;
         } else {
             const delta = timestamp - this.previousTimeStamp;
             if (delta > this.maxTimeDeltaBetweenFrames) {
-              this.dropFrameCount++;
+                this.dropFrameCount++;
             }
             this.previousTimeStamp = timestamp;
         }
     }
 
-    private getScreenCoords = (evt : MouseEvent | Touch) => {
+    private getScreenCoords = (evt: MouseEvent | Touch) => {
         let x = evt.clientX;
         let y = evt.clientY;
         if (navigator.appVersion.indexOf('MSIE') !== -1) {
@@ -913,10 +930,10 @@ export default abstract class APLRenderer<Options = {}> {
         return {x, y};
     }
 
-    private getLeavingCoords = (evt : MouseEvent) => {
+    private getLeavingCoords = (evt: MouseEvent) => {
         const coords = this.getViewportCoords(evt);
-        let x : number;
-        let y : number;
+        let x: number;
+        let y: number;
         const delta = 5;
         x = Math.abs(coords.x) < delta ? -delta : Math.abs(coords.x -
             this.view.getBoundingClientRect().width) < delta ? coords.x + delta : coords.x;
@@ -926,8 +943,8 @@ export default abstract class APLRenderer<Options = {}> {
     }
 
     private getTransformScale = () => {
-        let scaleX : number = 1;
-        let scaleY : number = 1;
+        let scaleX: number = 1;
+        let scaleY: number = 1;
         if (this.view !== undefined) {
             scaleX = this.view.getBoundingClientRect().width / this.view.offsetWidth;
             scaleY = this.view.getBoundingClientRect().height / this.view.offsetHeight;
@@ -935,7 +952,7 @@ export default abstract class APLRenderer<Options = {}> {
         return {scaleX, scaleY};
     }
 
-    private getViewportCoords = (evt : MouseEvent | Touch) => {
+    private getViewportCoords = (evt: MouseEvent | Touch) => {
         const screenCoords = this.getScreenCoords(evt);
         const offsetLeft = this.view === undefined ? 0 : this.view.getBoundingClientRect().left;
         const offsetTop = this.view === undefined ? 0 : this.view.getBoundingClientRect().top;
@@ -944,7 +961,7 @@ export default abstract class APLRenderer<Options = {}> {
         return {x, y};
     }
 
-    private onPointerDown = (evt : UIEvent) => {
+    private onPointerDown = (evt: UIEvent) => {
         if (this.context && this.view) {
             if (evt instanceof MouseEvent) {
                 this.sendMousePointerEvent(evt, PointerEventType.kPointerDown);
@@ -956,7 +973,7 @@ export default abstract class APLRenderer<Options = {}> {
         }
     }
 
-    private onPointerMove = (evt : UIEvent) => {
+    private onPointerMove = (evt: UIEvent) => {
         if (this.context && this.view) {
             if (evt instanceof MouseEvent) {
                 this.sendMousePointerEvent(evt, PointerEventType.kPointerMove);
@@ -968,7 +985,7 @@ export default abstract class APLRenderer<Options = {}> {
         }
     }
 
-    private onPointerUp = (evt : UIEvent) => {
+    private onPointerUp = (evt: UIEvent) => {
         if (this.context && this.view) {
             if (evt instanceof MouseEvent) {
                 this.sendMousePointerEvent(evt, PointerEventType.kPointerUp);
@@ -983,7 +1000,7 @@ export default abstract class APLRenderer<Options = {}> {
         }
     }
 
-    private onPointerLeave = (evt : UIEvent) => {
+    private onPointerLeave = (evt: UIEvent) => {
         if (this.context && this.view) {
             if (evt instanceof MouseEvent) {
                 const coords = this.getLeavingCoords(evt);
@@ -997,7 +1014,7 @@ export default abstract class APLRenderer<Options = {}> {
         }
     }
 
-    private sendMousePointerEvent = (evt : MouseEvent, pointerEventType : PointerEventType) => {
+    private sendMousePointerEvent = (evt: MouseEvent, pointerEventType: PointerEventType) => {
         // to prevent mouse events been triggered in touch enabled browser.
         // It is followed by touchend event after 300-500ms.
         const gap = (new Date()).getTime() - this.lastPointerEventTimestamp;
@@ -1008,25 +1025,26 @@ export default abstract class APLRenderer<Options = {}> {
         }
     }
 
-    private sendTouchPointerEvent = (evt : TouchEvent, pointerEventType : PointerEventType) => {
+    private sendTouchPointerEvent = (evt: TouchEvent, pointerEventType: PointerEventType) => {
         const touchCount = evt.changedTouches.length;
         for (let i = 0; i < touchCount; i++) {
-            const touch : Touch = evt.changedTouches.item(i);
+            const touch: Touch = evt.changedTouches.item(i);
             const coords = this.getViewportCoords(touch);
-            const handlePointerEventResult = this.context.handlePointerEvent(pointerEventType,
-                coords.x, coords.y, touch.identifier, PointerType.kTouchPointer);
-            if (handlePointerEventResult) {
-                evt.preventDefault();
-                evt.stopPropagation();
-            }
+            this.context.handlePointerEvent(
+                pointerEventType,
+                coords.x,
+                coords.y,
+                touch.identifier,
+                PointerType.kTouchPointer
+            );
         }
     }
 
-    private handleKeyDown = async (evt : IAsyncKeyboardEvent) => {
+    private handleKeyDown = async (evt: IAsyncKeyboardEvent) => {
         await this.passKeyboardEventToCore(evt, KeyHandlerType.KeyDown);
     }
 
-    private handleKeyUp = async (evt : IAsyncKeyboardEvent) => {
+    private handleKeyUp = async (evt: IAsyncKeyboardEvent) => {
         await this.passKeyboardEventToCore(evt, KeyHandlerType.KeyUp);
     }
 
@@ -1034,8 +1052,8 @@ export default abstract class APLRenderer<Options = {}> {
      * Get APL.Keyboard object
      * for MS edge Gamepad, repeat/altKey/ctrlKey/metaKey/shiftKey are undefined, need set default to false
      */
-    private getKeyboard = (evt : KeyboardEvent) => {
-        const keyboard : APL.Keyboard = {
+    private getKeyboard = (evt: KeyboardEvent) => {
+        const keyboard: APL.Keyboard = {
             code: this.isEdge ? this.getKeyboardCodeInEdge(evt) : evt.code,
             key: evt.key,
             repeat: evt.repeat === undefined ? false : evt.repeat,
@@ -1047,7 +1065,7 @@ export default abstract class APLRenderer<Options = {}> {
         return keyboard;
     }
 
-    private getKeyboardCodeInEdge = (evt : KeyboardEvent) : string => {
+    private getKeyboardCodeInEdge = (evt: KeyboardEvent): string => {
         if (this.isDPadKey(evt.key)) {
             return evt.key;
         } else if (evt.key.match('[0-9]')) {
@@ -1058,18 +1076,18 @@ export default abstract class APLRenderer<Options = {}> {
         return evt.code;
     }
 
-    private passKeyboardEventToCore = async (evt : IAsyncKeyboardEvent, keyHandlerType : number) => {
+    private passKeyboardEventToCore = async (evt: IAsyncKeyboardEvent, keyHandlerType: number) => {
         if (this.context) {
-            const keyboard : APL.Keyboard = this.getKeyboard(evt);
+            const keyboard: APL.Keyboard = this.getKeyboard(evt);
             await this.context.handleKeyboard(keyHandlerType, keyboard);
         }
     }
 
-    private isDPadKey = (key : string) : boolean => {
+    private isDPadKey = (key: string): boolean => {
         return key === ENTER_KEY || key === ARROW_LEFT || key === ARROW_UP || key === ARROW_RIGHT || key === ARROW_DOWN;
     }
 
-    private renderComponents() : void {
+    private renderComponents(): void {
         if (!this.context || !this.view) {
             return;
         }
@@ -1085,7 +1103,7 @@ export default abstract class APLRenderer<Options = {}> {
         this.top.$container.css('position', '');
     }
 
-    private removeRenderingComponents() : void {
+    private removeRenderingComponents(): void {
         if (this.top && this.view &&
             this.top.container &&
             this.view.contains(this.top.container)) {
@@ -1094,7 +1112,7 @@ export default abstract class APLRenderer<Options = {}> {
         }
     }
 
-    private async focusTopLeft() : Promise<void> {
+    private async focusTopLeft(): Promise<void> {
         const focusableAreas = await this.context.getFocusableAreas();
         let topLeft;
         for (const id in focusableAreas) {
@@ -1115,12 +1133,28 @@ export default abstract class APLRenderer<Options = {}> {
         }
     }
 
-    private passWindowEventsToCore = async (event : IAsyncKeyboardEvent) => {
+    private recoverFocusOnEnter(id: string, code: string): void {
+        if (code === ENTER_KEY) {
+            const component = this.componentMap[id] as ActionableComponent;
+            if (component['focus']) {
+                component.focus();
+            }
+        }
+    }
+
+    private passWindowEventsToCore = async (event: IAsyncKeyboardEvent) => {
+        if (!this.context) {
+            return;
+        }
+
+        const focused = await this.context.getFocused();
         if (this.isDPadKey(event.code)
             && (!document.activeElement || document.activeElement === document.body)
-            && this.context
-            && this.context.getFocused()) {
+            && focused) {
+            this.recoverFocusOnEnter(focused, event.code);
             this.passKeyboardEventToCore(event, KeyHandlerType.KeyDown);
+        } else if (!focused) {
+            this.focusTopLeft();
         }
     }
 }

@@ -10,7 +10,7 @@
  * @param b
  * @param epsilon
  */
-export const isEqual = (a : number, b : number, epsilon : number) : boolean => {
+export const isEqual = (a: number, b: number, epsilon: number): boolean => {
     return Math.abs(a - b) < epsilon;
 };
 
@@ -21,7 +21,7 @@ export const isEqual = (a : number, b : number, epsilon : number) : boolean => {
  * @param b
  * @param epsilon
  */
-export const nearlyGreaterOrEqual = (a : number, b : number, epsilon : number) : boolean => {
+export const nearlyGreaterOrEqual = (a: number, b: number, epsilon: number): boolean => {
     return (a > b) || isEqual(a, b, epsilon);
 };
 
@@ -32,6 +32,6 @@ export const nearlyGreaterOrEqual = (a : number, b : number, epsilon : number) :
  * @param b
  * @param epsilon
  */
-export const nearlyLessOrEqual = (a : number, b : number, epsilon : number) : boolean => {
+export const nearlyLessOrEqual = (a: number, b: number, epsilon: number): boolean => {
     return (a < b) || isEqual(a, b, epsilon);
 };

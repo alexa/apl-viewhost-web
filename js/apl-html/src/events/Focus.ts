@@ -15,7 +15,7 @@ export class Focus extends Event {
         const component = this.event.getComponent();
         if (component) {
             const viewhostComponent = this.renderer.componentMap[component.getUniqueId()] as ActionableComponent;
-            if (!viewhostComponent.focus) {
+            if (!viewhostComponent || !viewhostComponent.focus) {
                 this.event.resolve();
                 return;
             }

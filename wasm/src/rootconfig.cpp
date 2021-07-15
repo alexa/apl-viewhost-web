@@ -26,10 +26,7 @@ RootConfigMethods::create(emscripten::val environment) {
         .allowOpenUrl(allowOpenUrl)
         .disallowVideo(disallowVideo)
         .animationQuality(animationQuality)
-        .enforceAPLVersion(apl::APLVersion::kAPLVersionIgnore)
-        .enableExperimentalFeature(apl::RootConfig::ExperimentalFeature::kExperimentalFeatureHandleFocusInCore)
-        .enableExperimentalFeature(apl::RootConfig::ExperimentalFeature::kExperimentalFeatureNotifyChildrenChangedOnDisplayChange)
-        .enableExperimentalFeature(apl::RootConfig::kExperimentalFeatureHandleScrollingAndPagingInCore);
+        .enforceAPLVersion(apl::APLVersion::kAPLVersionIgnore);
 
 
     return config;

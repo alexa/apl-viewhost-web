@@ -11,7 +11,7 @@ import { Event } from './Event';
  */
 export class Preroll extends Event {
     public execute() {
-        const speech : string = this.event.getValue(EventProperty.kEventPropertySource);
+        const speech: string = this.event.getValue(EventProperty.kEventPropertySource);
         if (speech && speech.length > 0) {
             this.renderer.audioPlayer.prepareAsync(speech, true);
         } else {

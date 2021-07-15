@@ -1,19 +1,24 @@
-/*!
+/**
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {IExtensionEventCallbackResult} from 'apl-html';
-import { IExtension, ILiveDataDefinition } from '../IExtension';
-import { GoBackCommand } from './GoBackCommand';
-import { Stack } from './Stack';
-import { BackstackEnvironment } from './BackstackEnvironment';
-import { ClearCommand } from './ClearCommand';
-import { ExtensionCommandDefinition, ExtensionEventHandler } from '../Extension';
-import { ILogger, LoggerFactory } from '../..';
-import { BackstackExtensionObserverInterface } from './BackstackExtensionObserverInterface';
-import { IDocumentState } from '../IDocumentState';
-import { GoBackListener } from './GoBackListener';
+import {
+    IExtensionEventCallbackResult,
+    IExtension,
+    ILiveDataDefinition,
+    ExtensionCommandDefinition,
+    ExtensionEventHandler
+} from 'apl-html';
+import {GoBackCommand} from './GoBackCommand';
+import {Stack} from './Stack';
+import {BackstackEnvironment} from './BackstackEnvironment';
+import {ClearCommand} from './ClearCommand';
+import {ILogger, LoggerFactory} from '../..';
+import {BackstackExtensionObserverInterface} from './BackstackExtensionObserverInterface';
+import {IDocumentState} from '../IDocumentState';
+import {GoBackListener} from './GoBackListener';
+import {createAplExtensionCommandDefinition} from '../ExtensionCreationUtils';
 
 /**
  * Similar to the HTML_History object, the backstack extension allows for implicit sequential back navigation to
@@ -21,17 +26,17 @@ import { GoBackListener } from './GoBackListener';
  * new commands so that documents can directly manipulate the backstack and return to previous documents.
  */
 export class BackstackExtension implements IExtension, GoBackListener {
-    public readonly URI : string = 'aplext:backstack:10';
-    private static logger : ILogger = LoggerFactory.getLogger('BackExtension');
-    private responsibleForBackButton : boolean;
-    private observer : BackstackExtensionObserverInterface;
-    private backstack : Stack;
+    public readonly URI: string = 'aplext:backstack:10';
+    private static logger: ILogger = LoggerFactory.getLogger('BackExtension');
+    private responsibleForBackButton: boolean;
+    private observer: BackstackExtensionObserverInterface;
+    private backstack: Stack;
     // The active backstack id as provided by the last requesting document in settings.
-    private activeDocumentId : string | undefined;
+    private activeDocumentId: string | undefined;
 
-    private backstackArrayName : string | undefined;
+    private backstackArrayName: string | undefined;
 
-    public constructor(observer : BackstackExtensionObserverInterface) {
+    public constructor(observer: BackstackExtensionObserverInterface) {
         this.observer = observer;
         this.backstack = new Stack();
     }
@@ -48,21 +53,21 @@ export class BackstackExtension implements IExtension, GoBackListener {
      * @param isResponsibleForBackButton True if the device does not allow, or has no mechanism for, system invocation
      * of back (making the APL document "responsible").
      */
-    public setResponsibleForBackButton(isResponsibleForBackButton : boolean) {
+    public setResponsibleForBackButton(isResponsibleForBackButton: boolean) {
         this.responsibleForBackButton = isResponsibleForBackButton;
     }
 
     /**
      * Return the URI of this extension
      */
-    public getUri() : string {
+    public getUri(): string {
         return this.URI;
     }
 
     /**
      * @return True if there is an active document id to use for caching @c AplDocumentState.
      */
-    public shouldCacheActiveDocument() : boolean {
+    public shouldCacheActiveDocument(): boolean {
         return this.activeDocumentId !== undefined;
     }
 
@@ -76,7 +81,7 @@ export class BackstackExtension implements IExtension, GoBackListener {
     /**
      * Notify the observer to restore the IDocumentState popped by the backstack.
      */
-    public restoreDocumentState(documentState : IDocumentState) : boolean {
+    public restoreDocumentState(documentState: IDocumentState): boolean {
         if (documentState) {
             this.activeDocumentId = documentState.id;
             this.observer.onRestoreDocumentState(documentState);
@@ -90,10 +95,10 @@ export class BackstackExtension implements IExtension, GoBackListener {
      * @return True if the extension allows system back and the back event succeeded in issuing a restoreDocumentState
      * callback to the observer.
      */
-    public handleBack() : boolean {
+    public handleBack(): boolean {
         if (!this.responsibleForBackButton) {
             const backstackSize = this.backstack.size;
-            const goBackCommand : GoBackCommand = new GoBackCommand({
+            const goBackCommand: GoBackCommand = new GoBackCommand({
                 backType: GoBackCommand.COUNT_BACK_TYPE,
                 backValue: 1
             }, this);
@@ -106,7 +111,7 @@ export class BackstackExtension implements IExtension, GoBackListener {
     /**
      * Defines the callback for when a GoBack command is executed.
      */
-    public onGoBack(itemToGoBackTo : IDocumentState) {
+    public onGoBack(itemToGoBackTo: IDocumentState) {
         this.restoreDocumentState(itemToGoBackTo);
     }
 
@@ -115,7 +120,7 @@ export class BackstackExtension implements IExtension, GoBackListener {
      * backstack - The id’s of the documents in the backstack
      * responsibleForBackButton - True if the document is responsible for drawing a back button.
      */
-    public getEnvironment() : BackstackEnvironment {
+    public getEnvironment(): BackstackEnvironment {
         return {
             responsibleForBackButton: this.responsibleForBackButton,
             backstack: this.backstack.getIds()
@@ -125,14 +130,22 @@ export class BackstackExtension implements IExtension, GoBackListener {
     /**
      * Returns all of the commands supported by the Backstack extension.
      */
-    public getExtensionCommands() : ExtensionCommandDefinition[] {
+    public getExtensionCommands(): ExtensionCommandDefinition[] {
         return [
-            new ExtensionCommandDefinition(this.URI, GoBackCommand.COMMAND_TYPE)
+            new ExtensionCommandDefinition({
+                uri: this.URI,
+                name: GoBackCommand.COMMAND_TYPE,
+                createAplExtensionCommandDefinition
+            })
                 .allowFastMode(true)
                 .requireResolution(false)
                 .property(GoBackCommand.BACK_TYPE_KEY, GoBackCommand.COUNT_BACK_TYPE, false)
                 .property(GoBackCommand.BACK_VALUE_KEY, 1, false),
-            new ExtensionCommandDefinition(this.URI, ClearCommand.COMMAND_TYPE)
+            new ExtensionCommandDefinition({
+                uri: this.URI,
+                name: ClearCommand.COMMAND_TYPE,
+                createAplExtensionCommandDefinition
+            })
                 .allowFastMode(true)
                 .requireResolution(false)
         ];
@@ -141,12 +154,12 @@ export class BackstackExtension implements IExtension, GoBackListener {
     /**
      * The backstack extension does not add any event handlers.
      */
-    public getExtensionEventHandlers() : ExtensionEventHandler[] {
+    public getExtensionEventHandlers(): ExtensionEventHandler[] {
         return [];
     }
 
-    public getLiveData() : ILiveDataDefinition[] {
-        const liveData : ILiveDataDefinition[] = [];
+    public getLiveData(): ILiveDataDefinition[] {
+        const liveData: ILiveDataDefinition[] = [];
         if (this.backstackArrayName) {
             liveData.push({
                 name: this.backstackArrayName,
@@ -160,14 +173,14 @@ export class BackstackExtension implements IExtension, GoBackListener {
      * Sets the Context for later use
      * @param context Context for the current document
      */
-    public setContext(context : APL.Context) : void {
+    public setContext(context: APL.Context): void {
     }
 
     /**
      * Apply extension settings retrieved from Content.
      * @param settings Backstack settings object.
      */
-    public applySettings(settings : object) : void {
+    public applySettings(settings: object): void {
         this.backstackArrayName = undefined;
         // handle edge case: when backs stack settings are not provided.
         // meaning document request backstack but not intent to add to backstack extension.
@@ -207,17 +220,17 @@ export class BackstackExtension implements IExtension, GoBackListener {
      * @param source the source which raised the event that triggered the command
      * @param params the command parameters specified in the extension command definition
      */
-    public onExtensionEvent(uri : string, commandName : string, source : object, params : object,
-                            resultCallback : IExtensionEventCallbackResult) : void {
+    public onExtensionEvent(uri: string, commandName: string, source: object, params: object,
+                            resultCallback: IExtensionEventCallbackResult): void {
         if (uri === this.URI) {
             switch (commandName) {
                 case GoBackCommand.COMMAND_TYPE : {
-                    const goBackCommand : GoBackCommand = new GoBackCommand(params, this);
+                    const goBackCommand: GoBackCommand = new GoBackCommand(params, this);
                     goBackCommand.execute(this.backstack);
                     break;
                 }
                 case ClearCommand.COMMAND_TYPE : {
-                    const clearCommand : ClearCommand = new ClearCommand();
+                    const clearCommand: ClearCommand = new ClearCommand();
                     clearCommand.execute(this.backstack);
                     break;
                 }
@@ -233,7 +246,7 @@ export class BackstackExtension implements IExtension, GoBackListener {
      * Used to add an item to the backstack.
      * @param backItem item to be added
      */
-    public addDocumentStateToBackstack(backItem : IDocumentState) {
+    public addDocumentStateToBackstack(backItem: IDocumentState) {
         // only add items to the backstack if the backstackId has been provided in the settings
         if (this.activeDocumentId) {
             BackstackExtension.logger.info(`adding ${this.activeDocumentId}`);

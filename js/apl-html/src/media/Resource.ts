@@ -14,26 +14,26 @@ export type DownloadState = 'pending' | 'complete' | 'cancelled';
  * @ignore
  */
 export class Resource {
-  private downloadState : DownloadState;
-  private buffer : ArrayBuffer;
+  private downloadState: DownloadState;
+  private buffer: ArrayBuffer;
 
   constructor() {
     this.downloadState = 'pending';
   }
 
-  public setDownloadState(downloadState : DownloadState) : void {
+  public setDownloadState(downloadState: DownloadState): void {
     this.downloadState = downloadState;
   }
 
-  public getDownloadState() : DownloadState {
+  public getDownloadState(): DownloadState {
     return this.downloadState;
   }
 
-  public getBuffer() : ArrayBuffer {
+  public getBuffer(): ArrayBuffer {
     return this.buffer;
   }
 
-  public setBuffer(buffer : ArrayBuffer) : void {
+  public setBuffer(buffer: ArrayBuffer): void {
     this.buffer = buffer;
   }
 }

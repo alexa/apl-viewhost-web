@@ -18,33 +18,33 @@ export interface ILogger {
      *
      * @param msg any data to log to the console
      */
-    trace(...msg : any[]) : void;
+    trace(...msg: any[]): void;
 
     /**
      * Log debug message
      *
      * @param msg any data to log to the console
      */
-    debug(...msg : any[]) : void;
+    debug(...msg: any[]): void;
 
     /**
      * Log info message
      *
      * @param msg any data to log to the console
      */
-    info(...msg : any[]) : void;
+    info(...msg: any[]): void;
 
     /**
      * Log warn message
      *
      * @param msg any data to log to the console
      */
-    warn(...msg : any[]) : void;
+    warn(...msg: any[]): void;
 
     /**
      * Log error message
      *
      * @param msg any data to log to the console
      */
-    error(...msg : any[]) : void;
+    error(...msg: any[]): void;
 }

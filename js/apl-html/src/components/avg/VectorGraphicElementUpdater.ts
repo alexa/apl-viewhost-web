@@ -15,37 +15,57 @@ export { Group } from './Group';
 export { Path } from './Path';
 export { AVGText } from './AVGText';
 
+export interface UpdateElementsArgs {
+    root: APL.GraphicElement;
+    parentElement: Element;
+    dirty: { [key: number]: APL.GraphicElement };
+    lang: string;
+}
+
 export class VectorGraphicElementUpdater {
-    private AVGByGraphicKey : Map<number, AVG> = new Map<number, AVG>();
-    private walkable : Set<GraphicElementType> = new Set<GraphicElementType>(
+    private AVGByGraphicKey: Map<number, AVG> = new Map<number, AVG>();
+    private walkable: Set<GraphicElementType> = new Set<GraphicElementType>(
         [
             GraphicElementType.kGraphicElementTypeContainer,
             GraphicElementType.kGraphicElementTypeGroup
         ]);
-    private orphanedAVGKeys : Set<number>;
-    private readonly logger : ILogger;
+    private orphanedAVGKeys: Set<number>;
+    private readonly logger: ILogger;
 
     constructor() {
         this.logger = LoggerFactory.getLogger('VectorGraphicUpdater');
     }
 
-    public updateElements(root : APL.GraphicElement,
-                          parentElement : Element,
-                          dirty : { [key : number] : APL.GraphicElement }) {
+    public updateElementsWithArgs({root, parentElement, dirty, lang}: UpdateElementsArgs) {
         this.orphanedAVGKeys = new Set<number>(this.AVGByGraphicKey.keys());
-        this.walkTree(root, parentElement, dirty);
+        this.walkTree(root, parentElement, dirty, lang);
         this.deleteOrphanedElements();
     }
 
-    private walkTree(root : APL.GraphicElement,
-                     parentElement : Element,
-                     dirty : { [key : number] : APL.GraphicElement }) {
+    /**
+     * @Deprecated use updateElementsWithArgs
+     */
+    public updateElements(root: APL.GraphicElement,
+                          parentElement: Element,
+                          dirty: { [key: number]: APL.GraphicElement }) {
+        this.updateElementsWithArgs({
+            root,
+            parentElement,
+            dirty,
+            lang: ''
+        });
+    }
+
+    private walkTree(root: APL.GraphicElement,
+                     parentElement: Element,
+                     dirty: { [key: number]: APL.GraphicElement },
+                     lang: string) {
         if (root && this.walkable.has(root.getType())) {
             for (let i = 0; i < root.getChildCount(); i++) {
                 const child = root.getChildAt(i);
                 this.orphanedAVGKeys.delete(child.getId());
                 if (!this.AVGByGraphicKey.has(child.getId())) {
-                    const newElement = this.createElement(child, parentElement);
+                    const newElement = this.createElement(child, parentElement, lang);
                     if (newElement) {
                         this.AVGByGraphicKey.set(child.getId(), newElement);
                     }
@@ -55,21 +75,31 @@ export class VectorGraphicElementUpdater {
                     dirtyElement.graphic = dirty[child.getId()];
                     dirtyElement.updateDirty();
                 }
-                this.walkTree(child, this.AVGByGraphicKey.get(child.getId()).element, dirty);
+                this.walkTree(child, this.AVGByGraphicKey.get(child.getId()).element, dirty, lang);
             }
         } else {
             return;
         }
     }
 
-    private createElement(graphicElement : APL.GraphicElement, parentElement : Element) : AVG | undefined {
-        let newAVG : AVG;
+    private createElement(graphicElement: APL.GraphicElement, parentElement: Element, lang: string): AVG | undefined {
+        let newAVG: AVG;
         if (graphicElement.getType() === GraphicElementType.kGraphicElementTypeGroup) {
-            newAVG = new Group(graphicElement, parentElement, this.logger);
+            newAVG = new Group({
+                graphic: graphicElement,
+                parent: parentElement,
+                logger: this.logger,
+                lang
+            });
         } else if (graphicElement.getType() === GraphicElementType.kGraphicElementTypePath) {
             newAVG = new Path(graphicElement, parentElement, this.logger);
         } else if (graphicElement.getType() === GraphicElementType.kGraphicElementTypeText) {
-            newAVG = new AVGText(graphicElement, parentElement, this.logger);
+            newAVG = new AVGText({
+                graphic: graphicElement,
+                parent: parentElement,
+                logger: this.logger,
+                lang
+            });
         } else {
             this.logger.debug(`GraphicElement type ${graphicElement.getType()} is not supported`);
             return undefined;

@@ -12,6 +12,8 @@
 #include <rapidjson/writer.h>
 #include "wasm/embindutils.h"
 #include "wasm/session.h"
+#include "utils/jsparser.h"
+#include <climits>
 
 namespace apl {
 namespace wasm {
@@ -49,6 +51,17 @@ ContextMethods::getBackground(const apl::RootContextPtr& context) {
 void
 ContextMethods::setBackground(const apl::RootContextPtr& context, emscripten::val bg) {
     background = bg;
+}
+
+std::string
+ContextMethods::getDataSourceContext(const apl::RootContextPtr& context) {
+    rapidjson::Document document(rapidjson::kObjectType);
+    rapidjson::StringBuffer buffer;
+    rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
+    auto dataSourceContext = context->serializeDataSourceContext(allocator);
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    dataSourceContext.Accept(writer);
+    return buffer.GetString();
 }
 
 std::string
@@ -149,6 +162,42 @@ ContextMethods::cancelExecution(const apl::RootContextPtr& context) {
     context->cancelExecution();
 }
 
+void
+ContextMethods::applyScalingOptions(emscripten::val& scalingOptions,
+                                    std::vector<ViewportSpecification>& specs,
+                                    Metrics& coreMetrics,
+                                    bool& shapeOverridesCost,
+                                    double& k) {
+    if (!scalingOptions.isUndefined()) {
+        k = scalingOptions["biasConstant"].as<double>();
+        auto specifications = scalingOptions["specifications"];
+        int length = specifications["length"].as<int>();
+        for (int i = 0; i < length; i++) {
+            auto spec = specifications[i];
+            bool isSpecRound = coreMetrics.getScreenShape() == ScreenShape::ROUND;
+            auto mode = kViewportModeHub;
+            const std::string defaultMode = "HUB";
+            auto stringMode = jsparser::getOptionalValue(spec, "mode", defaultMode);
+            if(modeMap.find(stringMode) != modeMap.end()) {
+                mode = modeMap[stringMode];
+            }
+
+            const double viewportMin = 1;
+            specs.emplace_back(
+                                jsparser::getOptionalValue(spec, "minWidth", viewportMin),
+                                jsparser::getOptionalValue(spec, "maxWidth", INT_MAX),
+                                jsparser::getOptionalValue(spec, "minHeight",viewportMin),
+                                jsparser::getOptionalValue(spec, "maxHeight", INT_MAX),
+                                mode,
+                                isSpecRound
+                            );
+        }
+        if(!scalingOptions["shapeOverridesCost"].isUndefined()) {
+            shapeOverridesCost = scalingOptions["shapeOverridesCost"].as<bool>();
+        }
+    }
+}
+
 apl::RootContextPtr
 ContextMethods::create(emscripten::val options, emscripten::val text, emscripten::val metrics, emscripten::val content, emscripten::val config, emscripten::val scalingOptions) {
     try {
@@ -162,31 +211,18 @@ ContextMethods::create(emscripten::val options, emscripten::val text, emscripten
 
         // Other options
         auto contentPtr = content.as<ContentPtr>();
+
+        std::vector<ViewportSpecification> specs;
         bool shapeOverridesCost = true;
         double k = 0;
-        std::vector<ViewportSpecification> specs;
 
-        if (!scalingOptions.isUndefined()) {
-                k = scalingOptions["biasConstant"].as<double>();
-                auto specifications = scalingOptions["specifications"];
-                int length = specifications["length"].as<int>();
-                for (int i = 0; i < length; i++) {
-                    auto spec = specifications[i];
-                    bool isSpecRound = coreMetrics.getScreenShape() == ScreenShape::ROUND;
-                    auto mode = kViewportModeHub;
-                    auto stringMode = spec["mode"].as<std::string>();
-                    if(modeMap.find(stringMode) != modeMap.end()) {
-                        mode = modeMap[stringMode];
-                    }
-                    specs.push_back({spec["minWidth"].as<double>(), spec["maxWidth"].as<double>(),
-                                     spec["minHeight"].as<double>(), spec["maxHeight"].as<double>(),
-                                     mode,
-                                     isSpecRound});
-                }
-                if(!scalingOptions["shapeOverridesCost"].isUndefined()) {
-                    shapeOverridesCost = scalingOptions["shapeOverridesCost"].as<bool>();
-                }
-        }
+        applyScalingOptions(
+            scalingOptions,
+            specs,
+            coreMetrics,
+            shapeOverridesCost,
+            k
+        );
 
         apl::RootContextPtr root;
         WASMMetrics* m;
@@ -392,30 +428,18 @@ ContextMethods::configurationChange(const apl::RootContextPtr& context, emscript
     } else {
         auto m = context->getUserData<WASMMetrics>();
         auto coreMetrics = *(metrics.as<std::shared_ptr<Metrics>>());
+
         std::vector<ViewportSpecification> specs;
         bool shapeOverridesCost = true;
         double k = 0;
-        if (!scalingOptions.isUndefined()) {
-                k = scalingOptions["biasConstant"].as<double>();
-                auto specifications = scalingOptions["specifications"];
-                int length = specifications["length"].as<int>();
-                for (int i = 0; i < length; i++) {
-                    auto spec = specifications[i];
-                    bool isSpecRound = coreMetrics.getScreenShape() == ScreenShape::ROUND;
-                    auto mode = kViewportModeHub;
-                    auto stringMode = spec["mode"].as<std::string>();
-                    if(modeMap.find(stringMode) != modeMap.end()) {
-                        mode = modeMap[stringMode];
-                    }
-                    specs.push_back({spec["minWidth"].as<double>(), spec["maxWidth"].as<double>(),
-                                     spec["minHeight"].as<double>(), spec["maxHeight"].as<double>(),
-                                     mode,
-                                     isSpecRound});
-                }
-                if(!scalingOptions["shapeOverridesCost"].isUndefined()) {
-                    shapeOverridesCost = scalingOptions["shapeOverridesCost"].as<bool>();
-                }
-        }
+
+        applyScalingOptions(
+            scalingOptions,
+            specs,
+            coreMetrics,
+            shapeOverridesCost,
+            k
+        );
 
         if (!scalingOptions.isUndefined()) {
             ScalingOptions so(specs, k, shapeOverridesCost);
@@ -468,6 +492,7 @@ EMSCRIPTEN_BINDINGS(apl_wasm_context) {
         .function("getTheme", &internal::ContextMethods::getTheme)
         .function("getBackground", &internal::ContextMethods::getBackground)
         .function("setBackground", &internal::ContextMethods::setBackground)
+        .function("getDataSourceContext", &internal::ContextMethods::getDataSourceContext)
         .function("getVisualContext", &internal::ContextMethods::getVisualContext)
         .function("clearPending", &internal::ContextMethods::clearPending)
         .function("isDirty", &internal::ContextMethods::isDirty)

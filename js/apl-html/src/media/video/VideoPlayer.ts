@@ -3,149 +3,241 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-// const hls = require("hls.js/dist/hls.light.min.js");
-// const path = require("path");
-import * as $ from 'jquery';
-import { IMediaEventListener } from '../IMediaEventListener';
-import { PlaybackState } from '../Resource';
-import { IPlayer } from '../IPlayer';
+import {PlaybackState} from '../Resource';
+import {EmitBehavior, IPlaybackStateHandler, PlaybackStateHandler} from './PlaybackStateHandler';
+import {IVideoPlayer} from '../IVideoPlayer';
+import {IMediaEventListener} from '../IMediaEventListener';
 
-/**
- * @ignore
- */
-export class VideoPlayer implements IPlayer {
-    protected player : HTMLVideoElement;
-    // private hlsPlayer: any = undefined;
-    protected eventListener : IMediaEventListener;
-    protected playbackState : PlaybackState;
+export interface PlayerInitializationArgs {
+    player: HTMLVideoElement;
+    parent: HTMLElement;
+    scale: 'contain' | 'cover';
+}
 
-    private playerEndTime : number;
+export function createVideoPlayer(eventListener: IMediaEventListener): IVideoPlayer {
+    // Private Variables
+    let playerEndTime: number = undefined;
 
-    constructor(eventListener : IMediaEventListener) {
-        this.player = document.createElement('video');
-        this.eventListener = eventListener;
-    }
-
-    public configure(parent : HTMLElement, scale : 'contain'|'cover') {
-        parent.appendChild(this.player);
-        this.playbackState = PlaybackState.IDLE;
-        Object.assign(this.player.style, {
+    // Private Functions
+    function initializePlayer(args: PlayerInitializationArgs) {
+        const {
+            player,
+            parent,
+            scale
+        } = args;
+        parent.appendChild(player);
+        Object.assign(player.style, {
             'height': '100%',
             'object-fit': scale,
             'width': '100%'
         });
-        this.player.onplay = () : any => {
-            this.sendPlaying();
-            this.playbackState = PlaybackState.PLAYING;
-        };
-        this.player.onplaying = () : any => {
-            this.sendPlaying();
-            this.playbackState = PlaybackState.PLAYING;
-        };
-        this.player.onended = () : any => {
-            this.eventListener.onEvent(PlaybackState.ENDED);
-            this.playbackState = PlaybackState.ENDED;
-        };
-        this.player.onpause = () : any =>  {
-            this.eventListener.onEvent(PlaybackState.PAUSED);
-            this.playbackState = PlaybackState.PAUSED;
-        };
-        this.player.onerror = () : any => {
-            this.eventListener.onEvent(PlaybackState.ERROR);
-            this.playbackState = PlaybackState.ERROR;
-        };
-        this.player.onloadedmetadata = () : any => {
-            this.eventListener.onEvent(PlaybackState.LOADED);
-            this.playbackState = PlaybackState.LOADED;
-        };
-        this.player.ontimeupdate = () : any => {
-            if (this.playbackState === PlaybackState.PLAYING) {
-                this.eventListener.onEvent(PlaybackState.PLAYING);
-            }
-            this.onVideoTimeUpdated();
-        };
     }
 
-    public applyCssShadow = (shadowParams : string) => {
-        $(this.player).css('box-shadow', shadowParams);
-    }
-
-    public load(id : string, url : string) : Promise<void> {
-        this.player.id = id;
-        if (this.player.src !== url) {
-            this.playbackState = PlaybackState.IDLE;
-            this.player.src = url;
-            this.player.load();
-        } else {
-            this.eventListener.onEvent(PlaybackState.LOADED);
-            this.playbackState = PlaybackState.LOADED;
+    function positionRelativeToCurrentTime(time: number): Comparison {
+        if (time > this.player.currentTime) {
+            return Comparison.GT;
         }
-        return Promise.resolve();
-    }
-
-    public play(id : string, url : string, offset : number) : Promise<void> {
-            if (this.playbackState !== PlaybackState.PAUSED && offset > this.player.currentTime) {
-                // HTMLVidioElement is using second while offset is milliseconds.
-                this.player.currentTime = offset / 1000;
-            }
-            return this.player.play();
-    }
-
-    public pause() : void {
-        this.player.pause();
-    }
-
-    public mute() : void {
-        this.player.muted = true;
-    }
-
-    public unmute() : void {
-        this.player.muted = false;
-    }
-
-    public setVolume(volume : number) : void {
-        this.player.volume = volume;
-    }
-
-    public flush() : void {
-        this.pause();
-    }
-
-    public setCurrentTime(offsetInSecond : number) : void {
-        this.player.currentTime = offsetInSecond;
-    }
-
-    public setEndTime(endTimeInSecond : number) : void {
-        this.playerEndTime = endTimeInSecond;
-    }
-
-    public getCurrentPlaybackPosition() : number {
-        return this.player.currentTime;
-    }
-
-    public getDuration() : number {
-        // duration is in seconds.
-        return this.player.duration;
-    }
-
-    public getMediaState() : PlaybackState {
-        return this.playbackState;
-    }
-
-    public getMediaId() : string {
-        return this.player.id;
-    }
-
-    private sendPlaying() {
-        if (this.playbackState === PlaybackState.IDLE || this.playbackState === PlaybackState.PAUSED
-            || this.playbackState === PlaybackState.ENDED || this.playbackState === PlaybackState.LOADED) {
-            this.eventListener.onEvent(PlaybackState.PLAYING);
+        if (time < this.player.currentTime) {
+            return Comparison.LT;
         }
+        return Comparison.EQ;
     }
 
-    private onVideoTimeUpdated() {
-        if (this.playerEndTime && this.player.currentTime >= this.playerEndTime) {
+    function updateCurrentTimeTo(time: number): void {
+        this.player.currentTime = time / 1000;
+    }
+
+    function videoTimeWasUpdated(endTime: number) {
+        if (!isValidNumber(endTime)) {
+            return;
+        }
+        const currentTimeAtOrBeyondEndTime = this.player.currentTime >= endTime;
+        if (currentTimeAtOrBeyondEndTime) {
             this.pause();
         }
     }
+
+    // Video LifeCycle Callbacks
+    function attachOnPlayCallback() {
+        function onPlayCallback(): void {
+            this.playbackStateHandler.transitionToState(PlaybackState.PLAYING);
+        }
+
+        this.player.onplay = onPlayCallback.bind(this);
+    }
+
+    function attachOnPlayingCallback() {
+        function onPlayingCallback(): void {
+            this.playbackStateHandler.transitionToState(PlaybackState.PLAYING);
+        }
+
+        this.player.onplaying = onPlayingCallback.bind(this);
+    }
+
+    function attachOnEndedCallback() {
+        function onEndedCallback(): void {
+            this.playbackStateHandler.transitionToState(PlaybackState.ENDED);
+        }
+
+        this.player.onended = onEndedCallback.bind(this);
+    }
+
+    function attachOnPauseCallback() {
+        function onPauseCallback() {
+            this.playbackStateHandler.transitionToState(PlaybackState.PAUSED, EmitBehavior.AlwaysEmit);
+        }
+
+        this.player.onpause = onPauseCallback.bind(this);
+    }
+
+    function attachOnErrorCallback() {
+        function onErrorCallback() {
+            this.playbackStateHandler.transitionToState(PlaybackState.ERROR);
+        }
+
+        this.player.onerror = onErrorCallback.bind(this);
+    }
+
+    function attachOnLoadedMetadataCallback() {
+        function onLoadedMetadataCallback() {
+            this.playbackStateHandler.transitionToState(PlaybackState.LOADED);
+        }
+
+        this.player.onloadedmetadata = onLoadedMetadataCallback.bind(this);
+    }
+
+    function attachOnTimeUpdateCallback() {
+        function onTimeUpdateCallback() {
+            if (this.playbackStateHandler.currentPlaybackState !== PlaybackState.PAUSED) {
+                this.playbackStateHandler.transitionToState(PlaybackState.PLAYING, EmitBehavior.AlwaysEmit);
+            }
+            videoTimeWasUpdated.bind(this, playerEndTime);
+        }
+
+        this.player.ontimeupdate = onTimeUpdateCallback.bind(this);
+    }
+
+    // Public Interface
+    const videoPlayer: IVideoPlayer = {
+        // IVideoPlayer Interface
+        configure(parent: HTMLElement, scale: 'contain' | 'cover'): void {
+            initializePlayer({
+                player: this.player,
+                parent,
+                scale
+            });
+            this.playbackStateHandler.transitionToState(PlaybackState.IDLE);
+            attachOnPlayCallback.call(this);
+            attachOnPlayingCallback.call(this);
+            attachOnEndedCallback.call(this);
+            attachOnPauseCallback.call(this);
+            attachOnErrorCallback.call(this);
+            attachOnLoadedMetadataCallback.call(this);
+            attachOnTimeUpdateCallback.call(this);
+        },
+        applyCssShadow(shadowParams: string): void {
+            this.player.style.boxShadow = shadowParams;
+        },
+        setCurrentTimeInSeconds(offsetInSeconds: number): void {
+            this.player.currentTime = offsetInSeconds;
+        },
+        getCurrentPlaybackPositionInSeconds(): number {
+            return this.player.currentTime;
+        },
+        setEndTimeInSeconds(endTimeInSeconds: number): void {
+            playerEndTime = endTimeInSeconds;
+        },
+        getDurationInSeconds(): number {
+            return this.player.duration;
+        },
+        mute(): void {
+            this.player.muted = true;
+        },
+        unmute(): void {
+            this.player.muted = false;
+        },
+        // IPlayer Interface
+        load(id: string, url: string): Promise<void> {
+            this.player.id = id;
+            if (urlDifferentFromPlayerSource(this.player, url)) {
+                this.playbackStateHandler.transitionToState(PlaybackState.IDLE);
+                this.player.src = url;
+                this.player.load();
+            }
+            this.playbackStateHandler.transitionToState(PlaybackState.LOADED);
+            return Promise.resolve(undefined);
+        },
+        play(id: string, url: string, offset: number): Promise<void> {
+            const playbackIsNotPaused = !this.playbackStateHandler.isState(PlaybackState.PAUSED);
+            const offsetIsAhead = positionRelativeToCurrentTime.call(this, offset) === Comparison.GT;
+            if (playbackIsNotPaused && offsetIsAhead) {
+                updateCurrentTimeTo.call(this, offset);
+            }
+            return new Promise((resolve, reject) => {
+                this.player.play()
+                    .then(resolve)
+                    .catch(reject);
+            });
+        },
+        pause(): Promise<void> {
+            this.playbackStateHandler.transitionToState(PlaybackState.PAUSED);
+            return this.player.pause();
+        },
+        setVolume(volume: number): void {
+            this.player.volume = volume;
+        },
+        flush(): void {
+            this.pause();
+        },
+        getMediaId(): string {
+            return this.player.id;
+        },
+        getMediaState(): PlaybackState {
+            return this.playbackStateHandler.currentPlaybackState;
+        },
+        destroy() {
+            // Pause any existing playback
+            this.player.pause();
+            // Empty out the source
+            this.player.removeAttribute('src');
+            // Remove from DOM
+            this.player.remove();
+        }
+    };
+
+    const videoElement = document.createElement('video');
+    const playbackStateHandler = PlaybackStateHandler({
+        eventListener,
+        initialPlaybackState: PlaybackState.IDLE
+    });
+
+    // Object Properties
+    return Object.defineProperties(videoPlayer, {
+        player: {
+            value: videoElement as HTMLVideoElement,
+            writable: false,
+            configurable: false
+        },
+        playbackStateHandler: {
+            value: playbackStateHandler as IPlaybackStateHandler,
+            writable: false,
+            configurable: false
+        }
+    });
+}
+
+// Helper Functions
+function urlDifferentFromPlayerSource(player: HTMLVideoElement, url: string): boolean {
+    return player.src !== url;
+}
+
+function isValidNumber(maybeNumber: any): maybeNumber is number {
+    return maybeNumber !== undefined && typeof maybeNumber === 'number';
+}
+
+// Helper Enums
+enum Comparison {
+    LT = 'LT',
+    GT = 'GT',
+    EQ = 'EQ'
 }

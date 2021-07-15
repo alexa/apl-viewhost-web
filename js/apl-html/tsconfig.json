@@ -14,9 +14,6 @@
     "stripInternal": true,
     "noUnusedLocals": true
   },
-  "include": [
-    "src"
-  ],
   "exclude": [
     "build",
     "scripts"

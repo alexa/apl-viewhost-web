@@ -4,51 +4,52 @@
  */
 
 import APLRenderer,
-    {Content, DeviceMode, FontUtils, IAPLOptions, ILogger, JSLogLevel, LoggerFactory, LogLevel, LogTransport,
-        ViewportShape, commandFactory, LocaleMethods} from 'apl-html';
+{
+    Content, DeviceMode, FontUtils, IAPLOptions, ILogger, JSLogLevel, LoggerFactory, LogLevel, LogTransport,
+    ViewportShape, commandFactory, LocaleMethods, LiveArray, LiveMap
+} from 'apl-html';
 import {ConfigurationChange} from './ConfigurationChange';
-import {LiveArray} from './LiveArray';
-import {LiveMap} from './LiveMap';
 import {PackageLoader} from './PackageLoader';
 import {ExtensionManager} from './extensions/ExtensionManager';
 import {IDocumentState} from './extensions/IDocumentState';
-import { IConfigurationChangeOptions } from 'apl-html';
+import {IConfigurationChangeOptions} from 'apl-html';
 
 /**
  * This matches the schema sent from the server
  */
 export interface IValidViewportSpecification {
-    mode : DeviceMode;
-    shape : ViewportShape;
-    minWidth : number;
-    maxWidth : number;
-    minHeight : number;
-    maxHeight : number;
+    mode: DeviceMode;
+    shape: ViewportShape;
+    minWidth: number;
+    maxWidth: number;
+    minHeight: number;
+    maxHeight: number;
 }
 
+export interface ScalingOptions {
+    /** Higher values will scale less but use screen real estate less efficiently */
+    biasConstant: number;
+    /** Tested configurations */
+    specifications: IValidViewportSpecification[];
+}
 /**
  * Options when creating a new APLWASMRenderer
  */
 export interface IAPLWASMOptions extends IAPLOptions {
     /** Contains all the data and docs needed to inflate an APL view */
-    content : Content;
+    content: Content;
     /** information on device scaling */
-    scaling? : {
-        /** Higher values will scale less but use screen real estate less efficiently */
-        biasConstant : number;
-        /** Tested configurations */
-        specifications : IValidViewportSpecification[];
-    };
+    scaling?: ScalingOptions;
     /** Skip force loading of fonts loading. For tests mainly as electron flacky with it. */
-    notLoadFonts? : boolean;
+    notLoadFonts?: boolean;
     /** Log level to report. */
-    logLevel? : JSLogLevel;
+    logLevel?: JSLogLevel;
     /** Log transport */
-    logTransport? : LogTransport;
+    logTransport?: LogTransport;
     /** Extension Manager */
-    extensionManager? : ExtensionManager;
+    extensionManager?: ExtensionManager;
     /** Document State to restore */
-    documentState? : IDocumentState;
+    documentState?: IDocumentState;
 }
 
 const LEGACY_KARAOKE_APL_VERSION = '1.0';
@@ -61,23 +62,23 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
      * Creates a new renderer
      * @param options Options for this instance
      */
-    public static create(options : IAPLWASMOptions) {
+    public static create(options: IAPLWASMOptions) {
         return new APLWASMRenderer(options);
     }
 
-    protected legacyKaroke : boolean;
+    protected legacyKaroke: boolean;
 
     /// Logger to be used for core engine logs.
-    private coreLogger : ILogger;
+    private coreLogger: ILogger;
 
     /// Viewport metrics.
-    private metrics : APL.Metrics;
+    private metrics: APL.Metrics;
 
     /// APL Core config.
-    private rootConfig : APL.RootConfig;
+    private rootConfig: APL.RootConfig;
 
     /// Current Configuration Change
-    private configurationChange : ConfigurationChange;
+    private configurationChange: ConfigurationChange;
 
     /**
      * This constructor is private
@@ -85,7 +86,7 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
      * @internal
      * @ignore
      */
-    private constructor(options : IAPLWASMOptions) {
+    private constructor(options: IAPLWASMOptions) {
         LoggerFactory.initialize(options.logLevel || 'debug', options.logTransport);
         super(options);
         this.coreLogger = LoggerFactory.getLogger('Core');
@@ -99,7 +100,7 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
         this.rootConfig = Module.RootConfig.create(this.options.environment);
         this.rootConfig.utcTime(this.options.utcTime).localTimeAdjustment(this.options.localTimeAdjustment);
         this.rootConfig.localeMethods(LocaleMethods);
-        this.handleConfigurationChange = (configurationChangeOptions : IConfigurationChangeOptions) => {
+        this.handleConfigurationChange = (configurationChangeOptions: IConfigurationChangeOptions) => {
             if (this.context) {
                 const originalScaleFactor = this.context.getScaleFactor();
                 this.configurationChange = ConfigurationChange.create(configurationChangeOptions);
@@ -123,7 +124,7 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
      * @internal
      * @ignore
      */
-    public getLegacyKaraoke() : boolean {
+    public getLegacyKaraoke(): boolean {
         return this.legacyKaroke;
     }
 
@@ -132,7 +133,7 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
      * @param name Live data object name.
      * @param liveData Live data object.
      */
-    public registerLiveData(name : string, liveData : LiveArray | LiveMap) {
+    public registerLiveData(name: string, liveData: LiveArray | LiveMap) {
         if (liveData instanceof LiveArray) {
             this.rootConfig.liveArray(name, liveData.liveArray);
         } else {
@@ -141,8 +142,8 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
     }
 
     public async init() {
-        const logTransport : APL.CoreLogTransport = (level : number, log : string) => {
-            const logLevel : LogLevel = level as LogLevel;
+        const logTransport: APL.CoreLogTransport = (level: number, log: string) => {
+            const logLevel: LogLevel = level as LogLevel;
             switch (logLevel) {
                 case LogLevel.TRACE:
                     this.coreLogger.trace(log);
@@ -171,8 +172,8 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
         };
         Module.Logger.setLogTransport(logTransport);
 
-        const content : Content = this.options.documentState ?
-                                  this.options.documentState.content : this.options.content;
+        const content: Content = this.options.documentState ?
+            this.options.documentState.content : this.options.content;
 
         this.supportsResizing = content.getAPLSettings('supportsResizing');
 
@@ -198,8 +199,14 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
             await this.restoreDocument(this.options.documentState);
             this.options.documentState = undefined;
         } else {
-            this.context = Module.Context.create(this.options, this,
-            this.metrics, (content as any).content, this.rootConfig, this.options.scaling);
+            this.context = Module.Context.create(
+                this.options,
+                this,
+                this.metrics,
+                (content as any).content,
+                this.rootConfig,
+                this.options.scaling
+            );
         }
 
         if (!this.context) {
@@ -232,7 +239,7 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
      * ```
      * @param commands JSON string of an array of commands
      */
-    public executeCommands(commands : string) : APL.Action {
+    public executeCommands(commands: string): APL.Action {
         return this.context.executeCommands(commands);
     }
 
@@ -255,7 +262,7 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
      * @param data Handler supported data. Should be stringified.
      * @param fastMode true if should be executed in fast mode, false otherwise.
      */
-    public invokeExtensionEventHandler(uri : string, name : string, data : string, fastMode : boolean) : APL.Action {
+    public invokeExtensionEventHandler(uri: string, name: string, data: string, fastMode: boolean): APL.Action {
         return this.context.invokeExtensionEventHandler(uri, name, data, fastMode);
     }
 
@@ -272,11 +279,11 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
      * @param payload DataSource update payload.
      * @param type DataSource type. Optional, should be one of runtime registered.
      */
-    public processDataSourceUpdate(payload : string, type? : string) : boolean {
+    public processDataSourceUpdate(payload: string, type?: string): boolean {
         return this.context.processDataSourceUpdate(payload, type ? type : 'dynamicIndexList');
     }
 
-    public destroy(preserveContext? : boolean) {
+    public destroy(preserveContext?: boolean) {
         super.destroy(preserveContext);
         if (!preserveContext) {
             if (this.options.extensionManager) {
@@ -285,12 +292,12 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
         }
     }
 
-    private async loadPackages() : Promise<boolean> {
-        const packageLoader : PackageLoader = new PackageLoader();
+    private async loadPackages(): Promise<boolean> {
+        const packageLoader: PackageLoader = new PackageLoader();
         while (this.options.content.isWaiting()) {
             const importRequests = this.options.content.getRequestedPackages();
             if (importRequests.size > 0) {
-                const irArr : APL.ImportRequest[] = [];
+                const irArr: APL.ImportRequest[] = [];
                 importRequests.forEach((ir) => irArr.push(ir));
                 const loadedPkgs = await packageLoader.load(irArr);
                 for (const loadPkg of loadedPkgs) {
@@ -305,7 +312,7 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
         return true;
     }
 
-    private async restoreDocument(documentState : IDocumentState) : Promise<void> {
+    private async restoreDocument(documentState: IDocumentState): Promise<void> {
         if (!documentState) {
             return;
         }
@@ -322,7 +329,7 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
         }
     }
 
-    private passConfigurationChangeToCore(configurationChange : ConfigurationChange) : void {
+    private passConfigurationChangeToCore(configurationChange: ConfigurationChange): void {
         if (configurationChange.width && configurationChange.height) {
             this.metrics.size(configurationChange.width, configurationChange.height);
             this.context.configurationChange(configurationChange.getConfigurationChange(),

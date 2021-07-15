@@ -10,7 +10,7 @@ import APLRenderer from '../APLRenderer';
  * @ignore
  */
 export class Container extends Component {
-    constructor(renderer : APLRenderer, component : APL.Component, factory : FactoryFunction, parent? : Component) {
+    constructor(renderer: APLRenderer, component: APL.Component, factory: FactoryFunction, parent?: Component) {
         super(renderer, component, factory, parent);
 
         this.$container.css({
@@ -18,7 +18,7 @@ export class Container extends Component {
         });
     }
 
-    protected isLayout() : boolean {
+    protected isLayout(): boolean {
         return true;
     }
 }

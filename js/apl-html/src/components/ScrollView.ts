@@ -13,7 +13,7 @@ import { PropertyKey } from '../enums/PropertyKey';
  * @ignore
  */
 export interface IScrollViewProperties extends IComponentProperties {
-    [PropertyKey.kPropertyScrollPosition] : number;
+    [PropertyKey.kPropertyScrollPosition]: number;
 }
 
 /**
@@ -21,7 +21,7 @@ export interface IScrollViewProperties extends IComponentProperties {
  */
 export class ScrollView extends Scrollable<IScrollViewProperties> {
 
-    constructor(renderer : APLRenderer, component : APL.Component, factory : FactoryFunction, parent? : Component) {
+    constructor(renderer: APLRenderer, component: APL.Component, factory: FactoryFunction, parent?: Component) {
         super(renderer, component, factory, parent);
         this.container.classList.add('scrollView');
     }
@@ -29,17 +29,6 @@ export class ScrollView extends Scrollable<IScrollViewProperties> {
     public init() {
         super.init();
         this.$container.css('overflow', 'hidden');
-        // Override gap size to accomodate for padding
-        if (this.children && this.children.length > 0) {
-            const child = this.children[0];
-            this.$startGap.css({
-                top: child.bounds.top
-            });
-            this.$endGap.css({
-                height: this.bounds.height - this.innerBounds.height - this.innerBounds.top,
-                top: child.bounds.top + child.bounds.height
-            });
-        }
     }
 
     /**
@@ -47,7 +36,7 @@ export class ScrollView extends Scrollable<IScrollViewProperties> {
      * @returns [offset,size on direction]
      * @memberof ScrollViewComponent
      */
-    public getChildTopOffset(component : Component) : number {
+    public getChildTopOffset(component: Component): number {
         if (this.children.length === 0) {
             // no children
             return 0;
@@ -65,7 +54,7 @@ export class ScrollView extends Scrollable<IScrollViewProperties> {
         return top;
     }
 
-    public async setProperties(props : IScrollViewProperties) {
+    public async setProperties(props: IScrollViewProperties) {
         super.setProperties(props);
         // Since we are getting dirty properies from core
         // We will need to adjust our scroll position to match core's position

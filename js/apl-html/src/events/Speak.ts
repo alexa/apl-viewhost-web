@@ -17,11 +17,11 @@ import {ComponentType} from '..';
  * @internal
  */
 export class Speak extends Event implements IPlaybackEventListener {
-  protected component : Component;
-  protected highlightMode : CommandHighlightMode;
-  protected align : CommandScrollAlign;
-  protected highlightSequencer : HighlightSequencer;
-  protected textComponent : Text;
+  protected component: Component;
+  protected highlightMode: CommandHighlightMode;
+  protected align: CommandScrollAlign;
+  protected highlightSequencer: HighlightSequencer;
+  protected textComponent: Text;
 
   public onPlaybackStarted() {
     this.renderer.onSpeakEventStart(this.type);

@@ -13,24 +13,24 @@ import { GradientUnits } from '../../enums/GradientUnits';
  * @ignore
  */
 export interface IAVGGradient {
-    type : GradientType;
-    colorRange : number[];
-    inputRange : number[];
-    spreadMethod : GradientSpreadMethod;
-    units : GradientUnits;
-    x1 : number;
-    x2 : number;
-    y1 : number;
-    y2 : number;
-    centerX : number;
-    centerY : number;
-    radius : number;
+    type: GradientType;
+    colorRange: number[];
+    inputRange: number[];
+    spreadMethod: GradientSpreadMethod;
+    units: GradientUnits;
+    x1: number;
+    x2: number;
+    y1: number;
+    y2: number;
+    centerX: number;
+    centerY: number;
+    radius: number;
 }
 
-export function createGradientElement(gradient : IAVGGradient, transform : string,
-                                      parent : Element, logger : ILogger) : IValueWithReference | undefined {
+export function createGradientElement(gradient: IAVGGradient, transform: string,
+                                      parent: Element, logger: ILogger): IValueWithReference | undefined {
     const defs = document.createElementNS(SVG_NS, 'defs');
-    let gradientElement : SVGLinearGradientElement | SVGRadialGradientElement;
+    let gradientElement: SVGLinearGradientElement | SVGRadialGradientElement;
     const gradientId = uuidv4().toString();
     switch ( gradient.type ) {
         case GradientType.LINEAR: {

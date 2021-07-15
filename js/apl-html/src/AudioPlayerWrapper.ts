@@ -24,15 +24,15 @@ export interface IPlaybackEventListener {
  * @internal
  */
 export class AudioPlayerWrapper implements IAudioEventListener {
-  protected audioPlayer : AudioPlayer;
-  protected latestId : string;
-  protected preparePromise : PromiseContainer<void>;
-  protected latestMarkers : IBaseMarker[];
-  protected audioContext : AudioContext;
-  protected playbackEventListener : IPlaybackEventListener;
+  protected audioPlayer: AudioPlayer;
+  protected latestId: string;
+  protected preparePromise: PromiseContainer<void>;
+  protected latestMarkers: IBaseMarker[];
+  protected audioContext: AudioContext;
+  protected playbackEventListener: IPlaybackEventListener;
   protected logger = LoggerFactory.getLogger(AudioPlayerWrapper.name);
 
-  constructor(factory : AudioPlayerFactory) {
+  constructor(factory: AudioPlayerFactory) {
     this.audioPlayer = factory ? factory(this) : new DefaultAudioPlayer(this);
   }
 
@@ -43,7 +43,7 @@ export class AudioPlayerWrapper implements IAudioEventListener {
     this.playbackEventListener = undefined;
   }
 
-  public prepareAsync(url : string, decodeMarkers : boolean) {
+  public prepareAsync(url: string, decodeMarkers: boolean) {
     if (this.preparePromise) {
       this.logger.warn('prepare already in progress');
       return;
@@ -52,7 +52,7 @@ export class AudioPlayerWrapper implements IAudioEventListener {
     this.latestId = this.audioPlayer.prepare(url, decodeMarkers);
   }
 
-  public playLatest(playbackEventListener : IPlaybackEventListener) {
+  public playLatest(playbackEventListener: IPlaybackEventListener) {
     if (!this.preparePromise) {
       throw new Error('prepareAsync has not been called');
     }
@@ -60,7 +60,7 @@ export class AudioPlayerWrapper implements IAudioEventListener {
     const p = this.preparePromise.promise;
     p.then(() => {
       this.audioPlayer.play(this.latestId);
-    }).catch((reason? : any) => {
+    }).catch((reason?: any) => {
       this.onPlaybackFinished(this.latestId);
     });
   }
@@ -69,30 +69,30 @@ export class AudioPlayerWrapper implements IAudioEventListener {
     this.audioPlayer.flush();
   }
 
-  public getLatestMarkers() : IBaseMarker[] {
+  public getLatestMarkers(): IBaseMarker[] {
     return this.latestMarkers;
   }
 
-  public onPrepared(id : string) : void {
+  public onPrepared(id: string): void {
     if (this.latestId === id) {
       this.preparePromise.accept(undefined);
     }
   }
 
-  public onMarker(id : string, markers : IBaseMarker[]) : void {
+  public onMarker(id: string, markers: IBaseMarker[]): void {
     this.latestMarkers = markers;
   }
 
-  public onPlaybackStarted(id : string) : void {
+  public onPlaybackStarted(id: string): void {
     this.playbackEventListener.onPlaybackStarted();
   }
 
-  public onPlaybackFinished(id : string) : void {
+  public onPlaybackFinished(id: string): void {
     this.playbackEventListener.onPlaybackFinished();
     this.reset();
   }
 
-  public onError(id : string, reason : string) : void {
+  public onError(id: string, reason: string): void {
     if (this.preparePromise) {
       this.preparePromise.reject(reason);
     }

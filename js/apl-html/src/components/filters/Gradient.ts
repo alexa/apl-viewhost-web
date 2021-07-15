@@ -15,20 +15,20 @@ import { IImageFilterElement, IBaseFilter } from './ImageFilter';
  * @ignore
  */
 export interface IGradientFilter extends IBaseFilter {
-    gradient : IGradient;
+    gradient: IGradient;
 }
 
 /*
  * The Gradient filter appends a new zero-size gradient to the image array.
- * Specs: https://aplspec.aka.corp.amazon.com/release-1.5/html/filters.html#gradient
+ * Specs: https://developer.amazon.com/en-US/docs/alexa/alexa-presentation-language/apl-filters.html#gradient
  */
-export function getGradientFilter(filter : Filter,
-                                  svgDefsElement : SVGElement,
-                                  svgUseElement : SVGUseElement) : IImageFilterElement {
-    const gradientId : string = uuidv4().toString();
-    const filterImageArray : SVGFEImageElement[] = [];
+export function getGradientFilter(filter: Filter,
+                                  svgDefsElement: SVGElement,
+                                  svgUseElement: SVGUseElement): IImageFilterElement {
+    const gradientId: string = uuidv4().toString();
+    const filterImageArray: SVGFEImageElement[] = [];
     const gradient = (filter as IGradientFilter).gradient;
-    let gradientFilter : SVGElement;
+    let gradientFilter: SVGElement;
     switch (gradient.type) {
         case GradientType.LINEAR :
             const angle = gradient.angle || 0;
@@ -64,7 +64,7 @@ export function getGradientFilter(filter : Filter,
     svgDefsElement.appendChild(gradientFilter);
 
     const rect = document.createElementNS(SVG_NS, 'rect');
-    const rectId : string = uuidv4().toString();
+    const rectId: string = uuidv4().toString();
     rect.setAttributeNS('', 'height', '100%');
     rect.setAttributeNS('', 'width', '100%');
     rect.setAttributeNS('', 'fill', `url(#${gradientId})`);
@@ -77,14 +77,14 @@ export function getGradientFilter(filter : Filter,
     svgUseElement.setAttributeNS('', 'href', `#${rectId}`);
 
     const fImage = document.createElementNS(SVG_NS, 'feImage');
-    const feImageId : string = uuidv4().toString();
+    const feImageId: string = uuidv4().toString();
     fImage.setAttributeNS('', 'href', `#${rectId}`);
     fImage.setAttributeNS('', 'result', feImageId);
     filterImageArray.push(fImage);
     return { filterId: feImageId, filterElement: fImage, filterImageArray };
 }
 
-export function getAngleCoords(angle : number) {
+export function getAngleCoords(angle: number) {
     // angle can be 0 to 360
     const anglePI = (360 - angle) * (Math.PI / 180);
     const angleCoords = {

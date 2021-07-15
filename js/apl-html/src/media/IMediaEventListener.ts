@@ -9,5 +9,5 @@ import { PlaybackState } from './Resource';
  * @ignore
  */
 export interface IMediaEventListener {
-    onEvent(event : PlaybackState) : void;
+    onEvent(event: PlaybackState): void;
 }

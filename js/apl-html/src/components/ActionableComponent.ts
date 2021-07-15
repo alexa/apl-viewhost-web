@@ -10,7 +10,7 @@ import { Component, FactoryFunction, IGenericPropType } from './Component';
  * @ignore
  */
 export class ActionableComponent<PropsType = IGenericPropType> extends Component<PropsType> {
-    constructor(renderer : APLRenderer, component : APL.Component, factory : FactoryFunction, parent? : Component) {
+    constructor(renderer: APLRenderer, component: APL.Component, factory: FactoryFunction, parent?: Component) {
         super(renderer, component, factory, parent);
         this.container.tabIndex = -1;
     }

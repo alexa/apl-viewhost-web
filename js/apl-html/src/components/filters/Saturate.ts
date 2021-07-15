@@ -13,21 +13,21 @@ import { IBaseFilter, IImageFilterElement, BITMAP_IMAGE_REGEX_CHECK } from './Im
  * @ignore
  */
 export interface ISaturate extends IBaseFilter {
-    amount : number;
-    source? : number;
+    amount: number;
+    source?: number;
 }
 
 /*
  * Change the color saturation of the image and appends the new image to the end of the array.
- * Specs: https://aplspec.aka.corp.amazon.com/release-1.5/html/filters.html#saturate
+ * Specs: https://developer.amazon.com/en-US/docs/alexa/alexa-presentation-language/apl-filters.html#saturate
  * Utilize svg <feColorMatrix> filter
  * https://developer.mozilla.org/en-US/docs/Web/SVG/Element/feColorMatrix
  */
 
-export function getSaturateFilter(filter : Filter, imageSrcArray : string[]) : IImageFilterElement | undefined {
-    const saturateId : string = uuidv4().toString();
-    let filterImageArray : SVGFEImageElement[] = [];
-    const saturate : SVGElement = document.createElementNS(SVG_NS, 'feColorMatrix');
+export function getSaturateFilter(filter: Filter, imageSrcArray: string[]): IImageFilterElement | undefined {
+    const saturateId: string = uuidv4().toString();
+    let filterImageArray: SVGFEImageElement[] = [];
+    const saturate: SVGElement = document.createElementNS(SVG_NS, 'feColorMatrix');
     saturate.setAttribute('type', 'saturate');
     saturate.setAttribute('values', (filter as ISaturate).amount.toString());
     saturate.setAttributeNS('', 'result', saturateId);
@@ -38,7 +38,7 @@ export function getSaturateFilter(filter : Filter, imageSrcArray : string[]) : I
      * Values greater than 100% produce super-saturation.
      * The source image must be a bitmap
      */
-    let index : number = (filter as ISaturate).source;
+    let index: number = (filter as ISaturate).source;
 
     // Negative case : index outside source array bounds. return undefined
     if (isIndexOutOfBound(index, imageSrcArray.length)) {
@@ -47,7 +47,7 @@ export function getSaturateFilter(filter : Filter, imageSrcArray : string[]) : I
     if (index < 0) {
         index += imageSrcArray.length;
     }
-    const imageId : string = imageSrcArray[index];
+    const imageId: string = imageSrcArray[index];
     if (imageId.match(BITMAP_IMAGE_REGEX_CHECK)) {
         filterImageArray = generateSVGFeImage(imageId, saturate);
     } else {

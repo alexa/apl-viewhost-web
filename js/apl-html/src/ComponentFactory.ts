@@ -19,9 +19,9 @@ import { ComponentType } from './enums/ComponentType';
 import { GridSequence } from './components/GridSequence';
 import { VectorGraphicElementUpdater } from './components/avg/VectorGraphicElementUpdater';
 
-export const componentFactory = (renderer : APLRenderer, component : APL.Component,
-                                 parent? : Component, ensureLayout : boolean = false,
-                                 insertAt : number = -1 ) : Component<IGenericPropType> => {
+export const componentFactory = (renderer: APLRenderer, component: APL.Component,
+                                 parent?: Component, ensureLayout: boolean = false,
+                                 insertAt: number = -1 ): Component<IGenericPropType> => {
     const id = component.getUniqueId();
     if (renderer.componentMap[id]) {
         const comp = renderer.componentMap[id];
@@ -62,42 +62,42 @@ export const componentFactory = (renderer : APLRenderer, component : APL.Compone
 
 // tslint:disable:max-line-length
 const factoryMap = {
-    [ComponentType.kComponentTypeContainer]: (renderer : APLRenderer, component : APL.Component, parent? : Component) => {
+    [ComponentType.kComponentTypeContainer]: (renderer: APLRenderer, component: APL.Component, parent?: Component) => {
         return new Container(renderer, component, componentFactory, parent);
     },
-    [ComponentType.kComponentTypeEditText]: (renderer : APLRenderer, component : APL.Component, parent? : Component) => {
+    [ComponentType.kComponentTypeEditText]: (renderer: APLRenderer, component: APL.Component, parent?: Component) => {
         return new EditText(renderer, component, componentFactory, parent);
     },
-    [ComponentType.kComponentTypeFrame]: (renderer : APLRenderer, component : APL.Component, parent? : Component) => {
+    [ComponentType.kComponentTypeFrame]: (renderer: APLRenderer, component: APL.Component, parent?: Component) => {
         return new Frame(renderer, component, componentFactory, parent);
     },
-    [ComponentType.kComponentTypeImage]: (renderer : APLRenderer, component : APL.Component, parent? : Component) => {
+    [ComponentType.kComponentTypeImage]: (renderer: APLRenderer, component: APL.Component, parent?: Component) => {
         return new Image(renderer, component, componentFactory, parent);
     },
-    [ComponentType.kComponentTypePager]: (renderer : APLRenderer, component : APL.Component, parent? : Component) => {
+    [ComponentType.kComponentTypePager]: (renderer: APLRenderer, component: APL.Component, parent?: Component) => {
         return new PagerComponent(renderer, component, componentFactory, parent);
     },
-    [ComponentType.kComponentTypeScrollView]: (renderer : APLRenderer, component : APL.Component, parent? : Component) => {
+    [ComponentType.kComponentTypeScrollView]: (renderer: APLRenderer, component: APL.Component, parent?: Component) => {
         return new ScrollView(renderer, component, componentFactory, parent);
     },
-    [ComponentType.kComponentTypeSequence]: (renderer : APLRenderer, component : APL.Component, parent? : Component) => {
+    [ComponentType.kComponentTypeSequence]: (renderer: APLRenderer, component: APL.Component, parent?: Component) => {
         return new Sequence(renderer, component, componentFactory, parent);
     },
-    [ComponentType.kComponentTypeGridSequence]: (renderer : APLRenderer, component : APL.Component, parent? : Component) => {
+    [ComponentType.kComponentTypeGridSequence]: (renderer: APLRenderer, component: APL.Component, parent?: Component) => {
         return new GridSequence(renderer, component, componentFactory, parent);
     },
-    [ComponentType.kComponentTypeText]: (renderer : APLRenderer, component : APL.Component, parent? : Component) => {
+    [ComponentType.kComponentTypeText]: (renderer: APLRenderer, component: APL.Component, parent?: Component) => {
         return new Text(renderer, component, componentFactory, parent);
     },
-    [ComponentType.kComponentTypeTouchWrapper]: (renderer : APLRenderer, component : APL.Component,
-                                                 parent? : Component) => {
+    [ComponentType.kComponentTypeTouchWrapper]: (renderer: APLRenderer, component: APL.Component,
+                                                 parent?: Component) => {
         return new TouchWrapper(renderer, component, componentFactory, parent);
     },
-    [ComponentType.kComponentTypeVideo]: (renderer : APLRenderer, component : APL.Component, parent? : Component) => {
+    [ComponentType.kComponentTypeVideo]: (renderer: APLRenderer, component: APL.Component, parent?: Component) => {
         return renderer.videoFactory.create(renderer, component, componentFactory, parent);
     },
-    [ComponentType.kComponentTypeVectorGraphic]: (renderer : APLRenderer, component : APL.Component,
-                                                  parent? : Component) => {
+    [ComponentType.kComponentTypeVectorGraphic]: (renderer: APLRenderer, component: APL.Component,
+                                                  parent?: Component) => {
         return new VectorGraphic(renderer, component, componentFactory, new VectorGraphicElementUpdater(), parent);
     }
 };
