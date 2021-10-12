@@ -37,7 +37,7 @@
     "chai-exclude": "^2.0.3",
     "cross-env": "^5.2.0",
     "dts-packer": "link:../dts-packer",
-    "electron": "^4.0.4",
+    "electron": "^11.5.0",
     "electron-mocha": "^6.0.4",
     "istanbul": "^0.4.5",
     "istanbul-instrumenter-loader": "^3.0.1",
