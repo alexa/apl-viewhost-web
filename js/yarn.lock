@@ -5569,9 +5569,9 @@ uglifyjs-webpack-plugin@^2.1.2:
     worker-farm "^1.7.0"
 
 underscore@>=1.8.3, underscore@^1.9.1:
-  version "1.10.2"
-  resolved "https://registry.yarnpkg.com/underscore/-/underscore-1.10.2.tgz#73d6aa3668f3188e4adb0f1943bd12cfd7efaaaf"
-  integrity sha512-N4P+Q/BuyuEKFJ43B9gYuOj4TQUHXX+j2FqguVOpjkssLUUrnJofCcBccJSCoeturDoZU6GorDTHSvUDlSQbTg==
+  version "1.13.1"
+  resolved "https://registry.yarnpkg.com/underscore/-/underscore-1.13.1.tgz#0c1c6bd2df54b6b69f2314066d65b6cde6fcf9d1"
+  integrity sha512-hzSoAVtJF+3ZtiFX0VgfFPHEDRm7Y/QPjGyNo4TVdnDTdft3tr8hEkD25a1jC+TjTuE7tkHGKkhwCgs9dgBB2g==
 
 union-value@^1.0.0:
   version "1.0.1"
@@ -5773,7 +5773,7 @@ webpack-bundle-analyzer@^3.1.0:
     opener "^1.5.1"
     ws "^6.0.0"
 
-webpack-cli@^3.1.2, webpack-cli@^3.3.0, webpack-cli@^3.3.12, webpack-cli@^3.3.2:
+webpack-cli@^3.1.2, webpack-cli@^3.3.12, webpack-cli@^3.3.2:
   version "3.3.12"
   resolved "https://registry.yarnpkg.com/webpack-cli/-/webpack-cli-3.3.12.tgz#94e9ada081453cd0aa609c99e500012fd3ad2d4a"
   integrity sha512-NVWBaz9k839ZH/sinurM+HcDvJOTXwSjYp1ku+5XKeOC03z8v5QitnK/x+lAxGXFyhdayoIf/GOpv85z3/xPag==
