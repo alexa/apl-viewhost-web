@@ -6,8 +6,6 @@ import {LoggerFactory} from '../../logging/LoggerFactory';
 
 /**
  * Adjust exports to only export used interfaces
- * when codebase upgrades to TypeScript version that supports
- * exported variables with private names
  */
 export interface StylesApplier {
     applyStyle(): void;

@@ -9,13 +9,13 @@ import {FontStyle} from '../../enums/FontStyle';
 import {PropertyKey} from '../../enums/PropertyKey';
 import {TextAlign} from '../../enums/TextAlign';
 import {TextAlignVertical} from '../../enums/TextAlignVertical';
+import {FontUtils} from '../../utils/FontUtils';
+import {replaceLastWordWithEllipsis, truncateEndWithEllipsis} from '../../utils/TextUtils';
 import {IComponentProperties} from '../Component';
 import {Component, FactoryFunction} from '../Component';
-import {RichTextParser} from './RichTextParser';
 import {Geometry, ILineRange} from './Geometry';
-import {FontUtils} from '../../utils/FontUtils';
 import {MeasureMode} from './MeasureMode';
-import {truncateEndWithEllipsis, replaceLastWordWithEllipsis} from '../../utils/TextUtils';
+import {RichTextParser} from './RichTextParser';
 
 export interface ITextProperties extends IComponentProperties {
     [PropertyKey.kPropertyColor]: number;

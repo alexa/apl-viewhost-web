@@ -23,6 +23,7 @@
     "clean:html": "cd apl-html && yarn clean",
     "clean:wasm": "cd apl-wasm && yarn clean",
     "clean:dts-packer": "cd dts-packer && yarn clean",
-    "clean": "rimraf node_modules && yarn clean:client && yarn clean:html && yarn clean:wasm && yarn clean:dts-packer"
+    "clean": "rimraf node_modules && yarn clean:client && yarn clean:html && yarn clean:wasm && yarn clean:dts-packer",
+    "lint": "yarn workspaces run lint"
   }
 }

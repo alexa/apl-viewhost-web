@@ -137,4 +137,19 @@ export class Content {
     public getAPLSettings(key: string): any {
         return this.settings[key];
     }
- }
+
+    /**
+     * get the parameter through index.
+     * @param index
+     */
+    public getParameterAt(index: number): string {
+        return this.content.getParameterAt(index);
+    }
+
+    /**
+     * get the total customized parameter needed for APL.
+     */
+    public getParameterCount(): number {
+        return this.content.getParameterCount();
+    }
+}

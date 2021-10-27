@@ -3,16 +3,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import APLRenderer,
-{
-    Content, DeviceMode, FontUtils, IAPLOptions, ILogger, JSLogLevel, LoggerFactory, LogLevel, LogTransport,
-    ViewportShape, commandFactory, LocaleMethods, LiveArray, LiveMap
+import APLRenderer, {
+    commandFactory, Content, DeviceMode, DisplayState, FontUtils,
+    IAPLOptions, IConfigurationChangeOptions, ILogger, JSLogLevel, LiveArray,
+    LiveMap, LocaleMethods, LoggerFactory, LogLevel, LogTransport,
+    ViewportShape
 } from 'apl-html';
 import {ConfigurationChange} from './ConfigurationChange';
-import {PackageLoader} from './PackageLoader';
 import {ExtensionManager} from './extensions/ExtensionManager';
 import {IDocumentState} from './extensions/IDocumentState';
-import {IConfigurationChangeOptions} from 'apl-html';
+import {PackageLoader} from './PackageLoader';
 
 /**
  * This matches the schema sent from the server
@@ -111,6 +111,15 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
                 }
             }
         };
+
+        this.handleUpdateDisplayState = (displayState: DisplayState) => {
+            if (this.context) {
+                this.context.updateDisplayState(displayState);
+                this.destroyRenderingComponents();
+                this.reRenderComponents();
+            }
+        };
+
     }
 
     /**

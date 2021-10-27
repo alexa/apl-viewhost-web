@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {GraphicTextAnchor} from '../../enums/GraphicTextAnchor';
 import {GraphicPropertyKey} from '../../enums/GraphicPropertyKey';
-import {AVG} from './AVG';
+import {GraphicTextAnchor} from '../../enums/GraphicTextAnchor';
 import {ILogger} from '../../logging/ILogger';
 import {FontUtils} from '../../utils/FontUtils';
 import {ElementType} from '../helpers/StylesApplier';
+import {AVG} from './AVG';
 
 export interface AVGTextArgs {
     graphic: APL.GraphicElement;

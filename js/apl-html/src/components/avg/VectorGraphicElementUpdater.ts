@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { ILogger, LoggerFactory } from '../..';
 import { GraphicElementType } from '../../enums/GraphicElementType';
 import { AVG } from './AVG';
+import { AVGText } from './AVGText';
 import { Group } from './Group';
 import { Path } from './Path';
-import { AVGText } from './AVGText';
-import { ILogger, LoggerFactory } from '../..';
 
 export { AVG } from './AVG';
 export { Group } from './Group';

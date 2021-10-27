@@ -6,8 +6,8 @@
 'use strict';
 
 import { Filter } from '../../utils/FilterUtils';
-import { SVG_NS, uuidv4, Component } from '../Component';
-import { IImageFilterElement, IBaseFilter } from './ImageFilter';
+import { Component, SVG_NS, uuidv4 } from '../Component';
+import { IBaseFilter, IImageFilterElement } from './ImageFilter';
 
 /**
  * @ignore

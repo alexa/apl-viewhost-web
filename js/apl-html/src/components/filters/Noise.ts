@@ -5,10 +5,10 @@
 
 'use strict';
 
-import { NoiseFilterKind } from '../../enums/NoiseFilterKind';
-import { SoftRandom } from '../../utils/SoftRandom';
-import { Filter } from '../../utils/FilterUtils';
 import { FilterType } from '../../enums/FilterType';
+import { NoiseFilterKind } from '../../enums/NoiseFilterKind';
+import { Filter } from '../../utils/FilterUtils';
+import { SoftRandom } from '../../utils/SoftRandom';
 import { IBaseFilter } from './ImageFilter';
 
 /**
@@ -18,6 +18,7 @@ export interface INoise extends IBaseFilter {
     kind?: NoiseFilterKind;
     useColor?: boolean;
     sigma?: number;
+    source: number;
 }
 
 /**

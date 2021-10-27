@@ -4,8 +4,8 @@
  */
 
 import {IExtensionEventCallbackResult} from './IExtensionEventCallbackResult';
-import {LiveMap} from './LiveMap';
 import {LiveArray} from './LiveArray';
+import {LiveMap} from './LiveMap';
 
 export interface ILiveDataDefinition {
     name: string;

@@ -4,21 +4,21 @@
  */
 
 import {
-    IExtensionEventCallbackResult,
-    IExtension,
-    ILiveDataDefinition,
     ExtensionCommandDefinition,
-    ExtensionEventHandler
+    ExtensionEventHandler,
+    IExtension,
+    IExtensionEventCallbackResult,
+    ILiveDataDefinition
 } from 'apl-html';
-import {GoBackCommand} from './GoBackCommand';
-import {Stack} from './Stack';
-import {BackstackEnvironment} from './BackstackEnvironment';
-import {ClearCommand} from './ClearCommand';
 import {ILogger, LoggerFactory} from '../..';
-import {BackstackExtensionObserverInterface} from './BackstackExtensionObserverInterface';
-import {IDocumentState} from '../IDocumentState';
-import {GoBackListener} from './GoBackListener';
 import {createAplExtensionCommandDefinition} from '../ExtensionCreationUtils';
+import {IDocumentState} from '../IDocumentState';
+import {BackstackEnvironment} from './BackstackEnvironment';
+import {BackstackExtensionObserverInterface} from './BackstackExtensionObserverInterface';
+import {ClearCommand} from './ClearCommand';
+import {GoBackCommand} from './GoBackCommand';
+import {GoBackListener} from './GoBackListener';
+import {Stack} from './Stack';
 
 /**
  * Similar to the HTML_History object, the backstack extension allows for implicit sequential back navigation to

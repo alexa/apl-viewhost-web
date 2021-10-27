@@ -5,16 +5,19 @@
 import {AudioTrack} from '../../enums/AudioTrack';
 import {CommandControlMedia} from '../../enums/CommandControlMedia';
 import {PropertyKey} from '../../enums/PropertyKey';
+import {TrackState} from '../../enums/TrackState';
 import {VideoScale} from '../../enums/VideoScale';
-import {IMediaResource, PlaybackManager} from '../../media/PlaybackManager';
-import {PlaybackState} from '../../media/Resource';
-import {IVideoPlayer} from '../../media/IVideoPlayer';
-import {Video} from './Video';
-import {VideoPlayer} from '../../media/video';
-import {PromiseCallback, SetTrackCurrentTimeArgs} from './VideoCallTypes';
 import {ILogger} from '../../logging/ILogger';
 import {LoggerFactory} from '../../logging/LoggerFactory';
 import {IMediaEventListener} from '../../media/IMediaEventListener';
+import {IVideoPlayer} from '../../media/IVideoPlayer';
+import {MediaErrorCode} from '../../media/MediaErrorCode';
+import {MediaState} from '../../media/MediaState';
+import {IMediaResource, PlaybackManager} from '../../media/PlaybackManager';
+import {PlaybackState} from '../../media/Resource';
+import {VideoPlayer} from '../../media/video';
+import {Video} from './Video';
+import {PromiseCallback, SetTrackCurrentTimeArgs} from './VideoCallTypes';
 
 export interface VideoEventProcessorArgs {
     videoComponent: Video;
@@ -38,30 +41,13 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
 
     // Private Functions
     async function ensureLoaded(fromEvent: boolean, isSettingSource: boolean = false) {
-        if (!this.currentMediaResource.loaded) {
-            await this.player.load(this.currentMediaResource.id, this.currentMediaResource.url);
+        const currentMediaResource = this.playbackManager.getCurrent();
+        if (!currentMediaResource.loaded) {
+            await this.player.load(currentMediaResource.id, currentMediaResource.url);
+            currentMediaResource.loaded = true;
         } else {
             this.updateMediaState(fromEvent, isSettingSource);
         }
-    }
-
-    /**
-     * Return if the video should be paused when seeking to an offset.
-     * The play/pause should depend on kPropertyAutoplay at initial load - offset == 0.
-     * The play/pause should depend on kPropertyTrackPaused once video has been played - offset > 0.
-     *
-     * @param seekOffset
-     * @private
-     */
-    function shouldPauseAtSeek(seekOffset: number): boolean {
-        let pauseAtSeek = true;
-        if (shouldAutoPlay.call(this)) {
-            pauseAtSeek = false;
-        }
-        if (seekOffset > 0) {
-            pauseAtSeek = this.props[PropertyKey.kPropertyTrackPaused];
-        }
-        return pauseAtSeek;
     }
 
     function shouldAutoPlay(): boolean {
@@ -77,8 +63,19 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
 
     // Public Interface
     const videoEventProcessor = {
-        onEvent({event, fromEvent, isSettingSource}): void {
+        onEvent({
+            event,
+            fromEvent,
+            isSettingSource
+        }): void {
             switch (event) {
+                case PlaybackState.IDLE:
+                    this.currentMediaState.withTrackState(TrackState.kTrackNotReady);
+                    this.currentMediaState.withErrorCode(MediaErrorCode.DEFAULT);
+                    break;
+                case PlaybackState.LOADED:
+                    this.currentMediaState.withTrackState(TrackState.kTrackReady);
+                    break;
                 case PlaybackState.PLAYING:
                     this.currentMediaState.ended = false;
                     this.currentMediaState.paused = false;
@@ -97,6 +94,7 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
                         });
                     } else {
                         this.currentMediaState.ended = true;
+                        this.currentMediaState.paused = true;
                     }
                     endEventPromiseListeners.forEach((resolvePromise) => {
                         try {
@@ -107,14 +105,13 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
                     break;
                 case PlaybackState.ERROR:
                     logger.error('Playback error.');
+                    isSettingSource = false;
                     this.currentMediaState.ended = true;
                     this.currentMediaState.paused = true;
-                    break;
-                case PlaybackState.LOADED:
-                    this.currentMediaResource.loaded = true;
+                    this.currentMediaState.withTrackState(TrackState.kTrackFailed);
+                    this.currentMediaState.withErrorCode(MediaErrorCode.GENERIC);
                     break;
                 case PlaybackState.BUFFERING:
-                case PlaybackState.IDLE:
                 default:
                     return;
             }
@@ -128,9 +125,9 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
 
             this.playbackManager.setup(source);
             this.audioTrack = audioTrack;
-            this.currentMediaResource = this.playbackManager.getCurrent();
 
-            await this.delegate.seek(this.currentMediaResource.offset);
+            const currentMediaResource = this.playbackManager.getCurrent();
+            await this.delegate.seek(currentMediaResource.offset);
             await this.delegate.play();
 
             this.fromEvent = false;
@@ -147,7 +144,9 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
 
             switch (operation) {
                 case CommandControlMedia.kCommandControlMediaPlay:
-                    await this.delegate.play();
+                    if (this.player.getMediaState() !== PlaybackState.PLAYING) {
+                        await this.delegate.play();
+                    }
                     break;
                 case CommandControlMedia.kCommandControlMediaPause:
                     await this.delegate.pause();
@@ -177,8 +176,6 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
         // Playback Control Methods
         // Event-Aware Methods
         async play({waitForFinish, fromEvent, isSettingSource}): Promise<any> {
-            this.currentMediaResource = this.playbackManager.getCurrent();
-
             // Adjust Audio
             if (this.audioTrack === AudioTrack.kAudioTrackNone) {
                 this.player.mute();
@@ -188,21 +185,20 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
 
             await ensureLoaded.call(this, fromEvent, isSettingSource);
 
-            if (this.currentMediaResource.duration > 0) {
-                const endTime =
-                    toSecondsFromMilliseconds(this.currentMediaResource.offset + this.currentMediaResource.duration);
+            const currentMediaResource = this.playbackManager.getCurrent();
+
+            if (currentMediaResource.duration > 0) {
+                const endTime = toSecondsFromMilliseconds(currentMediaResource.offset + currentMediaResource.duration);
                 this.player.setEndTimeInSeconds(endTime);
             }
 
-            const startingPoint = this.currentMediaState.currentTime + this.currentMediaResource.offset;
+            const startingPoint = toMillisecondsFromSeconds(this.player.getCurrentPlaybackPositionInSeconds());
 
             await this.player.play(
-                this.currentMediaResource.id,
-                this.currentMediaResource.url,
+                currentMediaResource.id,
+                currentMediaResource.url,
                 startingPoint
             );
-
-            this.updateMediaState(fromEvent, isSettingSource);
 
             // This isn't the responsibility of play, it's the responsibility of the callee
             // We need to pull this out
@@ -215,39 +211,36 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
         async pause({fromEvent}): Promise<any> {
             if (videoState === PlaybackState.PLAYING || videoState === PlaybackState.BUFFERING) {
                 await this.player.pause();
-                this.updateMediaState(fromEvent);
             }
         },
-        async seek({offset, fromEvent}): Promise<any> {
-            const pauseAtSeek = shouldPauseAtSeek.call(this, offset);
-            if (pauseAtSeek) {
-                await this.delegate.pause();
-            }
-
+        async seek({seekOffset, fromEvent}): Promise<any> {
             const mediaResource: IMediaResource = this.playbackManager.getCurrent();
-            const startOffset: number = mediaResource.offset;
-            const desireOffset: number = startOffset + offset;
+            const mediaOffset = toSecondsFromMilliseconds(mediaResource.offset);
+            const currentPlaybackPosition: number = this.player.getCurrentPlaybackPositionInSeconds();
+            const desiredPlaybackPosition: number = currentPlaybackPosition + toSecondsFromMilliseconds(seekOffset);
 
             await ensureLoaded.call(this, fromEvent);
 
-            if (this.player.getDurationInSeconds() <= toSecondsFromMilliseconds(desireOffset)) {
+            if (this.player.getDurationInSeconds() <= toSecondsFromMilliseconds(desiredPlaybackPosition)) {
                 // minus unit time otherwise will rollover to start
                 this.player.setCurrentTimeInSeconds(this.player.getDurationInSeconds() - 0.001);
+            } else if (desiredPlaybackPosition < mediaOffset) {
+                this.player.setCurrentTimeInSeconds(mediaOffset);
             } else {
-                const updatedOffset = this.player.getCurrentPlaybackPositionInSeconds()
-                    + toSecondsFromMilliseconds(desireOffset);
-
-                this.player.setCurrentTimeInSeconds(updatedOffset);
+                this.player.setCurrentTimeInSeconds(desiredPlaybackPosition);
             }
 
             this.updateMediaState(fromEvent);
         },
         async rewind(): Promise<any> {
-            await this.delegate.seek(this.currentMediaResource.offset);
+            await this.delegate.pause();
+            const currentMediaResource = this.playbackManager.getCurrent();
+            const currentTime = toMillisecondsFromSeconds(this.player.getCurrentPlaybackPositionInSeconds());
+            await this.delegate.seek(-(currentTime - currentMediaResource.offset));
         },
         async previous({fromEvent}): Promise<any> {
-            await this.delegate.pause();
-            this.currentMediaResource = this.playbackManager.previous();
+            await this.delegate.rewind();
+            this.playbackManager.previous();
             await ensureLoaded.call(this, fromEvent);
         },
         async next({fromEvent}): Promise<any> {
@@ -255,16 +248,14 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
 
             if (!this.playbackManager.hasNext()) {
                 this.player.setCurrentTimeInSeconds(this.player.getDurationInSeconds() - 0.001);
-                this.updateMediaState(fromEvent);
             } else {
-                this.currentMediaResource = this.playbackManager.next();
+                this.playbackManager.next();
                 await ensureLoaded.call(this, fromEvent);
             }
         },
         async setTrack({trackIndex, fromEvent}): Promise<any> {
             await this.delegate.pause();
             this.playbackManager.setCurrent(trackIndex);
-            this.currentMediaResource = this.playbackManager.getCurrent();
             await ensureLoaded.call(this, fromEvent);
         },
         // End Event-Aware Methods
@@ -276,7 +267,6 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
 
             // Configure Player and Playback
             this.playbackManager.setup(source);
-            this.currentMediaResource = this.playbackManager.getCurrent();
             await ensureLoaded.call(this);
 
             // Play on set Source
@@ -326,15 +316,19 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
             if (!isValidPlayer(this.player)) {
                 return;
             }
-
             // Update Media State
-            // tslint:disable-next-line:max-line-length
-            this.currentMediaState.currentTime = toMillisecondsFromSeconds(this.player.getCurrentPlaybackPositionInSeconds());
-            this.currentMediaState.duration = toMillisecondsFromSeconds(this.player.getDurationInSeconds());
+            const offset = playBackManager.getCurrent().offset;
+            this.currentMediaState.currentTime = toMillisecondsFromSeconds(
+                this.player.getCurrentPlaybackPositionInSeconds()
+            ) - offset;
+            this.currentMediaState.duration = toMillisecondsFromSeconds(
+                this.player.getDurationInSeconds()
+            ) - offset;
             this.currentMediaState.trackCount = this.playbackManager.getTrackCount();
             this.currentMediaState.trackIndex = this.playbackManager.getCurrentIndex();
 
-            if (!isSettingSource && isValidMediaState(this.currentMediaState)) {
+            ensureValidMediaState(this.currentMediaState);
+            if (!isSettingSource) {
                 this.component.updateMediaState(this.currentMediaState, fromEvent);
                 this.emit('onUpdateMediaState', this.currentMediaState, fromEvent);
             }
@@ -372,14 +366,7 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
         logger
     });
     const playBackManager = new PlaybackManager();
-    const currentMediaState: APL.IMediaState = {
-        currentTime: 0,
-        duration: 0,
-        ended: false,
-        paused: true,
-        trackCount: 0,
-        trackIndex: 0
-    };
+    const currentMediaState = new MediaState();
 
     Object.defineProperties(videoEventProcessor, {
         player: {
@@ -394,11 +381,6 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
         },
         audioTrack: {
             value: undefined as AudioTrack,
-            writable: true,
-            configurable: false
-        },
-        currentMediaResource: {
-            value: undefined as IMediaResource,
             writable: true,
             configurable: false
         },
@@ -424,20 +406,17 @@ function isValidPlayer(player: any): player is IVideoPlayer {
     return player !== undefined;
 }
 
-function isValidMediaState(mediaState: any): mediaState is APL.IMediaState {
-    const {
-        currentTime,
-        duration,
-        trackCount,
-        trackIndex
-    } = mediaState;
+function ensureValidMediaState(mediaState: any): mediaState is APL.IMediaState {
+    const keysToClean = ['currentTime', 'currentTime', 'trackCount', 'trackIndex'];
 
-    return isValidValue(currentTime) &&
-        isValidValue(duration) &&
-        isValidValue(trackCount) &&
-        isValidValue(trackIndex);
+    for (const key of keysToClean) {
+        if (mediaState.hasOwnProperty(key) && !isValidMediaStateValue(mediaState[key])) {
+            mediaState[key] = 0;
+        }
+    }
+    return mediaState;
 }
 
-function isValidValue(n: any): n is number {
+function isValidMediaStateValue(n: any): n is number {
     return !Number.isNaN(n) && n !== undefined;
 }

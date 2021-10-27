@@ -7,14 +7,14 @@ import APLRenderer from '../../APLRenderer';
 import {AudioTrack} from '../../enums/AudioTrack';
 import {CommandControlMedia} from '../../enums/CommandControlMedia';
 import {VideoScale} from '../../enums/VideoScale';
+import {ILogger} from '../../logging/ILogger';
+import {LoggerFactory} from '../../logging/LoggerFactory';
 import {IMediaSource} from '../../media/IMediaSource';
 import {PlaybackState} from '../../media/Resource';
 import {Component, FactoryFunction} from '../Component';
 import {AbstractVideoComponent} from './AbstractVideoComponent';
-import {createVideoEventSequencer, VideoEventSequencer, VideoInterface} from './VideoEventSequencer';
-import {ILogger} from '../../logging/ILogger';
-import {LoggerFactory} from '../../logging/LoggerFactory';
 import {createVideoEventProcessor} from './VideoEventProcessor';
+import {createVideoEventSequencer, VideoEventSequencer, VideoInterface} from './VideoEventSequencer';
 
 const logger: ILogger = LoggerFactory.getLogger('Video');
 
@@ -78,7 +78,7 @@ export class Video extends AbstractVideoComponent {
 
     public async seek(offset: number): Promise<any> {
         this.videoEventSequencer.enqueueForProcessing(VideoInterface.SEEK, {
-            offset,
+            seekOffset: offset,
             fromEvent: this.fromEvent
         });
     }
@@ -186,7 +186,7 @@ export class Video extends AbstractVideoComponent {
     }
 
     protected get currentMediaResource() {
-        return this.videoEventProcessor.currentMediaResource;
+        return this.videoEventProcessor.playbackManager.getCurrent();
     }
 
     protected get currentMediaState() {

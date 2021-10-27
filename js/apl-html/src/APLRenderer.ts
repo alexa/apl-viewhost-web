@@ -3,26 +3,30 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { commandFactory } from './CommandFactory';
-import { componentFactory } from './ComponentFactory';
-import { Component } from './components/Component';
-import { MeasureMode } from './components/text/MeasureMode';
-import { TextMeasurement } from './components/text/Text';
-import { AnimationQuality } from './enums/AnimationQuality';
-import { IVideoFactory } from './components/video/IVideoFactory';
-import { VideoFactory } from './components/video/VideoFactory';
-import { AudioPlayerWrapper } from './AudioPlayerWrapper';
-import { AudioPlayerFactory } from './media/audio/AudioPlayer';
-import { LoggerFactory } from './logging/LoggerFactory';
-import { ILogger } from './logging/ILogger';
-import { Image } from './components/Image';
-import { PointerEventType } from './enums/PointerEventType';
-import { PointerType } from './enums/PointerType';
-import { ARROW_DOWN, ARROW_LEFT, ARROW_RIGHT, ARROW_UP, ENTER_KEY } from './utils/Constant';
-import { IExtensionManager } from './extensions/IExtensionManager';
-import { FocusDirection } from './enums/FocusDirection';
 import throttle = require('lodash.throttle');
-import { ActionableComponent } from './components/ActionableComponent';
+import {AudioPlayerWrapper} from './AudioPlayerWrapper';
+import {commandFactory} from './CommandFactory';
+import {componentFactory} from './ComponentFactory';
+import {ActionableComponent} from './components/ActionableComponent';
+import {Component} from './components/Component';
+import {MeasureMode} from './components/text/MeasureMode';
+import {TextMeasurement} from './components/text/Text';
+import {IVideoFactory} from './components/video/IVideoFactory';
+import {VideoFactory} from './components/video/VideoFactory';
+import {AnimationQuality} from './enums/AnimationQuality';
+import {DisplayState} from './enums/DisplayState';
+import {FocusDirection} from './enums/FocusDirection';
+import {PointerEventType} from './enums/PointerEventType';
+import {PointerType} from './enums/PointerType';
+import {IExtensionManager} from './extensions/IExtensionManager';
+import {ILogger} from './logging/ILogger';
+import {LoggerFactory} from './logging/LoggerFactory';
+import {AudioPlayerFactory} from './media/audio/AudioPlayer';
+import {browserIsEdge} from './utils/BrowserUtils';
+import {ARROW_DOWN, ARROW_LEFT, ARROW_RIGHT, ARROW_UP, ENTER_KEY, HttpStatusCodes} from './utils/Constant';
+import {isDisplayState} from './utils/DisplayStateUtils';
+import {getCssGradient, getCssPureColorGradient} from './utils/ImageUtils';
+import {fetchVectorGraphic} from './utils/VectorGraphicUtils';
 
 const agentName = 'AplWebRenderer';
 const agentVersion = '1.0.0';
@@ -47,7 +51,7 @@ export type ViewportShape = 'ROUND' | 'RECTANGLE';
 export type ScreenMode = 'normal' | 'high-contrast';
 
 /**
- * Physical charcteristics of the viewport
+ * Physical characteristics of the viewport
  */
 export interface IViewportCharacteristics {
     /** Width in pixels */
@@ -100,6 +104,10 @@ export interface IConfigurationChangeOptions {
     screenReader?: boolean;
 }
 
+export interface IDisplayStateOptions {
+    displayState: DisplayState;
+}
+
 /**
  * Developer tool options can be used to inject additional data into the DOM
  *
@@ -112,6 +120,8 @@ export interface IDeveloperToolOptions {
 
     /** Keys to export as data- attributes in the DOM */
     writeKeys: string[];
+
+    includeComponentId?: boolean;
 }
 
 /**
@@ -131,6 +141,12 @@ export interface ISendEvent {
 export interface IDataSourceFetchRequest {
     type: string;
     payload: any;
+}
+
+export interface IMediaRequest {
+    source: string;
+    errorCode?: number;
+    error?: string;
 }
 
 export interface IExtensionEvent {
@@ -160,7 +176,7 @@ export interface IAsyncKeyboardEvent extends KeyboardEvent {
  * Options when creating a new APLRenderer
  */
 export interface IAPLOptions {
-    /** Contains all the information on environment suport and options */
+    /** Contains all the information on environment support and options */
     environment: IEnvironment;
     /** APL theme. Usually 'light' or 'dark' */
     theme: string;
@@ -204,9 +220,9 @@ export interface IAPLOptions {
     onResizingIgnored?: (ignoredWidth: number, ignoredHeight: number) => void;
 
     /**
-     * Callback when a AVG source needs to be retreived by the consumer
+     * Callback when a AVG source needs to be retrieved by the consumer
      * If this is not provided, this viewhost will use the fetch API to
-     * retreive graphic content from sources.
+     * retrieve graphic content from sources.
      */
     onRequestGraphic?: (source: string) => Promise<string | undefined>;
     /**
@@ -286,6 +302,8 @@ export default abstract class APLRenderer<Options = {}> {
         this.handleConfigurationChange(configurationChangeOptions);
     }, 200);
 
+    protected handleUpdateDisplayState: (displayState: DisplayState) => void;
+
     /**
      * @internal
      * @ignore
@@ -346,7 +364,7 @@ export default abstract class APLRenderer<Options = {}> {
      */
     private dropFrameCount: number = 0;
 
-    private isEdge: boolean = /msie\s|trident\/|edge\//i.test(window.navigator.userAgent);
+    private isEdge: boolean = browserIsEdge(window.navigator.userAgent);
 
     public get options(): Options {
         return this.mOptions as any as Options;
@@ -423,7 +441,18 @@ export default abstract class APLRenderer<Options = {}> {
             this.onRunTimeError = mOptions.onRunTimeError;
         }
         if (mOptions.onRequestGraphic) {
-            this.onRequestGraphic = mOptions.onRequestGraphic;
+            this.onRequestGraphic = (source) => {
+                const vectorGraphicPromise = mOptions.onRequestGraphic(source);
+                // Enables onLoad/onFail when onRequestGraphic is overridden
+                vectorGraphicPromise.then((json) => {
+                    if (json) {
+                        this.context.mediaLoaded(source);
+                    } else {
+                        this.context.mediaLoadFailed(source, HttpStatusCodes.BadRequest, `Bad Request on ${source}`);
+                    }
+                });
+                return vectorGraphicPromise;
+            };
         }
         if (mOptions.onFinish) {
             this.onFinish = mOptions.onFinish;
@@ -452,7 +481,8 @@ export default abstract class APLRenderer<Options = {}> {
     public init(metricRecorder?: (m: APL.DisplayMetric) => void) {
         const startTime = performance.now();
         if (this.mOptions.mode === 'TV') {
-            window.addEventListener('keydown', this.passWindowEventsToCore);
+            window.addEventListener('keydown', this.passKeyDownToCore);
+            window.addEventListener('keyup', this.passKeyUpToCore);
         }
         this.renderComponents();
         const stopTime = performance.now();
@@ -511,6 +541,21 @@ export default abstract class APLRenderer<Options = {}> {
         this.configChangeThrottle(configurationChangeOptions);
     }
 
+    /**
+     * Process Display State Change.
+     * @param displayStateOptions The display state change options to provide to core.
+     */
+    public onDisplayStateChange(displayStateOptions: IDisplayStateOptions): void {
+        let displayState = displayStateOptions.displayState;
+
+        if (!isDisplayState(displayState)) {
+            console.error(`Invalid DisplayState. Defaulting DisplayState to "kDisplayStateForeground".`);
+            displayState = DisplayState.kDisplayStateForeground;
+        }
+
+        this.handleUpdateDisplayState(displayState);
+    }
+
     public getComponentCount(): number {
         return Object.keys(this.componentMap).length;
     }
@@ -525,8 +570,8 @@ export default abstract class APLRenderer<Options = {}> {
         // the default background color of the device will show through
         this.view.style.backgroundColor = backgroundColors[docTheme];
         this.view.style.backgroundImage = background.gradient ?
-            Image.getCssGradient(background.gradient, this.logger) :
-            Image.getCssPureColorGradient(background.color);
+            getCssGradient(background.gradient, this.logger) :
+            getCssPureColorGradient(background.color);
     }
 
     /**
@@ -542,19 +587,16 @@ export default abstract class APLRenderer<Options = {}> {
      * @ignore
      * @internal
      */
-    public async onRequestGraphic(source: string): Promise<string | undefined> {
-        const res = await fetch(source, {
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            },
-            method: 'get'
-        });
-        if (res.status === 200) {
-            const text = await res.text();
-            return text;
-        }
-        return undefined;
+    public onRequestGraphic(source: string): Promise<string | undefined> {
+        const fetchVectorGraphicArgs = {
+            renderer: this
+        };
+        return fetchVectorGraphic(source, fetchVectorGraphicArgs).then(
+            (response) => {
+                return response;
+            }).catch(() => {
+                return undefined;
+            });
     }
 
     /**
@@ -713,7 +755,8 @@ export default abstract class APLRenderer<Options = {}> {
             }
             this.view = undefined;
         }
-        window.removeEventListener('keydown', this.passWindowEventsToCore);
+        window.removeEventListener('keydown', this.passKeyDownToCore);
+        window.removeEventListener('keyup', this.passKeyUpToCore);
     }
 
     /**
@@ -1040,12 +1083,20 @@ export default abstract class APLRenderer<Options = {}> {
         }
     }
 
+    private canPassLocalKeyDown = (event: IAsyncKeyboardEvent) => {
+        return this.mOptions.mode !== 'TV' || !this.isDPadKey(event.code);
+    }
+
     private handleKeyDown = async (evt: IAsyncKeyboardEvent) => {
-        await this.passKeyboardEventToCore(evt, KeyHandlerType.KeyDown);
+        if (this.canPassLocalKeyDown(evt)) {
+            await this.passKeyboardEventToCore(evt, KeyHandlerType.KeyDown);
+        }
     }
 
     private handleKeyUp = async (evt: IAsyncKeyboardEvent) => {
-        await this.passKeyboardEventToCore(evt, KeyHandlerType.KeyUp);
+        if (this.canPassLocalKeyDown(evt)) {
+            await this.passKeyboardEventToCore(evt, KeyHandlerType.KeyUp);
+        }
     }
 
     /**
@@ -1133,28 +1184,50 @@ export default abstract class APLRenderer<Options = {}> {
         }
     }
 
-    private recoverFocusOnEnter(id: string, code: string): void {
+    private passKeyDownToCore = (event: IAsyncKeyboardEvent) => {
+        this.passWindowEventsToCore(event, KeyHandlerType.KeyDown);
+    }
+
+    private passKeyUpToCore = (event: IAsyncKeyboardEvent) => {
+        this.passWindowEventsToCore(event, KeyHandlerType.KeyUp);
+    }
+
+    private passWindowEventsToCore = async (event: IAsyncKeyboardEvent, handler: KeyHandlerType) => {
+        if (!this.context) {
+            return;
+        }
+
+        const focusedComponentId = await this.context.getFocused();
+
+        if (this.shouldPassWindowEventToCore(event, focusedComponentId)) {
+            this.ensureComponentIsFocused(focusedComponentId, event.code);
+            this.passKeyboardEventToCore(event, handler);
+        } else if (!focusedComponentId) {
+            this.focusTopLeft();
+        }
+    }
+
+    private shouldPassWindowEventToCore(event: IAsyncKeyboardEvent, focusedComponentId: string) {
+        const isViewAlreadyFocused = () => {
+            return this.view.contains(document.activeElement);
+        };
+
+        const isFocusLost = () => {
+            return !this.view.contains(document.activeElement)
+                && !(document.activeElement instanceof HTMLTextAreaElement);
+        };
+
+        return this.isDPadKey(event.code)
+            && focusedComponentId
+            && (isFocusLost() || isViewAlreadyFocused());
+    }
+
+    private ensureComponentIsFocused(id: string, code: string): void {
         if (code === ENTER_KEY) {
             const component = this.componentMap[id] as ActionableComponent;
             if (component['focus']) {
                 component.focus();
             }
-        }
-    }
-
-    private passWindowEventsToCore = async (event: IAsyncKeyboardEvent) => {
-        if (!this.context) {
-            return;
-        }
-
-        const focused = await this.context.getFocused();
-        if (this.isDPadKey(event.code)
-            && (!document.activeElement || document.activeElement === document.body)
-            && focused) {
-            this.recoverFocusOnEnter(focused, event.code);
-            this.passKeyboardEventToCore(event, KeyHandlerType.KeyDown);
-        } else if (!focused) {
-            this.focusTopLeft();
         }
     }
 }

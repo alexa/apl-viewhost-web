@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Event } from './Event';
 import { EventProperty } from '../enums/EventProperty';
+import { Event } from './Event';
 
 /**
  * @ignore

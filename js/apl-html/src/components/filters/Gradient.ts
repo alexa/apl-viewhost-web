@@ -5,11 +5,11 @@
 
 'use strict';
 
-import { Filter } from '../../utils/FilterUtils';
-import { IGradient } from '../Image';
-import { SVG_NS, Component, uuidv4 } from '../Component';
-import { GradientType } from '../../enums/GradientType';
-import { IImageFilterElement, IBaseFilter } from './ImageFilter';
+import {GradientType} from '../../enums/GradientType';
+import {Filter} from '../../utils/FilterUtils';
+import {IGradient} from '../../utils/ImageUtils';
+import {Component, SVG_NS, uuidv4} from '../Component';
+import {IBaseFilter, IImageFilterElement} from './ImageFilter';
 
 /**
  * @ignore
@@ -81,17 +81,17 @@ export function getGradientFilter(filter: Filter,
     fImage.setAttributeNS('', 'href', `#${rectId}`);
     fImage.setAttributeNS('', 'result', feImageId);
     filterImageArray.push(fImage);
-    return { filterId: feImageId, filterElement: fImage, filterImageArray };
+    return {filterId: feImageId, filterElement: fImage, filterImageArray};
 }
 
 export function getAngleCoords(angle: number) {
     // angle can be 0 to 360
     const anglePI = (360 - angle) * (Math.PI / 180);
     const angleCoords = {
-        x1 : Math.round(50 + Math.sin(anglePI) * 50) + '%',
-        y1 : Math.round(50 + Math.cos(anglePI) * 50) + '%',
-        x2 : Math.round(50 + Math.sin(anglePI + Math.PI) * 50) + '%',
-        y2 : Math.round(50 + Math.cos(anglePI + Math.PI) * 50) + '%'
+        x1: Math.round(50 + Math.sin(anglePI) * 50) + '%',
+        y1: Math.round(50 + Math.cos(anglePI) * 50) + '%',
+        x2: Math.round(50 + Math.sin(anglePI + Math.PI) * 50) + '%',
+        y2: Math.round(50 + Math.cos(anglePI + Math.PI) * 50) + '%'
     };
     return angleCoords;
 }

@@ -5,23 +5,23 @@
 
 import EventEmitter = require('eventemitter3');
 import * as $ from 'jquery';
-import {fillAndStrokeConverter} from './avg/GraphicsUtils';
-import APLRenderer from '../APLRenderer';
+import APLRenderer, {IAPLOptions} from '../APLRenderer';
+import {ComponentType} from '../enums/ComponentType';
 import {Display} from '../enums/Display';
+import {FocusDirection} from '../enums/FocusDirection';
+import {GradientSpreadMethod} from '../enums/GradientSpreadMethod';
+import {GradientUnits} from '../enums/GradientUnits';
+import {LayoutDirection} from '../enums/LayoutDirection';
 import {PropertyKey} from '../enums/PropertyKey';
 import {UpdateType} from '../enums/UpdateType';
-import {ComponentType} from '../enums/ComponentType';
-import {LoggerFactory} from '../logging/LoggerFactory';
 import {ILogger} from '../logging/ILogger';
-import {getScaledTransform} from '../utils/TransformUtils';
-import {GradientSpreadMethod} from '../enums/GradientSpreadMethod';
-import {ChildAction} from '../utils/Constant';
-import {numberToColor} from '../utils/ColorUtils';
-import {GradientUnits} from '../enums/GradientUnits';
-import {FocusDirection} from '../enums/FocusDirection';
-import {LayoutDirection} from '../enums/LayoutDirection';
-import {createBoundsFitter} from './helpers/BoundsFitter';
+import {LoggerFactory} from '../logging/LoggerFactory';
 import {getRectDifference} from '../utils/AplRectUtils';
+import {numberToColor} from '../utils/ColorUtils';
+import {ChildAction} from '../utils/Constant';
+import {getScaledTransform} from '../utils/TransformUtils';
+import {fillAndStrokeConverter} from './avg/GraphicsUtils';
+import {createBoundsFitter} from './helpers/BoundsFitter';
 import {applyAplRectToStyle, applyPaddingToStyle} from './helpers/StylesUtil';
 
 /**
@@ -153,11 +153,17 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
         });
         this.id = component.getUniqueId();
         this.$container.attr('id', this.id);
+
         this.assignedId = component.getId();
 
         if (renderer) {
             renderer.componentMap[this.id] = this;
             renderer.componentIdMap[this.assignedId] = this;
+
+            const options = renderer.options as IAPLOptions;
+            if (options && options.developerToolOptions && options.developerToolOptions.includeComponentId) {
+                this.$container.attr('data-componentid', component.getId());
+            }
         }
 
         this.container.classList.add('apl-' + this.constructor.name.toLowerCase());

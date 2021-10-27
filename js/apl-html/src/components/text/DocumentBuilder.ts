@@ -5,11 +5,11 @@
 
 import { SpanAttributeName } from '../../enums/SpanAttributeName';
 import { SpanType } from '../../enums/SpanType';
-import { IRichTextStyles, ISpannedTextNode } from './RichTextParser';
-import { LoggerFactory } from '../../logging/LoggerFactory';
 import { ILogger } from '../../logging/ILogger';
+import { LoggerFactory } from '../../logging/LoggerFactory';
 import { numberToColor } from '../../utils/ColorUtils';
 import {createStylesApplier, CssUnitType, StylesApplierArgs} from '../helpers/StylesApplier';
+import { IRichTextStyles, ISpannedTextNode } from './RichTextParser';
 
 export class DocumentBuilder {
     private static logger: ILogger = LoggerFactory.getLogger('DocumentBuilder');

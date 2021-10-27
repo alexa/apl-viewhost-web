@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Stack } from './Stack';
-import { LoggerFactory, ILogger } from '../..';
-import { GoBackListener } from './GoBackListener';
+import { ILogger, LoggerFactory } from '../..';
 import { IDocumentState } from '../IDocumentState';
+import { GoBackListener } from './GoBackListener';
+import { Stack } from './Stack';
 
 /**
  * The GoBack command is used to return to a previous document in the backstack.

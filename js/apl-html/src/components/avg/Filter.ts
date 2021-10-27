@@ -4,9 +4,9 @@
  */
 
 import * as $ from 'jquery';
+import { GraphicFilterType } from '../../enums/GraphicFilterType';
 import { ILogger } from '../../logging/ILogger';
 import { Component, SVG_NS, uuidv4 } from '../Component';
-import { GraphicFilterType } from '../../enums/GraphicFilterType';
 
 export interface IAVGFilterElement {
     filterId: string;

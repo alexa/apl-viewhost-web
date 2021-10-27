@@ -109,6 +109,8 @@ declare namespace APL {
                                    metrics?: APL.Metrics,
                                    scalingOptions?: any): void;
 
+        public updateDisplayState(displayState: any): void;
+
         public setFocus(direction: number, origin: APL.Rect, targetId: string): void;
 
         public getFocusableAreas(): Promise<Map<string, APL.Rect>>;
@@ -116,5 +118,9 @@ declare namespace APL {
         public getFocused(): Promise<string>;
 
         public reInflate(): void;
+
+        public mediaLoaded(source: string): void;
+
+        public mediaLoadFailed(source: string, errorCode: number, error: string): void;
     }
 }

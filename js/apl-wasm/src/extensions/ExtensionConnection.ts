@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { IExtensionConnection, IExtensionConnectionMessage, IExtensionService, ILogger, LoggerFactory } from 'apl-html';
 import { ExtensionManager } from './ExtensionManager';
-import { IExtensionConnection, IExtensionService, IExtensionConnectionMessage, ILogger, LoggerFactory } from 'apl-html';
 
 /**
  * The connection to local service.

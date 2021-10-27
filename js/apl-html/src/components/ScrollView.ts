@@ -5,9 +5,9 @@
 
 import * as $ from 'jquery';
 import APLRenderer from '../APLRenderer';
+import { PropertyKey } from '../enums/PropertyKey';
 import { Component, FactoryFunction, IComponentProperties } from './Component';
 import { Scrollable } from './Scrollable';
-import { PropertyKey } from '../enums/PropertyKey';
 
 /**
  * @ignore

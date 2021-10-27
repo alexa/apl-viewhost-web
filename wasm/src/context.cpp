@@ -2,7 +2,6 @@
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0
  */
-
 #include "wasm/context.h"
 #include "wasm/wasmmetrics.h"
 #include "apl/apl.h"
@@ -456,6 +455,11 @@ ContextMethods::configurationChange(const apl::RootContextPtr& context, emscript
     }
 }
 
+void 
+ContextMethods::updateDisplayState(const apl::RootContextPtr& context, int displayState) {
+    context->updateDisplayState(static_cast<apl::DisplayState>(displayState));
+}
+
 void
 ContextMethods::reInflate(const apl::RootContextPtr& context) {
     context->reinflate();
@@ -482,6 +486,17 @@ ContextMethods::getFocusableAreas(const apl::RootContextPtr& context) {
     }
     return propObject;
 }
+
+void
+ContextMethods::mediaLoaded(const apl::RootContextPtr& context, const std::string& source) {
+    context->mediaLoaded(source);
+}
+
+void
+ContextMethods::mediaLoadFailed(const apl::RootContextPtr& context, const std::string& source, int errorCode = -1, const std::string& error = std::string()){
+    context->mediaLoadFailed(source, errorCode, error);
+}
+
 } // namespace internal
 
 EMSCRIPTEN_BINDINGS(apl_wasm_context) {
@@ -519,10 +534,13 @@ EMSCRIPTEN_BINDINGS(apl_wasm_context) {
         .function("processDataSourceUpdate", &internal::ContextMethods::processDataSourceUpdate)
         .function("handleDisplayMetrics", &internal::ContextMethods::handleDisplayMetrics)
         .function("configurationChange", &internal::ContextMethods::configurationChange)
+        .function("updateDisplayState", &internal::ContextMethods::updateDisplayState)
         .function("reInflate", &internal::ContextMethods::reInflate)
         .function("setFocus", &internal::ContextMethods::setFocus)
         .function("getFocused", &internal::ContextMethods::getFocused)
         .function("getFocusableAreas", &internal::ContextMethods::getFocusableAreas)
+        .function("mediaLoaded", &internal::ContextMethods::mediaLoaded)
+        .function("mediaLoadFailed", &internal::ContextMethods::mediaLoadFailed)
         .class_function("create", &internal::ContextMethods::create);
 }
 

@@ -6,9 +6,9 @@
 import APLRenderer from '../APLRenderer';
 import {PropertyKey} from '../enums/PropertyKey';
 import {ScrollDirection} from '../enums/ScrollDirection';
+import {processNextTick} from '../utils/EventUtils';
 import {Component, FactoryFunction, IComponentProperties} from './Component';
 import {Scrollable} from './Scrollable';
-import {processNextTick} from '../utils/EventUtils';
 
 /**
  * @ignore

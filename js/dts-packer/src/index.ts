@@ -53,7 +53,6 @@ class NodeModule {
 
         const program = ts.createProgram([this.typesPath], {});
         const sources = program.getSourceFiles();
-        debugger;
         for(const source of sources) {
             const nmp = path.join(this.path, 'node_modules');
             if(!this.sources.has(source.fileName) && //we haven't traversed to this file

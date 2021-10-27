@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {AVG} from './AVG';
-import {Path} from './Path';
-import {Group} from './Group';
-import {AVGText} from './AVGText';
-import {ILogger} from '../../logging/ILogger';
 import {GraphicElementType} from '../../enums/GraphicElementType';
+import {ILogger} from '../../logging/ILogger';
 import {IDENTITY_TRANSFORM, IValueWithReference, SVG_NS} from '../Component';
+import {AVG} from './AVG';
+import {AVGText} from './AVGText';
+import {Group} from './Group';
+import {Path} from './Path';
 
 export interface PatternElementArgs {
     graphicPattern: APL.GraphicPattern;

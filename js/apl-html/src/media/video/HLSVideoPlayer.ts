@@ -3,15 +3,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {IVideoPlayer} from '../IVideoPlayer';
+import { IVideoPlayer } from '../IVideoPlayer';
 
 const hls = require('hls.js/dist/hls.light.min.js');
 const path = require('path');
-import {createVideoPlayer} from './VideoPlayer';
-import {PlaybackState} from '../Resource';
-import {ILogger} from '../../logging/ILogger';
-import {LoggerFactory} from '../../logging/LoggerFactory';
-import {IMediaEventListener} from '../IMediaEventListener';
+import { ILogger } from '../../logging/ILogger';
+import { LoggerFactory } from '../../logging/LoggerFactory';
+import { IMediaEventListener } from '../IMediaEventListener';
+import { PlaybackState } from '../Resource';
+import { createPlayerNetworkRetryManager, PlayerNetworkRetryManager } from './PlayerNetworkRetryManager';
+import { createVideoPlayer } from './VideoPlayer';
 
 const HLSPlaybackErrors = {
     NOT_SUPPORTED: 'The provided media format is not supported.',
@@ -150,9 +151,9 @@ export function createHLSVideoPlayer(hlsVideoPlayerArgs: HLSVideoPlayerArgs): IV
             try {
                 const player = getHLSPlayer.call(this);
                 if (isNativePlayer(player)) {
-                    configureNativePlayer.call(this, {player, url, resolve, reject});
+                    configureNativePlayer.call(this, { player, url, resolve, reject });
                 } else {
-                    configureHLSPlayer.call(this, {player, url, resolve, reject});
+                    configureHLSPlayer.call(this, { player, url, resolve, reject });
                 }
             } catch (e) {
                 reject(e);
@@ -173,7 +174,7 @@ export function createHLSVideoPlayer(hlsVideoPlayerArgs: HLSVideoPlayerArgs): IV
         } = args;
         player.src = url;
         player.load();
-        this.playbackStateHandler.transitionToState(PlaybackState.LOADED);
+
         resolve();
     }
 
@@ -189,21 +190,22 @@ export function createHLSVideoPlayer(hlsVideoPlayerArgs: HLSVideoPlayerArgs): IV
 
         resetPlayerState.call(this);
 
-        // Prepare for Video Playback
-        player.on(hls.Events.MEDIA_ATTACHED, () => {
-            player.loadSource(url);
-            player.on(hls.Events.MANIFEST_PARSED, () => {
-                videoPlayerState = VideoPlayerState.READY;
-                this.playbackStateHandler.transitionToState(PlaybackState.LOADED);
-                resolve();
-            });
+        const playerNetworkRetryManager: PlayerNetworkRetryManager = createPlayerNetworkRetryManager({
+            player,
+            errorCallback: handlePlaybackError.bind(this, HLSPlaybackErrors.FATAL_ERROR)
         });
 
         player.on(hls.Events.ERROR, (event, data) => {
             if (data.fatal) {
+                if (!playerNetworkRetryManager.shouldRetry()) {
+                    videoPlayerState = VideoPlayerState.ERROR;
+                    playerNetworkRetryManager.fail();
+                    reject();
+                    return;
+                }
                 switch (data.type) {
                     case hls.ErrorTypes.NETWORK_ERROR:
-                        player.startLoad();
+                        playerNetworkRetryManager.retry(url, data.details);
                         break;
                     case hls.ErrorTypes.MEDIA_ERROR:
                         player.recoverMediaError();
@@ -216,6 +218,16 @@ export function createHLSVideoPlayer(hlsVideoPlayerArgs: HLSVideoPlayerArgs): IV
                         break;
                 }
             }
+        });
+
+        // Prepare for Video Playback
+        player.on(hls.Events.MEDIA_ATTACHED, () => {
+            player.on(hls.Events.MANIFEST_PARSED, () => {
+                videoPlayerState = VideoPlayerState.READY;
+                this.playbackStateHandler.transitionToState(PlaybackState.LOADED);
+                resolve();
+            });
+            player.loadSource(url);
         });
 
         player.attachMedia(this.player);

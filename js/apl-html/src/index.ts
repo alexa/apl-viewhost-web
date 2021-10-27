@@ -5,10 +5,10 @@
 
 /// <reference path="../lib/dts/Module.d.ts" />
 
-import './assets/css/fonts.css';
 import APLRenderer from './APLRenderer';
+import './assets/css/fonts.css';
 export default APLRenderer;
-export {IAPLOptions, IViewportCharacteristics, IEnvironment, IConfigurationChangeOptions,
+export {IAPLOptions, IViewportCharacteristics, IEnvironment, IConfigurationChangeOptions, IDisplayStateOptions,
     ISendEvent, IDataSourceFetchRequest, DeviceMode, ViewportShape, ScreenMode} from './APLRenderer';
 export {Content} from './Content';
 export {commandFactory} from './CommandFactory';
@@ -55,6 +55,8 @@ export * from './enums/CommandScrollAlign';
 export * from './enums/CommandType';
 export * from './enums/ComponentType';
 export * from './enums/ContainerDirection';
+export * from './enums/DisplayState';
+export * from './enums/DocumentPropertyKey';
 export * from './enums/EventProperty';
 export * from './enums/EventType';
 export * from './enums/FilterType';

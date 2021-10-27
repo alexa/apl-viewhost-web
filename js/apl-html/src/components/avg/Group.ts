@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import {GraphicElementType} from '../../enums/GraphicElementType';
 import {GraphicPropertyKey} from '../../enums/GraphicPropertyKey';
-import {AVG} from './AVG';
-import {Path} from './Path';
-import {AVGText} from './AVGText';
 import {ILogger} from '../../logging/ILogger';
 import {Component} from '../Component';
-import {GraphicElementType} from '../../enums/GraphicElementType';
+import {AVG} from './AVG';
+import {AVGText} from './AVGText';
+import {Path} from './Path';
 
 export interface GroupArgs {
     graphic: APL.GraphicElement;

@@ -200,6 +200,8 @@ getValFromObject(const apl::Filter& filter, WASMMetrics* m) {
                                          filter.getValue(apl::kFilterPropertyUseColor), m)));
             propObject.set("kind", emscripten::val(getValFromObject(
                                          filter.getValue(apl::kFilterPropertyKind), m)));
+            propObject.set("source", emscripten::val(getValFromObject(
+                                         filter.getValue(apl::kFilterPropertySource), m)));
             break;
         case apl::kFilterTypeBlend:
             propObject.set("mode", emscripten::val(getValFromObject(

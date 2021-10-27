@@ -4,10 +4,10 @@
  */
 
 import { SpanType } from '../../enums/SpanType';
+import { ILogger } from '../../logging/ILogger';
+import { LoggerFactory } from '../../logging/LoggerFactory';
 import { RichTextParser } from './RichTextParser';
 import { ILine } from './Text';
-import { LoggerFactory } from '../../logging/LoggerFactory';
-import { ILogger } from '../../logging/ILogger';
 
 /**
  * @ignore

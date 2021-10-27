@@ -50,10 +50,6 @@ if(WASM_ASMJS)
         DESTINATION ${WEB_PUBLIC_DIR})
 endif(WASM_ASMJS)
 
-install(DIRECTORY
-    ${CMAKE_SOURCE_DIR}/fonts
-    DESTINATION ${WEB_PUBLIC_DIR})
-
 add_custom_target(generate-wasm-enums ALL
         COMMAND cd ${APL_PROJECT_DIR} && ${ENUMGEN_BIN}
         -f "AnimationQuality"
@@ -70,7 +66,10 @@ add_custom_target(generate-wasm-enums ALL
         -f "ContainerDirection"
         -f "DimensionType"
         -f "Display"
+        -f "DisplayState"
+        -f "DocumentPropertyKey"
         -f "EventType"
+        -f "EventMediaType"
         -f "EventProperty"
         -f "FilterProperty"
         -f "FilterType"
@@ -110,6 +109,7 @@ add_custom_target(generate-wasm-enums ALL
         -f "SubmitKeyType"
         -f "TextAlign"
         -f "TextAlignVertical"
+        -f "TrackState"
         -f "UpdateType"
         -f "VectorGraphicScale"
         -f "VideoScale"

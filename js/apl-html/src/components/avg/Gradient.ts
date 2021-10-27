@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { GradientSpreadMethod } from '../../enums/GradientSpreadMethod';
+import { GradientType } from '../../enums/GradientType';
+import { GradientUnits } from '../../enums/GradientUnits';
 import { ILogger } from '../../logging/ILogger';
 import { Component, IDENTITY_TRANSFORM, IValueWithReference, SVG_NS, uuidv4 } from '../Component';
-import { GradientType } from '../../enums/GradientType';
-import { GradientSpreadMethod } from '../../enums/GradientSpreadMethod';
-import { GradientUnits } from '../../enums/GradientUnits';
 
 /**
  * @ignore

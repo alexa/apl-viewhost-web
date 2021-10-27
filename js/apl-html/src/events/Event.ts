@@ -4,10 +4,10 @@
  */
 
 import APLRenderer from '../APLRenderer';
-import { PropertyKey } from '../enums/PropertyKey';
 import { EventType } from '../enums/EventType';
-import { LoggerFactory } from '../logging/LoggerFactory';
+import { PropertyKey } from '../enums/PropertyKey';
 import { ILogger } from '../logging/ILogger';
+import { LoggerFactory } from '../logging/LoggerFactory';
 
 const EVENT_TYPE_MAP = {
     [EventType.kEventTypeSendEvent]: 'SendEvent',

@@ -6,9 +6,9 @@
 import {GraphicElementType} from '../../enums/GraphicElementType';
 import {GraphicPropertyKey} from '../../enums/GraphicPropertyKey';
 import {ILogger} from '../../logging/ILogger';
+import {FontUtils} from '../../utils/FontUtils';
 import {IValueWithReference, SVG_NS} from '../Component';
 import {AVGFilter, createAndGetFilterElement} from './Filter';
-import {FontUtils} from '../../utils/FontUtils';
 import {fillAndStrokeConverter} from './GraphicsUtils';
 
 export interface AVGArgs {
@@ -77,7 +77,9 @@ export abstract class AVG {
     protected setAttribute(attributeName: string): (key: GraphicPropertyKey) => void {
         return (key: GraphicPropertyKey) => {
             const graphicPropertyValue = this.graphic.getValue(key);
-            this.element.setAttributeNS('', attributeName, graphicPropertyValue.toString());
+            this.element.setAttributeNS('', attributeName,
+                (graphicPropertyValue) ? graphicPropertyValue.toString() : ''
+            );
         };
     }
 
@@ -136,7 +138,9 @@ export abstract class AVG {
         return (key: GraphicPropertyKey) => {
             const fontStyle = this.graphic.getValue<number>(key);
             const convertedValue = FontUtils.getFontStyle(fontStyle);
-            this.element.setAttributeNS('', attributeName, convertedValue.toString());
+            this.element.setAttributeNS('', attributeName,
+                (convertedValue) ? convertedValue.toString() : ''
+            );
         };
     }
 

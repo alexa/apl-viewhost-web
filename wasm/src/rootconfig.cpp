@@ -26,8 +26,8 @@ RootConfigMethods::create(emscripten::val environment) {
         .allowOpenUrl(allowOpenUrl)
         .disallowVideo(disallowVideo)
         .animationQuality(animationQuality)
-        .enforceAPLVersion(apl::APLVersion::kAPLVersionIgnore);
-
+        .enforceAPLVersion(apl::APLVersion::kAPLVersionIgnore)
+        .enableExperimentalFeature(apl::RootConfig::ExperimentalFeature::kExperimentalFeatureManageMediaRequests);
 
     return config;
 }

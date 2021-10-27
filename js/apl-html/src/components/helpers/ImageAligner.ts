@@ -3,18 +3,30 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { CssAttributeValues } from './StylesApplier';
-import { ImageAlign } from '../../enums/ImageAlign';
-import { LayoutDirection } from '../../enums/LayoutDirection';
-import { ILogger } from '../../logging/ILogger';
-import { LoggerFactory } from '../../logging/LoggerFactory';
+import {ImageAlign} from '../../enums/ImageAlign';
+import {LayoutDirection} from '../../enums/LayoutDirection';
+import {ILogger} from '../../logging/ILogger';
+import {LoggerFactory} from '../../logging/LoggerFactory';
+import {CssAttributeValues} from './StylesApplier';
+
+export interface Dimensions {
+    width;
+    height;
+}
+
+export interface Bounds {
+    maxTop: number;
+    maxLeft: number;
+    minLeft: number;
+}
 
 export interface AlignerArgs {
-    parentBounds: APL.Rect;
-    element: HTMLImageElement;
+    parentBounds: Dimensions;
+    element: Dimensions;
     layoutDirection: LayoutDirection;
     alignerType?: AlignerType;
     imageAlign: ImageAlign;
+    boundLimits?: Bounds;
 }
 
 export enum AlignerType {
@@ -35,7 +47,12 @@ const alignFunctionMap: AlignerTypePositionerMap = {
 
 export function createAligner(args: AlignerArgs): Aligner {
     const defaultArgs = {
-        alignerType: AlignerType.Image
+        alignerType: AlignerType.Image,
+        boundLimits: {
+            maxTop: 0,
+            maxLeft: 0,
+            minLeft: 0
+        }
     };
     const alignerArgs = Object.assign(defaultArgs, args);
 
@@ -44,86 +61,106 @@ export function createAligner(args: AlignerArgs): Aligner {
         element,
         layoutDirection,
         alignerType,
-        imageAlign
+        imageAlign,
+        boundLimits
     } = alignerArgs;
 
     const logger = LoggerFactory.getLogger('ImageAligner');
 
-    function getAlignment() {
-        const positioner = alignFunctionMap[alignerType]({
-            parentBounds,
-            element,
-            layoutDirection,
-            logger
-        });
+    function alignBottom(positioner: Positioner): CssAttributeValues {
+        return {
+            left: positioner.setToHorizontalCenter(),
+            top: positioner.setToBottom()
+        };
+    }
 
-        switch (imageAlign) {
-            case ImageAlign.kImageAlignBottom: {
-                return {
-                    left: positioner.setToHorizontalCenter(),
-                    top: positioner.setToBottom()
-                };
-            }
-            case ImageAlign.kImageAlignBottomLeft: {
-                return {
-                    left: positioner.setToLeft(),
-                    top: positioner.setToBottom()
-                };
-            }
-            case ImageAlign.kImageAlignBottomRight: {
-                return {
-                    left: positioner.setToRight(),
-                    top: positioner.setToBottom()
-                };
-            }
-            case ImageAlign.kImageAlignCenter: {
-                return {
-                    left: positioner.setToHorizontalCenter(),
-                    top: positioner.setToVerticalCenter()
-                };
-            }
-            case ImageAlign.kImageAlignLeft: {
-                return {
-                    left: positioner.setToLeft(),
-                    top: positioner.setToVerticalCenter()
-                };
-            }
-            case ImageAlign.kImageAlignRight: {
-                return {
-                    left: positioner.setToRight(),
-                    top: positioner.setToVerticalCenter()
-                };
-            }
-            case ImageAlign.kImageAlignTop: {
-                return {
-                    left: positioner.setToHorizontalCenter(),
-                    top: positioner.setToTop()
-                };
-            }
-            case ImageAlign.kImageAlignTopLeft: {
-                return {
-                    left: positioner.setToLeft(),
-                    top: positioner.setToTop()
-                };
-            }
-            case ImageAlign.kImageAlignTopRight: {
-                return {
-                    left: positioner.setToRight(),
-                    top: positioner.setToTop()
-                };
-            }
-            default: {
+    function alignBottomLeft(positioner: Positioner): CssAttributeValues {
+        return {
+            left: positioner.setToLeft(),
+            top: positioner.setToBottom()
+        };
+    }
+
+    function alignBottomRight(positioner: Positioner): CssAttributeValues {
+        return {
+            left: positioner.setToRight(),
+            top: positioner.setToBottom()
+        };
+    }
+
+    function alignCenter(positioner: Positioner): CssAttributeValues {
+        return {
+            left: positioner.setToHorizontalCenter(),
+            top: positioner.setToVerticalCenter()
+        };
+    }
+
+    function alignLeft(positioner: Positioner): CssAttributeValues {
+        return {
+            left: positioner.setToLeft(),
+            top: positioner.setToVerticalCenter()
+        };
+    }
+
+    function alignRight(positioner: Positioner): CssAttributeValues {
+        return {
+            left: positioner.setToRight(),
+            top: positioner.setToVerticalCenter()
+        };
+    }
+
+    function alignTop(positioner: Positioner): CssAttributeValues {
+        return {
+            left: positioner.setToHorizontalCenter(),
+            top: positioner.setToTop()
+        };
+    }
+
+    function alignTopLeft(positioner: Positioner): CssAttributeValues {
+        return {
+            left: positioner.setToLeft(),
+            top: positioner.setToTop()
+        };
+    }
+
+    function alignTopRight(positioner: Positioner): CssAttributeValues {
+        return {
+            left: positioner.setToRight(),
+            top: positioner.setToTop()
+        };
+    }
+
+    const imageAlignmentFunctions = {
+        [ImageAlign.kImageAlignBottom]: alignBottom,
+        [ImageAlign.kImageAlignBottomLeft]: alignBottomLeft,
+        [ImageAlign.kImageAlignBottomRight]: alignBottomRight,
+        [ImageAlign.kImageAlignCenter]: alignCenter,
+        [ImageAlign.kImageAlignLeft]: alignLeft,
+        [ImageAlign.kImageAlignRight]: alignRight,
+        [ImageAlign.kImageAlignTop]: alignTop,
+        [ImageAlign.kImageAlignTopLeft]: alignTopLeft,
+        [ImageAlign.kImageAlignTopRight]: alignTopRight
+    };
+
+    return {
+        getAlignment(): CssAttributeValues {
+            const positioner = alignFunctionMap[alignerType]({
+                parentBounds,
+                element,
+                layoutDirection,
+                logger,
+                boundLimits
+            });
+
+            if (!imageAlignmentFunctions.hasOwnProperty(imageAlign)) {
                 logger.warn(`Bad image alignment property key: ${imageAlign}. Defaulting to center alignment.`);
                 return {
                     left: positioner.setToHorizontalCenter(),
                     top: positioner.setToVerticalCenter()
                 };
             }
+            return imageAlignmentFunctions[imageAlign](positioner);
         }
-    }
-
-    return {
-        getAlignment
     };
 }
 
@@ -132,6 +169,7 @@ interface PositionerArgs {
     element: Dimensions;
     layoutDirection: LayoutDirection;
     logger: ILogger;
+    boundLimits: Bounds;
 }
 
 export interface Positioner {
@@ -166,11 +204,6 @@ export interface Positioner {
     setToVerticalCenter(): number;
 }
 
-interface Dimensions {
-    width;
-    height;
-}
-
 const imagePositioners = {
     [LayoutDirection.kLayoutDirectionLTR]: createImagePositionerLTR,
     [LayoutDirection.kLayoutDirectionRTL]: createImagePositionerRTL
@@ -184,7 +217,8 @@ function createImagePositioner(args: PositionerArgs): Positioner {
     const {
         parentBounds: parentDimensions,
         element: elementDimensions,
-        logger
+        logger,
+        boundLimits
     } = args;
 
     let {
@@ -195,10 +229,14 @@ function createImagePositioner(args: PositionerArgs): Positioner {
         logger.warn(`LayoutDirection is not supported: ${layoutDirection}. Defaulting to LTR`);
         layoutDirection = LayoutDirection.kLayoutDirectionLTR;
     }
-    return imagePositioners[layoutDirection](parentDimensions, elementDimensions);
+    return imagePositioners[layoutDirection](parentDimensions, elementDimensions, boundLimits);
 }
 
-function createImagePositionerLTR(parentDimensions: Dimensions, elementDimensions: Dimensions): Positioner {
+function createImagePositionerLTR(
+    parentDimensions: Dimensions,
+    elementDimensions: Dimensions,
+    boundLimits: Bounds
+): Positioner {
     const {
         width: parentWidth,
         height: parentHeight
@@ -209,8 +247,10 @@ function createImagePositionerLTR(parentDimensions: Dimensions, elementDimension
         height: imageHeight
     } = elementDimensions;
 
-    const MAX_TOP_BOUND = 0;
-    const MAX_LEFT_BOUND = 0;
+    const {
+        maxLeft: MAX_LEFT_BOUND,
+        maxTop: MAX_TOP_BOUND
+    } = boundLimits;
 
     return {
         setToBottom() {
@@ -243,7 +283,11 @@ function createImagePositionerLTR(parentDimensions: Dimensions, elementDimension
     };
 }
 
-function createImagePositionerRTL(parentDimensions: Dimensions, elementDimensions: Dimensions): Positioner {
+function createImagePositionerRTL(
+    parentDimensions: Dimensions,
+    elementDimensions: Dimensions,
+    boundLimits: Bounds
+): Positioner {
     const {
         width: parentWidth,
         height: parentHeight
@@ -254,8 +298,10 @@ function createImagePositionerRTL(parentDimensions: Dimensions, elementDimension
         height: imageHeight
     } = elementDimensions;
 
-    const MAX_TOP_BOUND = 0;
-    const MIN_LEFT_BOUND = 0;
+    const {
+        minLeft: MIN_LEFT_BOUND,
+        maxTop: MAX_TOP_BOUND
+    } = boundLimits;
 
     return {
         setToBottom() {

@@ -5,11 +5,11 @@
 
 import APLRenderer from '../../APLRenderer';
 import { AudioTrack } from '../../enums/AudioTrack';
-import { Component, FactoryFunction } from '../Component';
 import { CommandControlMedia } from '../../enums/CommandControlMedia';
-import { PlaybackState } from '../../media/Resource';
-import { IMediaSource } from '../../media/IMediaSource';
 import { VideoScale } from '../../enums/VideoScale';
+import { IMediaSource } from '../../media/IMediaSource';
+import { PlaybackState } from '../../media/Resource';
+import { Component, FactoryFunction } from '../Component';
 import { AbstractVideoComponent } from './AbstractVideoComponent';
 
 /**

@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import {IMediaEventListener} from '../IMediaEventListener';
+import {IVideoPlayer} from '../IVideoPlayer';
 import {PlaybackState} from '../Resource';
 import {EmitBehavior, IPlaybackStateHandler, PlaybackStateHandler} from './PlaybackStateHandler';
-import {IVideoPlayer} from '../IVideoPlayer';
-import {IMediaEventListener} from '../IMediaEventListener';
 
 export interface PlayerInitializationArgs {
     player: HTMLVideoElement;
@@ -94,16 +94,15 @@ export function createVideoPlayer(eventListener: IMediaEventListener): IVideoPla
         function onErrorCallback() {
             this.playbackStateHandler.transitionToState(PlaybackState.ERROR);
         }
-
         this.player.onerror = onErrorCallback.bind(this);
     }
 
-    function attachOnLoadedMetadataCallback() {
-        function onLoadedMetadataCallback() {
+    function attachOnLoadedDataCallback() {
+        function onLoadedDataCallback() {
             this.playbackStateHandler.transitionToState(PlaybackState.LOADED);
         }
 
-        this.player.onloadedmetadata = onLoadedMetadataCallback.bind(this);
+        this.player.onloadeddata = onLoadedDataCallback.bind(this);
     }
 
     function attachOnTimeUpdateCallback() {
@@ -132,7 +131,7 @@ export function createVideoPlayer(eventListener: IMediaEventListener): IVideoPla
             attachOnEndedCallback.call(this);
             attachOnPauseCallback.call(this);
             attachOnErrorCallback.call(this);
-            attachOnLoadedMetadataCallback.call(this);
+            attachOnLoadedDataCallback.call(this);
             attachOnTimeUpdateCallback.call(this);
         },
         applyCssShadow(shadowParams: string): void {
@@ -164,7 +163,6 @@ export function createVideoPlayer(eventListener: IMediaEventListener): IVideoPla
                 this.player.src = url;
                 this.player.load();
             }
-            this.playbackStateHandler.transitionToState(PlaybackState.LOADED);
             return Promise.resolve(undefined);
         },
         play(id: string, url: string, offset: number): Promise<void> {

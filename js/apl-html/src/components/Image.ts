@@ -3,41 +3,34 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import APLRenderer from '../APLRenderer';
+import { FilterType } from '../enums/FilterType';
 import { ImageAlign } from '../enums/ImageAlign';
 import { ImageScale } from '../enums/ImageScale';
 import { PropertyKey } from '../enums/PropertyKey';
-import { GradientType } from '../enums/GradientType';
-import { Component, FactoryFunction, IComponentProperties, SVG_NS } from './Component';
-
-import * as $ from 'jquery';
-
-// This is a temporary shim for jquery so that the image scale
-// library works.
-(window as any).jQuery = $;
-import 'image-scale';
-import APLRenderer from '../APLRenderer';
-import { Noise } from './filters/Noise';
-import { ILogger } from '../logging/ILogger';
-import { Filter, generateSVGDefsAndUseElement } from '../utils/FilterUtils';
-import { isINoise } from './filters/Noise';
-import {createStylesApplier, CssUnitType} from './helpers/StylesApplier';
+import { arrayEquals, last } from '../utils/ArrayUtils';
+import { numberToColor } from '../utils/ColorUtils';
+import { createSVGImageFiltersApplier, Filter } from '../utils/FilterUtils';
+import {
+    loadAllImagesFromMediaSource
+} from '../utils/ImageRetrievalUtils';
+import {
+    createCanvasScaledImageProcessor,
+    createScaledImageProcessor,
+    getCssGradient,
+    IGradient,
+    ImageDimensions, ScaledImageSource
+} from '../utils/ImageUtils';
+import { isSomething, Maybe, Nothing } from '../utils/Maybe';
+import { Component, FactoryFunction, IComponentProperties, SVG_NS, uuidv4 } from './Component';
 import { createAligner } from './helpers/ImageAligner';
-
-/**
- * @ignore
- */
-export interface IGradient {
-    angle: number;
-    colorRange: number[];
-    inputRange: number[];
-    type: GradientType;
-}
+import { createStylesApplier, CssUnitType, ElementType } from './helpers/StylesApplier';
 
 /**
  * @ignore
  */
 export interface IImageProperties extends IComponentProperties {
-    [PropertyKey.kPropertySource]: string;
+    [PropertyKey.kPropertySource]: string | string [];
     [PropertyKey.kPropertyAlign]: ImageAlign;
     [PropertyKey.kPropertyBorderRadius]: number;
     [PropertyKey.kPropertyBorderWidth]: number;
@@ -51,442 +44,458 @@ export interface IImageProperties extends IComponentProperties {
 /**
  * @ignore
  */
-export class Image extends Component<IImageProperties> {
+interface ImageProperties {
+    borderRadius: number;
+    borderColor: string;
+    borderWidth: number;
+    overlayColor: string;
+    overlayGradient: string;
+    imageScale: ImageScale;
+    imageFilters: Filter[];
+    imageAlignment: ImageAlign;
+}
 
-    private imgPlaceHolder: HTMLDivElement = document.createElement('div');
-    private $imgPlaceHolder = $(this.imgPlaceHolder);
-    private imageOverlay: HTMLDivElement = document.createElement('div');
-    private $imageOverlay = $(this.imageOverlay);
-    // the original image is used to apply customized filter on canvas and scale the svg images.
-    // it shall be hidden from the final render result.
-    private originalImageElement: HTMLImageElement = document.createElement('img');
-    private $originalImageElement = $(this.originalImageElement);
-    // canvasElement is used to modify imageData defined in APL-filter/3P filter extension.
+/**
+ * @ignore
+ */
+export class Image extends Component<IImageProperties> {
+    private uuid = uuidv4();
+    private imageSourcesArray: Maybe<string[]>;
+    private imageProperties: ImageProperties = {} as ImageProperties;
     private canvasElement: HTMLCanvasElement = document.createElement('canvas');
-    // the image element inside svg
-    private imageElement: SVGElement = document.createElementNS(SVG_NS, 'image');
-    private svgDefsElement: SVGDefsElement | undefined = undefined;
-    private svgUseElement: SVGUseElement | undefined = undefined;
-    private svg: SVGElement = document.createElementNS(SVG_NS, 'svg') as SVGElement;
-    private $svg = $(this.svg);
-    // this flag indicates if the filter needs to be performed using canvas.
-    private hasFiltersInCanvas: boolean = false;
-    private setSvgImageHrefTimeout: any;
-    private isShadowHolderAdded: boolean = false;
+    private svgElement: SVGElement = document.createElementNS(SVG_NS, 'svg') as SVGElement;
+    private imageSVGElement: SVGElement = document.createElementNS(SVG_NS, 'image');
+    private imageOverlay: HTMLDivElement = document.createElement('div');
+    private imageView: HTMLDivElement = document.createElement('div');
+    private imageViewProperties = {
+        position: 'relative',
+        overflow: 'hidden'
+    };
+    private imageOverlayProperties = {
+        'position': 'absolute',
+        'z-index': 1,
+        'top': '0px',
+        'left': '0px'
+    };
+    private svgImageElementProperties = {
+        position: 'relative'
+    };
 
     constructor(renderer: APLRenderer, component: APL.Component, factory: FactoryFunction, parent?: Component) {
         super(renderer, component, factory, parent);
-        this.initSvgElement();
-        this.$originalImageElement.css({
-            'background-clip': 'padding-box',
-            'border-style': 'solid',
-            'border-width': '0px',
-            'display': 'none',
-            'overflow': 'hidden',
-            'position': 'absolute'
-        });
 
-        this.$imgPlaceHolder.css({
-            overflow: 'hidden',
-            position: 'relative',
-            isolation: 'isolate'
-        });
-
-        this.$imageOverlay.css('position', 'absolute');
-        this.imgPlaceHolder.classList.add('imageHolder');
-        this.imageOverlay.classList.add('imageOverlay');
-        this.imgPlaceHolder.appendChild(this.svg);
-        this.imgPlaceHolder.appendChild(this.originalImageElement);
-        this.imgPlaceHolder.appendChild(this.imageOverlay);
-        this.container.appendChild(this.imgPlaceHolder);
         this.propExecutor
-            (this.setBorderRadius, PropertyKey.kPropertyBorderRadius)
-            (this.setBorderColor, PropertyKey.kPropertyBorderColor)
-            (this.setBorderWidth, PropertyKey.kPropertyBorderWidth)
-            (this.setOverlayColor, PropertyKey.kPropertyOverlayColor)
-            (this.setOverlayGradient, PropertyKey.kPropertyOverlayGradient)
-            (this.setSourceAndFilter, PropertyKey.kPropertySource,
-                PropertyKey.kPropertyScale, PropertyKey.kPropertyFilters);
+        (this.setBorderRadius, PropertyKey.kPropertyBorderRadius)
+        (this.setOverlayColor, PropertyKey.kPropertyOverlayColor)
+        (this.setOverlayGradient, PropertyKey.kPropertyOverlayGradient)
+        (this.setImageScale, PropertyKey.kPropertyScale)
+        (this.setImageAlignment, PropertyKey.kPropertyAlign)
+        (this.setFilters, PropertyKey.kPropertyFilters)
+        (this.fetchSource, PropertyKey.kPropertySource);
+    }
+
+    public init() {
+        super.init();
+        this.prepareImageView();
+        this.prepareImageOverlay();
+        this.draw();
     }
 
     protected boundsUpdated() {
-        if (this.hasValidBounds()) {
-            this.$imgPlaceHolder.css({
-                height: this.innerBounds.height,
-                width: this.innerBounds.width
-            });
-            this.setSourceAndFilter();
+        if (!this.hasValidBounds()) {
+            return;
         }
     }
 
-    private initSvgElement = () => {
-        this.$svg.html('');
-        this.$svg.css({
-            'background-clip': 'padding-box',
-            'border-style': 'solid',
-            'border-width': '0px',
-            'display': 'none',
-            'overflow': 'hidden',
-            'position': 'absolute'
-        });
-        this.imageElement.setAttribute('preserveAspectRatio', 'none');
-        this.imageElement.setAttribute('x', '0%');
-        this.imageElement.setAttribute('y', '0%');
-        this.imageElement.setAttribute('width', '100%');
-        this.imageElement.setAttribute('height', '100%');
-        this.svg.appendChild(this.imageElement);
-    }
-
-    private setBorderRadius = () => {
-        const borderRadius = this.props[PropertyKey.kPropertyBorderRadius];
-        this.$imgPlaceHolder.css('border-radius', borderRadius);
+    protected onPropertiesUpdated() {
+        if (this.hasSourceChanged()) {
+            this.imageSourcesArray = Nothing;
+        }
+        this.draw();
     }
 
     protected applyCssShadow = (shadowParams: string) => {
-        if (ImageScale.kImageScaleNone === this.props[PropertyKey.kPropertyScale]) {
-            this.$originalImageElement.css('box-shadow', shadowParams);
-        }
-    }
-
-    private setBorderColor = () => {
-        const css = Component.numberToColor(this.props[PropertyKey.kPropertyBorderColor]);
-        this.$originalImageElement.css('border-color', css);
-        this.$svg.css('border-color', css);
-    }
-
-    private setBorderWidth = () => {
-        const css = this.props[PropertyKey.kPropertyBorderWidth];
-        this.$originalImageElement.css('border-color', css);
-        this.$svg.css('border-width', css);
-    }
-
-    private setFilters = (imageArray: string[]) => {
-        const filters: Filter[] = this.props[PropertyKey.kPropertyFilters];
-        this.checkFilters(filters);
-        if (this.hasFiltersInCanvas) {
-            // If implementing any filter in canvas, we draw image onto a canvas 2D context and invoke
-            // getImageData(), if image is from another origin then two requirements need to be met:
-            // 1. image's crossOrigin attribute is set to 'anonymous'
-            // 2. server that's configured to host images with the Access-Control-Allow-Origin
-            //    header configured to permit cross-origin access to image files
-            // reference: https://developer.mozilla.org/en-US/docs/Web/HTML/CORS_enabled_image
-            this.originalImageElement.crossOrigin = 'anonymous';
-        }
-        this.addSVGFilters(filters, imageArray);
-    }
-
-    private setOverlayColor = () => {
-        this.$imageOverlay.css('background-color',
-            Component.numberToColor(this.props[PropertyKey.kPropertyOverlayColor]));
-    }
-
-    private setOverlayGradient = () => {
-        this.$imageOverlay.css('background-image',
-            Image.getCssGradient(this.props[PropertyKey.kPropertyOverlayGradient], this.logger));
-    }
-
-    private setSourceAndFilter = () => {
-        if (this.hasValidBounds()) {
-            // reset svg
-            this.initSvgElement();
-            // get images from source.
-            let imageSrcArray: string[] | string = this.props[PropertyKey.kPropertySource];
-            imageSrcArray = imageSrcArray instanceof Array ? imageSrcArray : [imageSrcArray];
-            // Need make a copy of source image array, otherwise it will be mutated by filter operations
-            const imageArray: string [] = imageSrcArray.slice(0);
-            this.setFilters(imageArray);
-            // the original image is used to apply customized filter and will be hidden from the final render result.
-            // workaround for firefox to draw on canvas : image's crossOrigin attribute is set to 'anonymous'
-            if (navigator.userAgent.toLowerCase().indexOf('firefox') > -1 && this.hasFiltersInCanvas) {
-                this.originalImageElement.crossOrigin = 'anonymous';
-            }
-            this.originalImageElement.src = this.getImageSource(imageSrcArray[imageSrcArray.length - 1],
-                this.originalImageElement.crossOrigin === 'anonymous');
-            $(this.originalImageElement).on('load', () => {
-                this.setImageScale();
-                // hide the original image after everything is loaded. and add svg
-                this.$originalImageElement.css('display', 'none');
-                // onLoad can be triggered 5~6 times due to image resizing and other reasons.
-                // using debounce can avoid unnecessary calls and improve performance.
-                clearTimeout(this.setSvgImageHrefTimeout);
-                this.setSvgImageHrefTimeout = setTimeout(() => {
-                    this.setSvgImageHref();
-                    $(this.svg).html($(this.svg).html());
-                }, 10);
-                // setup shadow
-                if (this.originalImageElement.complete
-                    && !this.isShadowHolderAdded
-                    && this.hasShadowPropertyDefined()) {
-                    this.isShadowHolderAdded = true;
-                    this.applyShadowEffectWhenScaled();
-                }
-            });
-        }
-    }
-
-    private getImageSource = (source: string, cors: boolean): string => {
-        if (!cors) {
-            return source;
-        }
-        // for cors requested image, we do not want to load from cache.
-        return source.includes('?') ? source + '&_' : source + '?_';
-    }
-
-    private setSvgImageHref = () => {
-        if (this.hasFiltersInCanvas) {
-            this.applyFiltersToSvgImageHref();
-        } else {
-            // no filter need to perform on canvas, directly set image source.
-            let imageSrcArray: string[] | string = this.props[PropertyKey.kPropertySource];
-            imageSrcArray = imageSrcArray instanceof Array ? imageSrcArray : [imageSrcArray];
-            // per specs, the last one from image array should be rendered.
-            this.imageElement.setAttribute('href', imageSrcArray[imageSrcArray.length - 1]);
-        }
-    }
-
-    private applyShadowEffectWhenScaled = () => {
-        // shallow copy imgPlaceHolder and the shadow will be applied on the copied div element
-        const imgShadowHolder = $(this.imgPlaceHolder.cloneNode(false)).attr('class', 'imgShadowHolder');
-        // set the css properties of the cloned div and make it cover imgPlaceHolder
-        imgShadowHolder.css('overflow', 'unset');
-        imgShadowHolder.css('margin-top', -this.$imgPlaceHolder.height());
-        const DEFAULT_ZINDEX: number = -1;
-        imgShadowHolder.css('z-index', DEFAULT_ZINDEX);
-        imgShadowHolder.appendTo(this.$imgPlaceHolder.parent());
-        imgShadowHolder.css('box-shadow', this.getCssShadow());
-    }
-
-    private hasShadowPropertyDefined = (): boolean => {
-        return (this.props[PropertyKey.kPropertyShadowHorizontalOffset] !== 0
-            || this.props[PropertyKey.kPropertyShadowVerticalOffset] !== 0
-            || this.props[PropertyKey.kPropertyShadowRadius] > 0
-            || this.props[PropertyKey.kPropertyShadowColor] > 0);
-    }
-
-    /**
-     * Check filters.
-     * If there is any filter to be implemented in canvas, set hasFiltersInCanvas to true.
-     */
-    private checkFilters = (filters: Filter[]) => {
-        filters.forEach((filter) => {
-            // Noise filter is performed using canvas.
-            if (isINoise(filter)) {
-                this.hasFiltersInCanvas = true;
-            }
-        });
-    }
-
-    private addSVGFilters(filters: Filter[], imageSourceArray: string[]): void {
-        // substring the CORE ID from :1000 -> 1000, otherwise, HTML will not recognize.
-        // this id will map to filter id in the definition
-        const filterId = this.component.getUniqueId().substring(1);
-        const svgDefsAndUseElement = generateSVGDefsAndUseElement(filters, imageSourceArray, filterId);
-        if (svgDefsAndUseElement) {
-            this.svgDefsElement = svgDefsAndUseElement.svgDefsElement;
-            this.svgUseElement = svgDefsAndUseElement.svgUseElement;
-            if (this.svgUseElement) {
-                this.svg.appendChild(this.svgUseElement);
-            }
-            if (this.svgDefsElement) {
-                this.svg.appendChild(this.svgDefsElement);
-                this.imageElement.setAttribute('filter', `url(#${filterId})`);
-            }
-        }
-    }
-
-    /**
-     * Apply filters one by one based on their order.
-     * Skip blur if blur is implemented in CSS.
-     */
-    private applyFiltersToSvgImageHref = () => {
-        const w = this.canvasElement.width;
-        const h = this.canvasElement.height;
-        if (w <= 0 || h <= 0) { return; }
-
-        const ctx = this.canvasElement.getContext('2d');
-        const filters: Filter[] = this.props[PropertyKey.kPropertyFilters];
-        ctx.drawImage(this.originalImageElement, 0, 0, w, h);
-        let imageData: ImageData;
-        try {
-            imageData = ctx.getImageData(0, 0, w, h);
-        } catch (e) {
-            this.logger.error('Failed to apply filters in Canvas, removing canvas element.');
-        }
-        if (!imageData) { return; }
-
-        filters.forEach((filter) => {
-            // skip other filters because it will leverage SVG filter.
-            if (isINoise(filter)) {
-                const noise: Noise = new Noise(filter.useColor, filter.kind, filter.sigma);
-                noise.addNoise(imageData);
-            } else {
-                this.logger.warn('unknown filter for canvas');
-            }
-        });
-        ctx.putImageData(imageData, 0, 0);
-        // update the render image element with raw ImageData.
-        this.imageElement.setAttribute('href', this.canvasElement.toDataURL());
-    }
-
-    public static getCssGradient(gradient: IGradient, logger: ILogger): string {
-        if (!gradient) {
-            return '';
-        }
-
-        let gradientCss = '';
-
-        // All gradients use color stops, colors are mandatory, stop positions are not
-        const inputRange = gradient.inputRange || [];
-        const colorStops = gradient.colorRange.map((color, idx) => {
-            // if the color already in css rgba format string, do not need convert.
-            if (typeof color !== 'number') {
-                if (inputRange.length > idx) {
-                    return `${color} ${inputRange[idx] * 100}%`;
-                }
-                return color;
-            }
-            // else color is a number, convert to rgba format.
-            if (inputRange.length > idx) {
-                return `${this.numberToColor(color)} ${inputRange[idx] * 100}%`;
-            }
-            return this.numberToColor(color);
-        }).join(',');
-
-        switch ( gradient.type ) {
-            case GradientType.LINEAR: {
-                const angle = gradient.angle || 0;
-                gradientCss = `linear-gradient(${angle}deg, ${colorStops})`;
-                break;
-            }
-            case GradientType.RADIAL: {
-                gradientCss = `radial-gradient(${colorStops})`;
-                break;
-            }
-            default: {
-                logger.warn('Incorrect gardient type');
-                break;
-            }
-        }
-        return gradientCss;
-    }
-
-    public static getCssPureColorGradient(color: string) {
-        return `linear-gradient(${color}, ${color})`;
-    }
-
-    private setImageScale() {
-        const width: number = this.originalImageElement.naturalWidth as number;
-        const height: number = this.originalImageElement.naturalHeight as number;
-        this.$originalImageElement.css('width', width);
-        this.$originalImageElement.css('height', height);
-        this.$originalImageElement.css('display', '');
-        ($(this.originalImageElement) as any).imageScale({
-            scale: this.getImageScale()
-        });
-        const imageEleWidth = $(this.originalImageElement).width();
-        const imageEleHeight =  $(this.originalImageElement).height();
-        this.$svg.css('display', '');
-        this.$svg.css({
-            top: this.originalImageElement.offsetTop,
-            left: this.originalImageElement.offsetLeft
-        });
-        this.svg.setAttribute('width', imageEleWidth.toString());
-        this.svg.setAttribute('height', imageEleHeight.toString());
-        this.$imageOverlay.css('width', Math.min(this.innerBounds.width, imageEleWidth));
-        this.$imageOverlay.css('height', Math.min(this.innerBounds.height, imageEleHeight));
-        this.$imgPlaceHolder.css('width', Math.min(this.innerBounds.width, imageEleWidth));
-        this.$imgPlaceHolder.css('height', Math.min(this.innerBounds.height, imageEleHeight));
-        this.setImageHolderAlignment();
-        if (this.props[PropertyKey.kPropertyScale] === ImageScale.kImageScaleBestFill) {
-            this.setImageAndSvgAlignment();
-        }
-    }
-
-    private getImageScale(): string {
-        // tslint:disable-next-line:switch-default
-        switch (this.props[PropertyKey.kPropertyScale]) {
-            case ImageScale.kImageScaleBestFill:
-                return 'best-fill';
-            case ImageScale.kImageScaleBestFit:
-                return 'best-fit';
-            case ImageScale.kImageScaleBestFitDown:
-                return 'best-fit-down';
-            case ImageScale.kImageScaleFill:
-                return 'fill';
-            case ImageScale.kImageScaleNone:
-                return 'none';
-            default:
-                this.logger.error('bad image scale property enum', this.props[PropertyKey.kPropertyScale]);
-                return 'best-fit';
-        }
-    }
-
-    private setImageHolderAlignment() {
-        const imageAligner = createAligner({
-            parentBounds: this.innerBounds,
-            element: this.originalImageElement,
-            layoutDirection: this.layoutDirection,
-            imageAlign: this.props[PropertyKey.kPropertyAlign]
-        });
-        const alignment = imageAligner.getAlignment();
-
         createStylesApplier({
-            element: this.imgPlaceHolder,
-            properties: alignment,
-            cssUnitType: CssUnitType.Pixels
+            element: this.imageView,
+            properties: {
+                'box-shadow': shadowParams
+            },
+            elementType: ElementType.HTML
         }).applyStyle();
     }
 
-    private setImageAndSvgAlignment() {
-        let top = this.originalImageElement.offsetTop;
-        let left = this.originalImageElement.offsetLeft;
-        switch (this.props[PropertyKey.kPropertyAlign]) {
-            case ImageAlign.kImageAlignBottom: {
-                top *= 2;
-                break;
-            }
-            case ImageAlign.kImageAlignBottomLeft: {
-                top *= 2;
-                left = 0;
-                break;
-            }
-            case ImageAlign.kImageAlignBottomRight: {
-                top *= 2;
-                left *= 2;
-                break;
-            }
-            case ImageAlign.kImageAlignCenter: {
-                // Do nothing, current top and left are for center.
-                break;
-            }
-            case ImageAlign.kImageAlignLeft: {
-                left = 0;
-                break;
-            }
-            case ImageAlign.kImageAlignRight: {
-                left *= 2;
-                break;
-            }
-            case ImageAlign.kImageAlignTop: {
-                top = 0;
-                break;
-            }
-            case ImageAlign.kImageAlignTopLeft: {
-                top = 0;
-                left = 0;
-                break;
-            }
-            case ImageAlign.kImageAlignTopRight: {
-                top = 0;
-                left *= 2;
-                break;
-            }
-            default: {
-                this.logger.error('Bad image alignment property key', this.props[PropertyKey.kPropertyAlign]);
-                break;
-            }
+    private hasSourceChanged(): boolean {
+        const sourceArray = this.getSourceArrayFromProperty();
+        if (isSomething(this.imageSourcesArray)) {
+            return !arrayEquals(sourceArray, this.imageSourcesArray);
         }
-        this.$originalImageElement.css({top, left});
-        this.$svg.css({top, left});
+        return true;
+    }
+
+    private getSourceArrayFromProperty = (): string[] => {
+        let sourceArray = this.props[PropertyKey.kPropertySource];
+        sourceArray = sourceArray instanceof Array ? sourceArray : [sourceArray];
+        return sourceArray;
+    }
+
+    private draw = () => {
+        // Render Pipeline
+        this.fetchSource()
+            .then(() => {
+                // Ensure Dynamic Properties are set
+                this.setImageAlignment();
+                this.setBorderRadius();
+                this.setOverlayColor();
+                this.setOverlayGradient();
+                this.setImageScale();
+                // Paint
+                this.renderImage()
+                    .catch((error) => {
+                        this.logger.error(`Error rendering image: ${error}`);
+                    });
+            });
+    }
+
+    private fetchSource = async () => {
+        if (isSomething(this.imageSourcesArray)) {
+            return;
+        }
+        this.imageSourcesArray = this.getSourceArrayFromProperty();
+        await loadAllImagesFromMediaSource(this.imageSourcesArray, this.renderer);
+    }
+
+    private async renderImage() {
+        if (!isSomething(this.imageSourcesArray)) {
+            return;
+        }
+
+        const mainImageSource = last(this.imageSourcesArray);
+
+        if (!isSomething(mainImageSource)) {
+            this.logger.warn('Attempted to render image without image url.');
+            return;
+        }
+
+        // Set updated bounds
+        const {
+            height,
+            width
+        } = this.innerBounds;
+
+        const imageDimensions: ImageDimensions = {
+            width,
+            height
+        };
+        const useCanvas = this.hasNoiseFilter || this.imageScale === ImageScale.kImageScaleNone;
+
+        const lastIndex = this.imageSourcesArray.length - 1;
+        // Scale all images
+        const scaledImageSources: ScaledImageSource[] = await Promise.all(
+            this.imageSourcesArray.map(async (imageSourceUrl, index) => {
+
+                let imageProcessor;
+
+                // Select the corresponding image processor
+                if (useCanvas) {
+                    imageProcessor = await createCanvasScaledImageProcessor({
+                        imageSourceUrl,
+                        canvas: this.canvasElement,
+                        imageDimensions,
+                        renderer: this.renderer,
+                        filters: this.imageFilters,
+                        applyFilterArgs: {
+                            currentImageIndex: index,
+                            isLastIndex: (index === lastIndex)
+                        },
+                        scalingOption: this.imageScale
+                    });
+                } else {
+                    imageProcessor = await createScaledImageProcessor({
+                        imageSourceUrl,
+                        imageDimensions,
+                        renderer: this.renderer,
+                        scalingOption: this.imageScale
+                    });
+                }
+
+                return imageProcessor.scaleImage();
+            })
+        );
+
+        const {
+            scaledImageWidth,
+            scaledImageHeight,
+            scaledSource
+        } = last(scaledImageSources) as ScaledImageSource;
+
+        // Apply SVG Filters
+        createSVGImageFiltersApplier({
+            uuid: this.uuid,
+            svgElement: this.svgElement,
+            imageElement: this.imageSVGElement,
+            filters: this.imageFilters,
+            imageSources: scaledImageSources.map((imageSource) => imageSource.scaledSource)
+        }).applyFiltersToSVGImage();
+
+        // Update Image
+        this.imageSVGElement.setAttribute('href', scaledSource);
+
+        // Sizing
+        createStylesApplier({
+            element: this.svgElement,
+            properties: {
+                height: scaledImageHeight,
+                width: scaledImageWidth
+            },
+            elementType: ElementType.SVG
+        }).applyStyle();
+
+        const viewHeight = Math.min(height, scaledImageHeight);
+        const viewWidth = Math.min(width, scaledImageWidth);
+
+        createStylesApplier({
+            element: this.imageOverlay,
+            properties: {
+                height: viewHeight,
+                width: viewWidth
+            },
+            cssUnitType: CssUnitType.Pixels
+        }).applyStyle();
+
+        createStylesApplier({
+            element: this.imageView,
+            properties: {
+                height: viewHeight,
+                width: viewWidth
+            },
+            cssUnitType: CssUnitType.Pixels
+        }).applyStyle();
+
+        // Alignment
+        const imageViewAlignment = createAligner({
+            parentBounds: this.innerBounds,
+            element: {
+                width: scaledImageWidth,
+                height: scaledImageHeight
+            },
+            layoutDirection: this.layoutDirection,
+            imageAlign: this.imageAlignment
+        }).getAlignment();
+
+        createStylesApplier({
+            element: this.imageView,
+            properties: imageViewAlignment,
+            cssUnitType: CssUnitType.Pixels
+        }).applyStyle();
+
+        const imageViewInnerHTMLAlignment = createAligner({
+            parentBounds: {
+                height: viewHeight,
+                width: viewWidth
+            },
+            element: {
+                width: scaledImageWidth,
+                height: scaledImageHeight
+            },
+            boundLimits: {
+                maxTop: Number.NEGATIVE_INFINITY,
+                maxLeft: Number.NEGATIVE_INFINITY,
+                minLeft: Number.POSITIVE_INFINITY
+            },
+            layoutDirection: this.layoutDirection,
+            imageAlign: this.imageAlignment
+        }).getAlignment();
+
+        createStylesApplier({
+            element: this.svgElement,
+            properties: imageViewInnerHTMLAlignment,
+            cssUnitType: CssUnitType.Pixels
+        }).applyStyle();
+
+        // Display Image
+        this.insertIntoDOM({
+            element: this.imageView,
+            properties: this.imageViewProperties
+        });
+    }
+
+    private insertIntoDOM({element, properties}) {
+        const isAlreadyInDOM = !!document.getElementById(element.id);
+        if (!isAlreadyInDOM) {
+            createStylesApplier({
+                element,
+                properties
+            }).applyStyle();
+
+            this.container.appendChild(element);
+        }
+    }
+
+    private prepareImageView() {
+        // Prep SVGImage
+        const svgImageInSVGElement = this.svgElement.getElementsByTagName('image').length > 0;
+        if (!svgImageInSVGElement) {
+            createStylesApplier({
+                element: this.imageSVGElement,
+                properties: {
+                    preserveAspectRatio: 'none',
+                    x: '0%',
+                    y: '0%',
+                    width: '100%',
+                    height: '100%'
+                },
+                elementType: ElementType.SVG
+            }).applyStyle();
+            this.imageSVGElement.id = `svg-image-element-${this.uuid}`;
+
+            this.svgElement.appendChild(this.imageSVGElement);
+        }
+
+        // Prep SVG
+        const svgInImageView = this.imageView.getElementsByTagName('svg').length > 0;
+        if (!svgInImageView) {
+            createStylesApplier({
+                element: this.svgElement,
+                properties: this.svgImageElementProperties
+            }).applyStyle();
+
+            this.svgElement.id = `svg-element-${this.uuid}`;
+            this.imageView.appendChild(this.svgElement);
+        }
+
+        // Prep Overlay
+        const overlayInView = this.imageView.getElementsByTagName('div').length > 0;
+        if (!overlayInView) {
+            createStylesApplier({
+                element: this.imageOverlay,
+                properties: this.imageOverlayProperties
+            }).applyStyle();
+
+            this.imageOverlay.id = `image-overlay-${this.uuid}`;
+            this.imageView.appendChild(this.imageOverlay);
+        }
+    }
+
+    private prepareImageOverlay() {
+        this.imageOverlay.id = `overlay-${this.uuid}`;
+    }
+
+    private setFilters = () => {
+        this.imageFilters = this.props[PropertyKey.kPropertyFilters];
+    }
+
+    private setBorderRadius = () => {
+        this.borderRadius = this.props[PropertyKey.kPropertyBorderRadius];
+        createStylesApplier({
+            element: this.imageView,
+            properties: {
+                'border-radius': this.borderRadius
+            },
+            cssUnitType: CssUnitType.Pixels,
+            elementType: ElementType.HTML
+        }).applyStyle();
+    }
+
+    private setOverlayColor = () => {
+        this.overlayColor = numberToColor(this.props[PropertyKey.kPropertyOverlayColor]);
+        createStylesApplier({
+            element: this.imageOverlay,
+            properties: {
+                'background-color': this.overlayColor
+            }
+        }).applyStyle();
+    }
+
+    private setOverlayGradient = () => {
+        this.overlayGradient = getCssGradient(this.props[PropertyKey.kPropertyOverlayGradient], this.logger);
+        createStylesApplier({
+            element: this.imageOverlay,
+            properties: {
+                'background-image': this.overlayGradient
+            }
+        }).applyStyle();
+    }
+
+    private setImageScale = () => {
+        this.imageScale = this.props[PropertyKey.kPropertyScale];
+    }
+
+    private setImageAlignment = () => {
+        this.imageAlignment = this.props[PropertyKey.kPropertyAlign];
+    }
+
+    // Setters / Getters
+    set borderRadius(value: number) {
+        this.imageProperties.borderRadius = value;
+    }
+
+    get borderRadius() {
+        return this.imageProperties.borderRadius;
+    }
+
+    set borderColor(value: string) {
+        this.imageProperties.borderColor = value;
+    }
+
+    get borderColor() {
+        return this.imageProperties.borderColor;
+    }
+
+    set borderWidth(value: number) {
+        this.imageProperties.borderWidth = value;
+    }
+
+    get borderWidth() {
+        return this.imageProperties.borderWidth;
+    }
+
+    set overlayColor(value: string) {
+        this.imageProperties.overlayColor = value;
+    }
+
+    get overlayColor() {
+        return this.imageProperties.overlayColor;
+    }
+
+    set overlayGradient(value: string) {
+        this.imageProperties.overlayGradient = value;
+    }
+
+    get overlayGradient() {
+        return this.imageProperties.overlayGradient;
+    }
+
+    get hasNoiseFilter(): boolean {
+        const filtersArray = this.props[PropertyKey.kPropertyFilters];
+        const isNoiseFilter = (filter) => filter.type === FilterType.kFilterTypeNoise;
+        return filtersArray.some(isNoiseFilter);
+    }
+
+    set imageScale(value: ImageScale) {
+        this.imageProperties.imageScale = value;
+    }
+
+    get imageScale() {
+        return this.imageProperties.imageScale;
+    }
+
+    set imageAlignment(value: ImageAlign) {
+        this.imageProperties.imageAlignment = value;
+    }
+
+    get imageAlignment() {
+        return this.imageProperties.imageAlignment;
+    }
+
+    set imageFilters(value: Filter[]) {
+        this.imageProperties.imageFilters = value;
+    }
+
+    get imageFilters() {
+        return this.imageProperties.imageFilters;
+    }
+
+    get canvasRenderingContext() {
+        return this.canvasElement.getContext('2d');
     }
 }

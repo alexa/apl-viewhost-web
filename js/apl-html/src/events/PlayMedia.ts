@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { Video } from '../components/video/Video';
 import { AudioTrack } from '../enums/AudioTrack';
 import { CommandAudioTrack } from '../enums/CommandAudioTrack';
 import { EventProperty } from '../enums/EventProperty';
-import { Video } from '../components/video/Video';
 import { IMediaSource } from '../media/IMediaSource';
 import { Event } from './Event';
 

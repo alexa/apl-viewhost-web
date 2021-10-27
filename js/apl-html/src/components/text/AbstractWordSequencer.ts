@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { LoggerFactory } from '../../logging/LoggerFactory';
 import { ILogger } from '../../logging/ILogger';
+import { LoggerFactory } from '../../logging/LoggerFactory';
 
 export interface ISpeakableCommand {
     onSpeechFinished();

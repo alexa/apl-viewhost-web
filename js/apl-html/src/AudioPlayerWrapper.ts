@@ -5,12 +5,12 @@
 
 'use strict';
 
+import { LoggerFactory } from './logging/LoggerFactory';
 import { AudioPlayer, AudioPlayerFactory} from './media/audio/AudioPlayer';
 import { DefaultAudioPlayer } from './media/audio/DefaultAudioPlayer';
 import { IAudioEventListener } from './media/audio/IAudioEventListener';
 import { IBaseMarker } from './media/audio/SpeechMarks';
 import { PromiseContainer } from './utils/PromiseUtils';
-import { LoggerFactory } from './logging/LoggerFactory';
 
 /**
  * @internal

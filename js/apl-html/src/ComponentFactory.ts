@@ -5,10 +5,12 @@
 
 import APLRenderer from './APLRenderer';
 import { VectorGraphic } from './components/avg/VectorGraphic';
+import { VectorGraphicElementUpdater } from './components/avg/VectorGraphicElementUpdater';
 import { Component, IGenericPropType } from './components/Component';
 import { Container } from './components/Container';
 import { EditText } from './components/EditText';
 import { Frame } from './components/Frame';
+import { GridSequence } from './components/GridSequence';
 import { Image } from './components/Image';
 import { PagerComponent } from './components/pager/PagerComponent';
 import { ScrollView } from './components/ScrollView';
@@ -16,8 +18,6 @@ import { Sequence } from './components/Sequence';
 import { Text } from './components/text/Text';
 import { TouchWrapper } from './components/TouchWrapper';
 import { ComponentType } from './enums/ComponentType';
-import { GridSequence } from './components/GridSequence';
-import { VectorGraphicElementUpdater } from './components/avg/VectorGraphicElementUpdater';
 
 export const componentFactory = (renderer: APLRenderer, component: APL.Component,
                                  parent?: Component, ensureLayout: boolean = false,

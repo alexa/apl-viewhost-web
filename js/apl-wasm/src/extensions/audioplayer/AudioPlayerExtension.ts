@@ -4,11 +4,10 @@
  */
 
 import {IExtensionEventCallbackResult} from 'apl-html';
-import {IExtension, ILiveDataDefinition, ExtensionCommandDefinition, ExtensionEventHandler, LiveMap} from 'apl-html';
-import {AudioPlayerEnvironment} from './AudioPlayerEnvironment';
+import {ExtensionCommandDefinition, ExtensionEventHandler, IExtension, ILiveDataDefinition, LiveMap} from 'apl-html';
 import {ILogger, LoggerFactory} from '../..';
-import {AudioPlayerExtensionObserverInterface, Lyric} from './AudioPlayerExtensionObserverInterface';
 import {createAplExtensionCommandDefinition, createAplExtensionEventHandler} from '../ExtensionCreationUtils';
+import {AudioPlayerExtensionObserverInterface, Lyric} from './AudioPlayerExtensionObserverInterface';
 
 /**
  * An APL Extension designed for bi-directional communication between an AudioPlayer and APL document
@@ -62,7 +61,7 @@ export class AudioPlayerExtension implements IExtension {
      * The audioplayer extension doesn't add any environment properties to
      * the assigned namespace of the entension at APL1.4:
      */
-    public getEnvironment(): AudioPlayerEnvironment {
+    public getEnvironment() {
         return {};
     }
 

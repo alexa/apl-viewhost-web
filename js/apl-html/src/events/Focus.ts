@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {Event} from './Event';
-import {ActionableComponent} from '../components/ActionableComponent';
 import {EventProperty} from '..';
+import {ActionableComponent} from '../components/ActionableComponent';
+import {Event} from './Event';
 
 /**
  * @ignore

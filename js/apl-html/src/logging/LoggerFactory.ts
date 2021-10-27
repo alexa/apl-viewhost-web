@@ -8,8 +8,8 @@
 import * as loglevel from 'loglevel';
 import { LogLevelNumbers, MethodFactory } from 'loglevel';
 import { ILogger } from './ILogger';
-import { LogTransport } from './LogTransport';
 import { LogLevel } from './LogLevel';
+import { LogTransport } from './LogTransport';
 
 /**
  * Simple wrapper to hide loglevel logger oddity and do set-up. Could be changed to be more generic in the future.

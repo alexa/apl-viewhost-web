@@ -6,17 +6,18 @@
 import APLRenderer from './APLRenderer';
 import { EventType } from './enums/EventType';
 import { ControlMedia } from './events/ControlMedia';
-import { OpenUrl } from './events/OpenUrl';
-import { PlayMedia } from './events/PlayMedia';
-import { SendEvent } from './events/SendEvent';
-import { Speak } from './events/Speak';
-import { Finish } from './events/Finish';
-import { Preroll } from './events/Preroll';
-import { ReInflate} from './events/ReInflate';
-import { Focus } from './events/Focus';
-import { RequestFirstLineBounds } from './events/RequestFirstLineBounds';
 import { DataSourceFetchRequest } from './events/DataSourceFetchRequest';
 import { ExtensionEvent } from './events/ExtensionEvent';
+import { Finish } from './events/Finish';
+import { Focus } from './events/Focus';
+import { MediaRequest } from './events/MediaRequest';
+import { OpenUrl } from './events/OpenUrl';
+import { PlayMedia } from './events/PlayMedia';
+import { Preroll } from './events/Preroll';
+import { ReInflate} from './events/ReInflate';
+import { RequestFirstLineBounds } from './events/RequestFirstLineBounds';
+import { SendEvent } from './events/SendEvent';
+import { Speak } from './events/Speak';
 
 /**
  * Creates and executes a command
@@ -89,6 +90,11 @@ const factoryMap = {
     },
     [EventType.kEventTypeExtension]: (event: APL.Event, renderer: APLRenderer) => {
         const command = new ExtensionEvent(event, renderer);
+        command.execute();
+        return command;
+    },
+    [EventType.kEventTypeMediaRequest]: (event: APL.Event, renderer: APLRenderer) => {
+        const command = new MediaRequest(event, renderer);
         command.execute();
         return command;
     }

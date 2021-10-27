@@ -5,15 +5,15 @@
 
 'use strict';
 
-import { Filter } from '../../utils/FilterUtils';
 import { FilterType } from '../../enums/FilterType';
-import { SVG_NS } from '../Component';
-import { getBlurFilter } from './Blur';
-import { getColorFilter } from './Color';
 import { ILogger } from '../../logging/ILogger';
 import { LoggerFactory } from '../../logging/LoggerFactory';
-import { getGradientFilter } from './Gradient';
+import { Filter } from '../../utils/FilterUtils';
+import { SVG_NS } from '../Component';
 import { getBlendFilter } from './Blend';
+import { getBlurFilter } from './Blur';
+import { getColorFilter } from './Color';
+import { getGradientFilter } from './Gradient';
 import { getGrayscaleFilter } from './Grayscale';
 import { getSaturateFilter } from './Saturate';
 
@@ -56,6 +56,8 @@ export class ImageFilter {
      * ImageFilter Constructor
      * @param filters filters get from kPropertyFilters
      * @param imageSrcArray image urls get from kPropertySource
+     * @param svgDefsElement svg element
+     * @param svgUseElement svg use element
      */
     constructor(filters: Filter[], imageSrcArray: string[], svgDefsElement: SVGElement,
                 svgUseElement: SVGUseElement) {

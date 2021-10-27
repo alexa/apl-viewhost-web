@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {GraphicPropertyKey} from '../../enums/GraphicPropertyKey';
-import {AVG} from './AVG';
-import {ILogger} from '../../logging/ILogger';
 import {GraphicLineCap} from '../../enums/GraphicLineCap';
 import {GraphicLineJoin} from '../../enums/GraphicLineJoin';
+import {GraphicPropertyKey} from '../../enums/GraphicPropertyKey';
+import {ILogger} from '../../logging/ILogger';
+import {AVG} from './AVG';
 
 const lineCaps = new Map([
     [GraphicLineCap.kGraphicLineCapButt, 'butt'],

@@ -70,6 +70,16 @@ ContentMethods::getExtensionSettings(const apl::ContentPtr& content, const std::
     return emscripten::getValFromObject(content->getExtensionSettings(uri), nullptr);
 }
 
+std::string
+ContentMethods::getParameterAt(const apl::ContentPtr& content, size_t index) {
+    return content->getParameterAt(index);
+}
+
+size_t
+ContentMethods::getParameterCount(const apl::ContentPtr& content) {
+    return content->getParameterCount();
+}
+
 } // namespace internal
 
 EMSCRIPTEN_BINDINGS(apl_wasm_content) {
@@ -88,7 +98,9 @@ EMSCRIPTEN_BINDINGS(apl_wasm_content) {
         .function("addPackage", &internal::ContentMethods::addPackage)
         .function("getAPLVersion", &internal::ContentMethods::getAPLVersion)
         .function("getExtensionRequests", &internal::ContentMethods::getExtensionRequests)
-        .function("getExtensionSettings", &internal::ContentMethods::getExtensionSettings);
+        .function("getExtensionSettings", &internal::ContentMethods::getExtensionSettings)
+        .function("getParameterAt", &internal::ContentMethods::getParameterAt)
+        .function("getParameterCount", &internal::ContentMethods::getParameterCount);
 }
 
 } // namespace wasm

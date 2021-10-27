@@ -7,7 +7,7 @@
 
 import { Filter, generateSVGFeImage, isIndexOutOfBound } from '../../utils/FilterUtils';
 import { SVG_NS, uuidv4 } from '../Component';
-import { IBaseFilter, IImageFilterElement, BITMAP_IMAGE_REGEX_CHECK } from './ImageFilter';
+import { BITMAP_IMAGE_REGEX_CHECK, IBaseFilter, IImageFilterElement } from './ImageFilter';
 
 /**
  * @ignore

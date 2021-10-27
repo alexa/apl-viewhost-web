@@ -3,22 +3,25 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { FilterType } from '../enums/FilterType';
-import { IColor } from '../components/filters/Color';
-import { IBlur } from '../components/filters/Blur';
-import { INoise } from '../components/filters/Noise';
-import { IGradientFilter } from '../components/filters/Gradient';
-import { IBlend } from '../components/filters/Blend';
-import { IGrayscale } from '../components/filters/Grayscale';
-import { ISaturate } from '../components/filters/Saturate';
-import { ImageFilter } from '../components/filters/ImageFilter';
-import { SVG_NS, uuidv4 } from '..';
+import {SVG_NS, uuidv4} from '../components/Component';
+import {IBlend} from '../components/filters/Blend';
+import {IBlur} from '../components/filters/Blur';
+import {IColor} from '../components/filters/Color';
+import {IGradientFilter} from '../components/filters/Gradient';
+import {IGrayscale} from '../components/filters/Grayscale';
+import {ImageFilter} from '../components/filters/ImageFilter';
+import {INoise} from '../components/filters/Noise';
+import {ISaturate} from '../components/filters/Saturate';
+import {FilterType} from '../enums/FilterType';
+import {ILogger} from '../logging/ILogger';
+import {LoggerFactory} from '../logging/LoggerFactory';
+import {isSomething} from './Maybe';
 
 /**
  * @ignore
  */
 export type Filter = IBlur | INoise | IColor | IGradientFilter |
-                     IBlend | IGrayscale | ISaturate ;
+    IBlend | IGrayscale | ISaturate;
 
 /**
  * The APL filters needs to be handled by SVG filter.
@@ -58,7 +61,7 @@ export const generateSVGDefsAndUseElement = (filters: Filter[],
     svgFilterElement.id = filterId;
     svgDefs.appendChild(svgFilterElement);
 
-    return { svgDefsElement : svgDefs, svgUseElement : svgUse };
+    return {svgDefsElement: svgDefs, svgUseElement: svgUse};
 };
 
 /**
@@ -71,23 +74,23 @@ export const generateSVGDefsAndUseElement = (filters: Filter[],
 export const generateSVGFeImage = (sourceImageId: string,
                                    filterElement: SVGElement,
                                    isDestinationIn?: boolean): SVGFEImageElement[] => {
-        const fImage = document.createElementNS(SVG_NS, 'feImage');
-        const filterImageArray: SVGFEImageElement[] = [];
-        const feImageId: string = uuidv4().toString();
-        fImage.setAttributeNS('', 'href', sourceImageId);
-        fImage.setAttributeNS('', 'result', feImageId);
-        fImage.setAttributeNS('', 'x', '0');
-        fImage.setAttributeNS('', 'y', '0');
-        fImage.setAttributeNS('', 'height', '100%');
-        fImage.setAttributeNS('', 'width', '100%');
-        fImage.setAttributeNS('', 'preserveAspectRatio', 'none');
-        filterImageArray.push(fImage);
-        if (isDestinationIn) {
-            filterElement.setAttributeNS('', 'in2', feImageId);
-        } else {
-            filterElement.setAttributeNS('', 'in', feImageId);
-        }
-        return filterImageArray;
+    const fImage = document.createElementNS(SVG_NS, 'feImage');
+    const filterImageArray: SVGFEImageElement[] = [];
+    const feImageId: string = uuidv4().toString();
+    fImage.setAttributeNS('', 'href', sourceImageId);
+    fImage.setAttributeNS('', 'result', feImageId);
+    fImage.setAttributeNS('', 'x', '0');
+    fImage.setAttributeNS('', 'y', '0');
+    fImage.setAttributeNS('', 'height', '100%');
+    fImage.setAttributeNS('', 'width', '100%');
+    fImage.setAttributeNS('', 'preserveAspectRatio', 'none');
+    filterImageArray.push(fImage);
+    if (isDestinationIn) {
+        filterElement.setAttributeNS('', 'in2', feImageId);
+    } else {
+        filterElement.setAttributeNS('', 'in', feImageId);
+    }
+    return filterImageArray;
 };
 
 /**
@@ -105,3 +108,65 @@ export const isIndexOutOfBound = (index: number, imageArrayLength: number): bool
     }
     return false;
 };
+
+export interface SVGImageFiltersApplierArgs {
+    uuid: string;
+    svgElement: SVGElement;
+    imageElement: SVGElement;
+    filters: Filter[];
+    imageSources: string[];
+    logger?: ILogger;
+}
+
+export interface SVGImageFiltersApplier {
+    applyFiltersToSVGImage: () => void;
+}
+
+export function createSVGImageFiltersApplier(args: SVGImageFiltersApplierArgs): SVGImageFiltersApplier {
+    const defaultArgs = {
+        logger: LoggerFactory.getLogger('SVGImageFiltersApplier')
+    };
+    args = Object.assign(defaultArgs, args);
+
+    const {
+        uuid,
+        svgElement,
+        imageElement,
+        filters,
+        imageSources
+    } = args;
+
+    return {
+        applyFiltersToSVGImage(): void {
+            const filterId = `filter-${uuid}`;
+            const svgFilters = generateSVGDefsAndUseElement(filters, imageSources, filterId);
+            if (!isSomething(svgFilters)) {
+                return;
+            }
+            const {
+                svgDefsElement: svgFilterDefinitions,
+                svgUseElement: svgFilterUses
+            } = svgFilters;
+
+            const existingSVGFilterDefinitions = svgElement.getElementsByTagName('defs');
+            // Note: HTMLCollectionOf type has limited support for/of; use basic for loop for now
+            // tslint:disable-next-line:prefer-for-of
+            for (let i = 0; i < existingSVGFilterDefinitions.length; i++) {
+                const svgFilterDefinition = existingSVGFilterDefinitions[i];
+                svgElement.removeChild(svgFilterDefinition);
+            }
+
+            const existingSVGFilterUses = svgElement.getElementsByTagName('use');
+            // Note: HTMLCollectionOf type has limited support for/of; use basic for loop for now
+            // tslint:disable-next-line:prefer-for-of
+            for (let i = 0; i < existingSVGFilterUses.length; i++) {
+                const svgFilterUse = existingSVGFilterUses[i];
+                svgElement.removeChild(svgFilterUse);
+            }
+
+            svgElement.appendChild(svgFilterUses);
+            svgElement.appendChild(svgFilterDefinitions);
+            imageElement.setAttribute('filter', `url('#${filterId}')`);
+        }
+    };
+}

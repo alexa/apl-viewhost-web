@@ -5,16 +5,14 @@
 
 'use strict';
 
-import {LoggerFactory} from '../logging/LoggerFactory';
-import {ILogger} from '../logging/ILogger';
-import {FontStyle} from '../enums/FontStyle';
 import * as WebFont from 'webfontloader';
 import {createStylesApplier, ElementType, ElementTypes} from '../components/helpers/StylesApplier';
+import {FontStyle} from '../enums/FontStyle';
+import {ILogger} from '../logging/ILogger';
+import {LoggerFactory} from '../logging/LoggerFactory';
 
 /**
  * Adjust exports to only export used interfaces
- * when codebase upgrades to TypeScript version that supports
- * exported variables with private names
  */
 export interface SetArgs {
     element: Element;

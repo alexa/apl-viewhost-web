@@ -26,6 +26,8 @@ struct ContentMethods {
     static std::string getAPLVersion(const apl::ContentPtr& content);
     static std::set<std::string> getExtensionRequests(const apl::ContentPtr& content);
     static emscripten::val getExtensionSettings(const apl::ContentPtr& content, const std::string& extensionName);
+    static std::string getParameterAt(const apl::ContentPtr& content, size_t index);
+    static size_t getParameterCount(const apl::ContentPtr& content);
 
 };
 } // namespace internal

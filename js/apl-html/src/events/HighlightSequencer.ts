@@ -5,16 +5,16 @@
 
 'use strict';
 
-import { IFragmentMarker, IBaseMarker } from '../media/audio/SpeechMarks';
 import { ILineRange } from '../components/text/Geometry';
-import { MarkSequencer } from './MarkSequencer';
 import { ComponentType } from '../enums/ComponentType';
+import { IBaseMarker, IFragmentMarker } from '../media/audio/SpeechMarks';
+import { MarkSequencer } from './MarkSequencer';
 
 import { CommandHighlightMode } from '../enums/CommandHighlightMode';
 import { CommandScrollAlign } from '../enums/CommandScrollAlign';
 
-import { Text } from '../components/text/Text';
 import APLRenderer from '../APLRenderer';
+import { Text } from '../components/text/Text';
 
 /**
  * @internal

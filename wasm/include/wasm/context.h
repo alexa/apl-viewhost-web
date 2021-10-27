@@ -56,10 +56,13 @@ struct ContextMethods {
     static bool processDataSourceUpdate(const apl::RootContextPtr& context, const std::string& payload, const std::string& type);
     static void handleDisplayMetrics(const apl::RootContextPtr& context, emscripten::val metrics);
     static void configurationChange(const apl::RootContextPtr& context, emscripten::val configurationChange, emscripten::val metrics, emscripten::val scalingOptions);
+    static void updateDisplayState(const apl::RootContextPtr& context, int displayState);
     static void reInflate(const apl::RootContextPtr& context);
     static void setFocus(const apl::RootContextPtr& context, int direction, const apl::Rect& origin, const std::string& targetId);
     static std::string getFocused(const apl::RootContextPtr& context);
     static emscripten::val getFocusableAreas(const apl::RootContextPtr& context);
+    static void mediaLoaded(const apl::RootContextPtr& context, const std::string& source);
+    static void mediaLoadFailed(const apl::RootContextPtr& context, const std::string& source, int errorCode, const std::string& error);
 
 private:
     static void applyScalingOptions(emscripten::val& scalingOptions,

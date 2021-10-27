@@ -5,9 +5,9 @@
 
 'use strict';
 
+import { DefaultAudioContextProvider, IAudioContextProvider } from './AudioContextProvider';
 import { AudioPlayer } from './AudioPlayer';
 import { IAudioEventListener } from './IAudioEventListener';
-import { DefaultAudioContextProvider, IAudioContextProvider } from './AudioContextProvider';
 
 export class DefaultAudioPlayer extends AudioPlayer {
   protected contextProvider: IAudioContextProvider = new DefaultAudioContextProvider();

@@ -90,14 +90,19 @@ void
 ComponentMethods::updateMediaState(apl::ComponentPtr& component, const emscripten::val& state, bool fromEvent) {
     if (!state.hasOwnProperty("trackIndex") || !state.hasOwnProperty("trackCount") ||
         !state.hasOwnProperty("currentTime") || !state.hasOwnProperty("duration") ||
-        !state.hasOwnProperty("paused") || !state.hasOwnProperty("ended")) {
+        !state.hasOwnProperty("paused") || !state.hasOwnProperty("ended") ||
+        !state.hasOwnProperty("errorCode") || !state.hasOwnProperty("trackState"))
+        {
         LOG(LogLevel::ERROR) << "Can't update media state. MediaStatus structure is wrong.";
         return;
     }
 
-    const MediaState mediaState(state["trackIndex"].as<int>(), state["trackCount"].as<int>(),
+    MediaState mediaState(state["trackIndex"].as<int>(), state["trackCount"].as<int>(),
                                 state["currentTime"].as<int>(), state["duration"].as<int>(),
                                 state["paused"].as<bool>(), state["ended"].as<bool>());
+    mediaState.withTrackState(static_cast<apl::TrackState>(state["trackState"].as<int>()));
+    mediaState.withErrorCode(state["errorCode"].as<int>());
+
     component->updateMediaState(mediaState, fromEvent);
 }
 

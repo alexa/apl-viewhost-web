@@ -2,8 +2,8 @@
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0
  */
-import { Content, ILogger, LoggerFactory, IExtensionManager, IExtensionEventCallbackResult, LiveArray, LiveMap,
-    IExtension, IExtensionConnection, IExtensionService} from 'apl-html';
+import { Content, IExtension, IExtensionConnection, IExtensionEventCallbackResult, IExtensionManager,
+    IExtensionService, ILogger, LiveArray, LiveMap, LoggerFactory} from 'apl-html';
 import { ExtensionConfiguration } from './ExtensionConfiguration';
 import { ExtensionLocalConnection } from './ExtensionConnection';
 import { ExtensionClient, IExtensionClient } from './ExtentionClient';

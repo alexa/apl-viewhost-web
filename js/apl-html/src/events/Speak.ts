@@ -3,15 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import {ComponentType} from '..';
+import {IPlaybackEventListener} from '../AudioPlayerWrapper';
 import {Component} from '../components/Component';
 import {Text} from '../components/text/Text';
-import {Event} from './Event';
-import {EventProperty} from '../enums/EventProperty';
-import {IPlaybackEventListener} from '../AudioPlayerWrapper';
 import {CommandHighlightMode} from '../enums/CommandHighlightMode';
 import {CommandScrollAlign} from '../enums/CommandScrollAlign';
+import {EventProperty} from '../enums/EventProperty';
+import {Event} from './Event';
 import {HighlightSequencer} from './HighlightSequencer';
-import {ComponentType} from '..';
 
 /**
  * @internal

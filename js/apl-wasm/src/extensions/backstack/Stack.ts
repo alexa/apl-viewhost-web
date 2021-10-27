@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { IDocumentState } from '../IDocumentState';
 import { LiveArray } from 'apl-html';
+import { IDocumentState } from '../IDocumentState';
 
 /**
  * A stack which keeps track of the ids of all constituent items.

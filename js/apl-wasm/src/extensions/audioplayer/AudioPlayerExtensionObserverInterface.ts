@@ -75,7 +75,8 @@ export interface AudioPlayerExtensionObserverInterface {
     /**
      * Used to notify the observer when the extension has issued a AddLyricsDurationInMilliseconds event.
      * The observer should store the provided Lyrics usgae data.
-     * @param durationInMilliseconds A long number representing how long the document displayed lyrics in milliseconds for a given track
+     * @param durationInMilliseconds A long number representing how long the document
+     *                               displayed lyrics in milliseconds for a given track
      * @param token The instance of the song in which lyrics are being viewed
      */
     onFlushLyricData();

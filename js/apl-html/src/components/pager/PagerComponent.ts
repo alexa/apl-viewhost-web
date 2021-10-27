@@ -5,8 +5,8 @@
 
 import APLRenderer from '../../APLRenderer';
 import { PropertyKey } from '../../enums/PropertyKey';
-import { Component, FactoryFunction, IComponentProperties } from '../Component';
 import { ActionableComponent } from '../ActionableComponent';
+import { Component, FactoryFunction, IComponentProperties } from '../Component';
 
 /**
  * @ignore

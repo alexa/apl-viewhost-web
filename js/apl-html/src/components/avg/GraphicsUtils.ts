@@ -4,10 +4,10 @@
  */
 
 import {ILogger} from '../../logging/ILogger';
+import {numberToColor} from '../../utils/ColorUtils';
+import {IValueWithReference} from '../Component';
 import {createGradientElement, IAVGGradient} from './Gradient';
 import {getOrCreatePatternElementWithArgs} from './Patterns';
-import {IValueWithReference} from '../Component';
-import {numberToColor} from '../../utils/ColorUtils';
 
 export interface FillAndStrokeConverterArgs {
     value: object;

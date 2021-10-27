@@ -4,10 +4,10 @@
  */
 
 import APLRenderer from '../APLRenderer';
-import { Component, FactoryFunction, IComponentProperties } from './Component';
-import { ActionableComponent } from './ActionableComponent';
 import { PropertyKey } from '../enums/PropertyKey';
 import { ChildAction } from '../utils/Constant';
+import { ActionableComponent } from './ActionableComponent';
+import { Component, FactoryFunction, IComponentProperties } from './Component';
 
 /**
  * @ignore

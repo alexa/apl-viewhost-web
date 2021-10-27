@@ -5,13 +5,13 @@
 
 import * as $ from 'jquery';
 import APLRenderer from '../../APLRenderer';
-import {GraphicPropertyKey} from '../../enums/GraphicPropertyKey';
-import {PropertyKey} from '../../enums/PropertyKey';
-import {VectorGraphicScale} from '../../enums/VectorGraphicScale';
-import {Component, FactoryFunction, IComponentProperties} from '../Component';
-import {ActionableComponent} from '../ActionableComponent';
-import {VectorGraphicElementUpdater} from './VectorGraphicElementUpdater';
-import {GraphicLayoutDirection} from '../../enums/GraphicLayoutDirection';
+import { GraphicLayoutDirection } from '../../enums/GraphicLayoutDirection';
+import { GraphicPropertyKey } from '../../enums/GraphicPropertyKey';
+import { PropertyKey } from '../../enums/PropertyKey';
+import { VectorGraphicScale } from '../../enums/VectorGraphicScale';
+import { ActionableComponent } from '../ActionableComponent';
+import { Component, FactoryFunction, IComponentProperties } from '../Component';
+import { VectorGraphicElementUpdater } from './VectorGraphicElementUpdater';
 
 const SUPPORTED_GRAPHIC_LAYOUT_DIRECTIONS = {
     [GraphicLayoutDirection.kGraphicLayoutDirectionLTR]: 'ltr',

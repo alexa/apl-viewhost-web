@@ -3,17 +3,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import * as $ from 'jquery';
 import APLRenderer, {IAsyncKeyboardEvent} from '../APLRenderer';
+import {FontStyle} from '../enums/FontStyle';
+import {KeyboardType} from '../enums/KeyboardType';
+import {PropertyKey} from '../enums/PropertyKey';
+import {UpdateType} from '../enums/UpdateType';
+import {ARROW_DOWN, ARROW_LEFT, ARROW_RIGHT, ARROW_UP, ENTER_KEY} from '../utils/Constant';
+import {FontUtils} from '../utils/FontUtils';
 import {ActionableComponent} from './ActionableComponent';
 import {Component, FactoryFunction, IComponentProperties} from './Component';
-import {FontStyle} from '../enums/FontStyle';
-import {PropertyKey} from '../enums/PropertyKey';
-import * as $ from 'jquery';
 import {applyAplRectToStyle} from './helpers/StylesUtil';
-import {FontUtils} from '../utils/FontUtils';
-import {UpdateType} from '../enums/UpdateType';
-import {KeyboardType} from '../enums/KeyboardType';
-import {ARROW_RIGHT, ARROW_LEFT, ARROW_DOWN, ARROW_UP, ENTER_KEY} from '../utils/Constant';
 
 /**
  * @ignore

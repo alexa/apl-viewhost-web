@@ -2,9 +2,9 @@
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  */
 
-import {PromiseCallback} from './VideoCallTypes';
 import {ILogger} from '../../logging/ILogger';
 import {LoggerFactory} from '../../logging/LoggerFactory';
+import {PromiseCallback} from './VideoCallTypes';
 
 export enum VideoInterface {
     ON_EVENT = 'onEvent',

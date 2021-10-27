@@ -2,8 +2,8 @@
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  */
 
-import {PlaybackState} from '../Resource';
 import {IMediaEventListener} from '../IMediaEventListener';
+import {PlaybackState} from '../Resource';
 
 export enum EmitBehavior {
     Dedup = 'DEDUP',

@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Event } from './Event';
-import { Text } from '../components/text/Text';
 import { Component } from '../components/Component';
+import { Text } from '../components/text/Text';
+import { Event } from './Event';
 
 /**
  * @ignore
