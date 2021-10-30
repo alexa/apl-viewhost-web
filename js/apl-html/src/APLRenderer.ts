@@ -446,9 +446,9 @@ export default abstract class APLRenderer<Options = {}> {
                 // Enables onLoad/onFail when onRequestGraphic is overridden
                 vectorGraphicPromise.then((json) => {
                     if (json) {
-                        this.context.mediaLoaded(source);
-                    } else {
-                        this.context.mediaLoadFailed(source, HttpStatusCodes.BadRequest, `Bad Request on ${source}`);
+                        this.mediaLoaded(source);
+                    } else if (this.context) {
+                        this.mediaLoadFailed(source, HttpStatusCodes.BadRequest, `Bad Request on ${source}`);
                     }
                 });
                 return vectorGraphicPromise;
@@ -856,6 +856,36 @@ export default abstract class APLRenderer<Options = {}> {
             if (root) {
                 root.destroy(true);
             }
+        }
+    }
+
+    /**
+     * Tell Core media has loaded
+     */
+    public mediaLoaded(source: string): void {
+        if (this.context) {
+            this.context.mediaLoaded(source);
+        } else {
+            setTimeout( () => {
+                if (this.context) {
+                    this.context.mediaLoaded(source);
+                }
+            }, 200);
+        }
+    }
+
+    /**
+     * Tell Core media has failed to load
+     */
+    public mediaLoadFailed(source: string, errorCode: number, error: string): void {
+        if (this.context) {
+            this.context.mediaLoadFailed(source, errorCode, error);
+        } else {
+            setTimeout( () => {
+                if (this.context) {
+                    this.context.mediaLoadFailed(source, errorCode, error);
+                }
+            }, 200);
         }
     }
 

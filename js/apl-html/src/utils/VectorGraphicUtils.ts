@@ -36,11 +36,11 @@ function checkMediaLoadedOnCachedVectorGraphicSource(mediaSource: string, args?:
 
     const requestPromise: Promise<string> = promiseMap.get(mediaSource);
     requestPromise.then((promise) => {
-        if (renderer && renderer.context) {
+        if (renderer) {
             if (promise) {
-                renderer.context.mediaLoaded(mediaSource);
+                renderer.mediaLoaded(mediaSource);
             } else {
-                renderer.context.mediaLoadFailed(mediaSource, HttpStatusCodes.BadRequest, `Bad request on ${mediaSource}`);
+                renderer.mediaLoadFailed(mediaSource, HttpStatusCodes.BadRequest, `Bad request on ${mediaSource}`);
             }
         }
     });
@@ -58,18 +58,18 @@ function vectorGraphicRequest(source: string, args: MediaRequestArgs): Promise<s
         }
     }).then((response) => {
         if (response.status === HttpStatusCodes.Ok) {
-            if (renderer && renderer.context) {
-                renderer.context.mediaLoaded(source);
+            if (renderer) {
+                renderer.mediaLoaded(source);
             }
             return response.text();
         }
-        if (renderer && renderer.context) {
-            renderer.context.mediaLoadFailed(source, response.status, response.statusText);
+        if (renderer) {
+            renderer.mediaLoadFailed(source, response.status, response.statusText);
         }
         return undefined;
     }).catch((error) => {
-        if (renderer && renderer.context) {
-            renderer.context.mediaLoadFailed(source, HttpStatusCodes.BadRequest, `Bad request: ${error.message} ${source}`);
+        if (renderer) {
+            renderer.mediaLoadFailed(source, HttpStatusCodes.BadRequest, `Bad request: ${error.message} ${source}`);
         }
         return undefined;
     });

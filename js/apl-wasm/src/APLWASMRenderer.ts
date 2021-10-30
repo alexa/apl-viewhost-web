@@ -115,8 +115,6 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
         this.handleUpdateDisplayState = (displayState: DisplayState) => {
             if (this.context) {
                 this.context.updateDisplayState(displayState);
-                this.destroyRenderingComponents();
-                this.reRenderComponents();
             }
         };
 

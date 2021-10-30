@@ -316,14 +316,20 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
             if (!isValidPlayer(this.player)) {
                 return;
             }
-            // Update Media State
-            const offset = playBackManager.getCurrent().offset;
+
+            let offset: number = 0;
+            try {
+                offset = playBackManager.getCurrent().offset;
+            } catch (error) {
+                logger.warn('Can not get current media resource');
+            }
             this.currentMediaState.currentTime = toMillisecondsFromSeconds(
                 this.player.getCurrentPlaybackPositionInSeconds()
             ) - offset;
             this.currentMediaState.duration = toMillisecondsFromSeconds(
                 this.player.getDurationInSeconds()
             ) - offset;
+
             this.currentMediaState.trackCount = this.playbackManager.getTrackCount();
             this.currentMediaState.trackIndex = this.playbackManager.getCurrentIndex();
 

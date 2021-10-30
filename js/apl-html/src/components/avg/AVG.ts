@@ -78,7 +78,8 @@ export abstract class AVG {
         return (key: GraphicPropertyKey) => {
             const graphicPropertyValue = this.graphic.getValue(key);
             this.element.setAttributeNS('', attributeName,
-                (graphicPropertyValue) ? graphicPropertyValue.toString() : ''
+                (graphicPropertyValue !== undefined && graphicPropertyValue !== null) ?
+                    graphicPropertyValue.toString() : ''
             );
         };
     }
@@ -139,7 +140,7 @@ export abstract class AVG {
             const fontStyle = this.graphic.getValue<number>(key);
             const convertedValue = FontUtils.getFontStyle(fontStyle);
             this.element.setAttributeNS('', attributeName,
-                (convertedValue) ? convertedValue.toString() : ''
+                (convertedValue !== null && convertedValue !== undefined) ? convertedValue.toString() : ''
             );
         };
     }

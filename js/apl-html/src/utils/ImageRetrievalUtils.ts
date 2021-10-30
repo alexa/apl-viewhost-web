@@ -15,16 +15,16 @@ const loadImageFromMediaSource = async (sourceUrl: string,
                                         renderer: APLRenderer): Promise<HTMLImageElement> => {
     return new Promise<HTMLImageElement>((resolve, reject) => {
         imageElement.onload = () => {
-            if (renderer && renderer.context) {
-                renderer.context.mediaLoaded(sourceUrl);
+            if (renderer) {
+                renderer.mediaLoaded(sourceUrl);
             }
             resolve(imageElement);
         };
         imageElement.onerror = reject;
         imageElement.src = sourceUrl;
     }).catch(() => {
-        if (renderer && renderer.context) {
-            renderer.context.mediaLoadFailed(sourceUrl, HttpStatusCodes.BadRequest, `Bad request on ${sourceUrl}`);
+        if (renderer) {
+            renderer.mediaLoadFailed(sourceUrl, HttpStatusCodes.BadRequest, `Bad request on ${sourceUrl}`);
         }
         return createUnattachedImageElement();
     });
@@ -47,10 +47,10 @@ export const loadAllImagesFromMediaSource = async (sourceUrls: string[],
                     const imageElement = await imageElementPromise;
 
                     // Call onMedia events for cached sources
-                    if (imageElement.src && renderer && renderer.context) {
-                        renderer.context.mediaLoaded(sourceUrl);
-                    } else {
-                        renderer.context.mediaLoadFailed(sourceUrl, HttpStatusCodes.BadRequest, `Bad request on ${sourceUrl}`);
+                    if (imageElement.src && renderer) {
+                        renderer.mediaLoaded(sourceUrl);
+                    } else if (renderer) {
+                        renderer.mediaLoadFailed(sourceUrl, HttpStatusCodes.BadRequest, `Bad request on ${sourceUrl}`);
                     }
                 } else {
                     createImageAndInsertIntoMap(sourceUrl, renderer);
