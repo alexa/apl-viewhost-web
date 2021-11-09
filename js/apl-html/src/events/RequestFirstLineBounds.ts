@@ -23,6 +23,8 @@ export class RequestFirstLineBounds extends Event {
             // Highlight first line as this event applicable only to line highlighting.
             this.component.highlight(0);
             this.event.resolveWithRect(top, 0, this.component.bounds.width, height);
+        } else if (this.component === undefined) {
+            this.event.resolveWithRect(0, 0, 0, 0);
         }
     }
 }
