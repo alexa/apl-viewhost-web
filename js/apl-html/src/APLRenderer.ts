@@ -452,7 +452,8 @@ export default abstract class APLRenderer<Options = {}> {
     public init(metricRecorder?: (m: APL.DisplayMetric) => void) {
         const startTime = performance.now();
         if (this.mOptions.mode === 'TV') {
-            window.addEventListener('keydown', this.passWindowEventsToCore);
+            window.addEventListener('keydown', this.passKeyDownToCore);
+            window.addEventListener('keyup', this.passKeyUpToCore);
         }
         this.renderComponents();
         const stopTime = performance.now();
@@ -713,7 +714,8 @@ export default abstract class APLRenderer<Options = {}> {
             }
             this.view = undefined;
         }
-        window.removeEventListener('keydown', this.passWindowEventsToCore);
+        window.removeEventListener('keydown', this.passKeyDownToCore);
+        window.removeEventListener('keyup', this.passKeyUpToCore);
     }
 
     /**
@@ -1040,12 +1042,20 @@ export default abstract class APLRenderer<Options = {}> {
         }
     }
 
+    private canPassLocalKeyDown = (event: IAsyncKeyboardEvent) => {
+        return this.mOptions.mode !== 'TV' || !this.isDPadKey(event.code);
+    }
+
     private handleKeyDown = async (evt: IAsyncKeyboardEvent) => {
-        await this.passKeyboardEventToCore(evt, KeyHandlerType.KeyDown);
+        if (this.canPassLocalKeyDown(evt)) {
+            await this.passKeyboardEventToCore(evt, KeyHandlerType.KeyDown);
+        }
     }
 
     private handleKeyUp = async (evt: IAsyncKeyboardEvent) => {
-        await this.passKeyboardEventToCore(evt, KeyHandlerType.KeyUp);
+        if (this.canPassLocalKeyDown(evt)) {
+            await this.passKeyboardEventToCore(evt, KeyHandlerType.KeyUp);
+        }
     }
 
     /**
@@ -1133,28 +1143,50 @@ export default abstract class APLRenderer<Options = {}> {
         }
     }
 
-    private recoverFocusOnEnter(id: string, code: string): void {
+    private passKeyDownToCore = (event: IAsyncKeyboardEvent) => {
+        this.passWindowEventsToCore(event, KeyHandlerType.KeyDown);
+    }
+
+    private passKeyUpToCore = (event: IAsyncKeyboardEvent) => {
+        this.passWindowEventsToCore(event, KeyHandlerType.KeyUp);
+    }
+
+    private passWindowEventsToCore = async (event: IAsyncKeyboardEvent, handler: KeyHandlerType) => {
+        if (!this.context) {
+            return;
+        }
+
+        const focusedComponentId = await this.context.getFocused();
+
+        if (this.shouldPassWindowEventToCore(event, focusedComponentId)) {
+            this.ensureComponentIsFocused(focusedComponentId, event.code);
+            this.passKeyboardEventToCore(event, handler);
+        } else if (!focusedComponentId) {
+            this.focusTopLeft();
+        }
+    }
+
+    private shouldPassWindowEventToCore(event: IAsyncKeyboardEvent, focusedComponentId: string) {
+        const isViewAlreadyFocused = () => {
+            return this.view.contains(document.activeElement);
+        };
+
+        const isFocusLost = () => {
+            return !this.view.contains(document.activeElement)
+                && !(document.activeElement instanceof HTMLTextAreaElement);
+        };
+
+        return this.isDPadKey(event.code)
+            && focusedComponentId
+            && (isFocusLost() || isViewAlreadyFocused());
+    }
+
+    private ensureComponentIsFocused(id: string, code: string): void {
         if (code === ENTER_KEY) {
             const component = this.componentMap[id] as ActionableComponent;
             if (component['focus']) {
                 component.focus();
             }
-        }
-    }
-
-    private passWindowEventsToCore = async (event: IAsyncKeyboardEvent) => {
-        if (!this.context) {
-            return;
-        }
-
-        const focused = await this.context.getFocused();
-        if (this.isDPadKey(event.code)
-            && (!document.activeElement || document.activeElement === document.body)
-            && focused) {
-            this.recoverFocusOnEnter(focused, event.code);
-            this.passKeyboardEventToCore(event, KeyHandlerType.KeyDown);
-        } else if (!focused) {
-            this.focusTopLeft();
         }
     }
 }

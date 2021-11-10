@@ -116,15 +116,15 @@ export abstract class AudioPlayer {
     }
 
     const onDecode = (audioBuffer: AudioBuffer) => {
-      const audioNode = this.getAudioNode(audioContext);
+      const audioNode = this.getConnectedAudioNode(audioContext);
       this.currentSource = audioContext.createBufferSource();
       this.currentSource.buffer = audioBuffer;
-      audioNode.connect(audioContext.destination);
       this.currentSource.connect(audioNode);
 
       this.currentSource.onended = (event: Event) => {
         this.currentSource.disconnect();
         audioNode.disconnect();
+        this._audioNode = null;
         this.currentSource = null;
         this.onPlaybackFinished(id);
         this.resourceMap.delete(id);
@@ -145,14 +145,18 @@ export abstract class AudioPlayer {
       onDecodeError);
   }
 
-  // The gainNode passed in should be connected to the audiocontext destination
+  // The AudioNode passed in should be connected to the AudioContext destination
   protected setCurrentAudioNode(node: IAudioNode): void {
     this.disconnectCurrentAudioNode();
     this._audioNode = node;
   }
 
-  private getAudioNode(context: AudioContext): IAudioNode {
-    this._audioNode = this._audioNode || context.createGain();
+  // Gets an AudioNode connected to the AudioContext destination
+  private getConnectedAudioNode(context: AudioContext): IAudioNode {
+    if (!this._audioNode) {
+      this._audioNode = context.createGain();
+      this._audioNode.connect(context.destination);
+    }
     return this._audioNode;
   }
 

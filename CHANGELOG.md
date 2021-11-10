@@ -1,5 +1,11 @@
 # Changelog for apl-viewhost-web
 
+## [1.7.1]
+
+## Changed
+
+- Fixed scrolling issue with SpeakItem command when highlight mode set to line
+
 ## [1.7.0]
 
 This release adds support for version 1.7 of the APL specification. Please also see APL Core Library for changes: [apl-core-library CHANGELOG](https://github.com/alexa/apl-core-library/blob/master/CHANGELOG.md)
