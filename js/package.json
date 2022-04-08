@@ -9,21 +9,21 @@
     "dts-packer"
   ],
   "scripts": {
-    "build:wasm:happynpm": "yarn build:packer && yarn build:html:prod && cd apl-wasm && yarn build:happynpm",
-    "build:wasm:dev": "yarn build:packer && yarn build:html:dev && cd apl-wasm && yarn build:dev",
-    "build:wasm:test": "yarn build:packer && yarn build:html:test && cd apl-wasm && yarn build:test",
-    "build:wasm:prod": "yarn build:packer && yarn build:html:prod && cd apl-wasm && yarn build:prod",
-    "build:html:dev": "cd apl-html && yarn build:dev",
-    "build:html:test": "cd apl-html && yarn build:test",
-    "build:html:prod": "cd apl-html && yarn build:prod",
     "build:client:dev": "yarn build:packer && yarn build:html:dev && cd apl-client && yarn build:dev",
     "build:client:prod": "yarn build:packer && yarn build:html:prod && cd apl-client && yarn build:prod",
+    "build:html:dev": "cd apl-html && yarn build:dev",
+    "build:html:prod": "cd apl-html && yarn build:prod",
+    "build:html:test": "cd apl-html && yarn build:test",
     "build:packer": "cd dts-packer && yarn build",
+    "build:wasm:dev": "yarn build:packer && yarn build:html:dev && cd apl-wasm && yarn build:dev",
+    "build:wasm:happynpm": "yarn build:packer && yarn build:html:prod && cd apl-wasm && yarn build:happynpm",
+    "build:wasm:prod": "yarn build:packer && yarn build:html:prod && cd apl-wasm && yarn build:prod",
+    "build:wasm:test": "yarn build:packer && yarn build:html:test && cd apl-wasm && yarn build:test",
+    "clean": "rimraf node_modules && yarn clean:client && yarn clean:html && yarn clean:wasm && yarn clean:dts-packer",
     "clean:client": "cd apl-client && yarn clean",
+    "clean:dts-packer": "cd dts-packer && yarn clean",
     "clean:html": "cd apl-html && yarn clean",
     "clean:wasm": "cd apl-wasm && yarn clean",
-    "clean:dts-packer": "cd dts-packer && yarn clean",
-    "clean": "rimraf node_modules && yarn clean:client && yarn clean:html && yarn clean:wasm && yarn clean:dts-packer",
     "lint": "yarn workspaces run lint"
   }
 }

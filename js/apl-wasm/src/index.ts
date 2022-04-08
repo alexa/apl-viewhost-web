@@ -11,11 +11,11 @@ export * from 'apl-html';
 export { ExtensionFilterDefinition } from './extensions/ExtensionFilterDefinition';
 export * from './extensions/ExtensionConfiguration';
 export { ExtensionManager } from './extensions/ExtensionManager';
-export { BackstackExtension } from './extensions/backstack/BackstackExtension';
 export { AudioPlayerExtension } from './extensions/audioplayer/AudioPlayerExtension';
 export { AudioPlayerExtensionObserverInterface, Lyric} from './extensions/audioplayer/AudioPlayerExtensionObserverInterface';
+export { AttentionSystemExtension } from './extensions/attentionsystem/AttentionSystemExtension';
+export { BackstackExtension } from './extensions/backstack/BackstackExtension';
 export { IDocumentState, createDocumentState } from './extensions/IDocumentState';
-export { createWasmE2EEncryptionExtension} from './extensions/e2eencryption/CreateE2EEncryptionExtension';
 
 /**
  * Call this first before anything. This function loads any webassembly

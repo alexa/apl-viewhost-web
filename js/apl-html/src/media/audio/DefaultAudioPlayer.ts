@@ -10,16 +10,20 @@ import { AudioPlayer } from './AudioPlayer';
 import { IAudioEventListener } from './IAudioEventListener';
 
 export class DefaultAudioPlayer extends AudioPlayer {
-  protected contextProvider: IAudioContextProvider = new DefaultAudioContextProvider();
+    protected contextProvider: IAudioContextProvider = new DefaultAudioContextProvider();
 
-  constructor(eventListener: IAudioEventListener) {
-    super(eventListener);
-  }
+    constructor(eventListener: IAudioEventListener) {
+        super(eventListener);
+    }
 
-  public play(id: string) {
-    this.contextProvider.getAudioContext().then((context: AudioContext) => {
-      super.playWithContext(id, context);
-    }).catch((reason?: any) => {
-    });
-  }
+    public play(id: string) {
+        this.contextProvider.getAudioContext().then((context: AudioContext) => {
+          super.playWithContext(id, context);
+        }).catch((reason?: any) => {
+        });
+    }
+
+    public releaseAudioContext(): void {
+        this.contextProvider.releaseAudioContext(null);
+    }
 }

@@ -4,29 +4,30 @@
  */
 
 import throttle = require('lodash.throttle');
-import {AudioPlayerWrapper} from './AudioPlayerWrapper';
-import {commandFactory} from './CommandFactory';
-import {componentFactory} from './ComponentFactory';
-import {ActionableComponent} from './components/ActionableComponent';
-import {Component} from './components/Component';
-import {MeasureMode} from './components/text/MeasureMode';
-import {TextMeasurement} from './components/text/Text';
-import {IVideoFactory} from './components/video/IVideoFactory';
-import {VideoFactory} from './components/video/VideoFactory';
-import {AnimationQuality} from './enums/AnimationQuality';
-import {DisplayState} from './enums/DisplayState';
-import {FocusDirection} from './enums/FocusDirection';
-import {PointerEventType} from './enums/PointerEventType';
-import {PointerType} from './enums/PointerType';
-import {IExtensionManager} from './extensions/IExtensionManager';
-import {ILogger} from './logging/ILogger';
-import {LoggerFactory} from './logging/LoggerFactory';
-import {AudioPlayerFactory} from './media/audio/AudioPlayer';
-import {browserIsEdge} from './utils/BrowserUtils';
-import {ARROW_DOWN, ARROW_LEFT, ARROW_RIGHT, ARROW_UP, ENTER_KEY, HttpStatusCodes} from './utils/Constant';
-import {isDisplayState} from './utils/DisplayStateUtils';
-import {getCssGradient, getCssPureColorGradient} from './utils/ImageUtils';
-import {fetchVectorGraphic} from './utils/VectorGraphicUtils';
+import { AudioPlayerWrapper } from './AudioPlayerWrapper';
+import { commandFactory } from './CommandFactory';
+import { componentFactory } from './ComponentFactory';
+import { ActionableComponent } from './components/ActionableComponent';
+import { extractVectorGraphicFromResponse } from './components/avg/VectorGraphic';
+import { Component } from './components/Component';
+import { MeasureMode } from './components/text/MeasureMode';
+import { TextMeasurement } from './components/text/Text';
+import { IVideoFactory } from './components/video/IVideoFactory';
+import { VideoFactory } from './components/video/VideoFactory';
+import { AnimationQuality } from './enums/AnimationQuality';
+import { DisplayState } from './enums/DisplayState';
+import { FocusDirection } from './enums/FocusDirection';
+import { PointerEventType } from './enums/PointerEventType';
+import { PointerType } from './enums/PointerType';
+import { IExtensionManager } from './extensions/IExtensionManager';
+import { ILogger } from './logging/ILogger';
+import { LoggerFactory } from './logging/LoggerFactory';
+import { AudioPlayerFactory } from './media/audio/AudioPlayer';
+import { browserIsEdge } from './utils/BrowserUtils';
+import { ARROW_DOWN, ARROW_LEFT, ARROW_RIGHT, ARROW_UP, ENTER_KEY, HttpStatusCodes } from './utils/Constant';
+import { isDisplayState } from './utils/DisplayStateUtils';
+import { getCssGradient, getCssPureColorGradient } from './utils/ImageUtils';
+import { fetchMediaResource } from './utils/MediaRequestUtils';
 
 const agentName = 'AplWebRenderer';
 const agentVersion = '1.0.0';
@@ -66,18 +67,33 @@ export interface IViewportCharacteristics {
     dpi: number;
 }
 
+export interface IEnvironmentBase {
+    /** Indicates if video is allowed.  */
+    disallowVideo?: boolean;
+    /** `true` if speech interaction is not supported. Defaults to `false` */
+    disallowDialog?: boolean;
+    /** `true` if edit text is not supported. Defaults to `false` */
+    disallowEditText?: boolean;
+    /** Custom environment property values. */
+    environmentValues?: { [key: string]: any };
+}
+
+const EnvironmentDefaults: IEnvironmentBase = {
+    disallowDialog: false,
+    disallowEditText: false,
+    disallowVideo: false
+};
+
 /**
  * Environment and support options
  */
-export interface IEnvironment {
+export interface IEnvironment extends IEnvironmentBase {
     /** Agent Name */
     agentName: string;
     /** Agent Version */
     agentVersion: string;
     /** `true` if OpenURL command is supported. Defaults to `false` */
     allowOpenUrl?: boolean;
-    /** `true` if video is not supported. Defaults to `false` */
-    disallowVideo?: boolean;
     /** Level of animation quality. Defaults to `AnimationQuality.kAnimationQualityNormal` */
     animationQuality?: AnimationQuality;
 }
@@ -87,7 +103,7 @@ export interface IEnvironment {
  *
  * Dynamic changes to the renderer viewport or envrionment.
  */
-export interface IConfigurationChangeOptions {
+export interface IConfigurationChangeOptions extends IEnvironmentBase {
     /** Viewport Width in pixels */
     width?: number;
     /** Viewport Height in pixels */
@@ -102,6 +118,7 @@ export interface IConfigurationChangeOptions {
     screenMode?: ScreenMode;
     /** Indicates if a screen reader has been enabled for the user. */
     screenReader?: boolean;
+
 }
 
 export interface IDisplayStateOptions {
@@ -145,6 +162,7 @@ export interface IDataSourceFetchRequest {
 
 export interface IMediaRequest {
     source: string;
+    headers?: Headers;
     errorCode?: number;
     error?: string;
 }
@@ -224,7 +242,7 @@ export interface IAPLOptions {
      * If this is not provided, this viewhost will use the fetch API to
      * retrieve graphic content from sources.
      */
-    onRequestGraphic?: (source: string) => Promise<string | undefined>;
+    onRequestGraphic?: (url: string, headers?: Headers) => Promise<string | undefined>;
     /**
      * Callback to open a URL. Return `false` if this call fails
      */
@@ -245,7 +263,7 @@ export interface IAPLOptions {
 /**
  * The main renderer. Create a new one with `const renderer = APLRenderer.create(content);`
  */
-export default abstract class APLRenderer<Options = {}> {
+export default abstract class APLRenderer<Options = any> {
     private static mappingKeyExpression: RegExp = /:\d+$/;
     private static mousePointerId: number = 0;
 
@@ -298,7 +316,7 @@ export default abstract class APLRenderer<Options = {}> {
     /** Document set flag for allowing config change driven resizing */
     protected supportsResizing: boolean = false;
 
-    private configChangeThrottle = throttle((configurationChangeOptions: IConfigurationChangeOptions) => {
+    private configurationChangeThrottle = throttle((configurationChangeOptions: IConfigurationChangeOptions) => {
         this.handleConfigurationChange(configurationChangeOptions);
     }, 200);
 
@@ -422,8 +440,7 @@ export default abstract class APLRenderer<Options = {}> {
             mOptions.environment.agentVersion : agentVersion;
         mOptions.environment.allowOpenUrl = mOptions.environment.allowOpenUrl === undefined ?
             false : mOptions.environment.allowOpenUrl;
-        mOptions.environment.disallowVideo = mOptions.environment.disallowVideo === undefined ?
-            false : mOptions.environment.disallowVideo;
+        mOptions.environment = {...EnvironmentDefaults, ...mOptions.environment};
         mOptions.environment.animationQuality = mOptions.environment.animationQuality === undefined ?
             AnimationQuality.kAnimationQualityNormal : mOptions.environment.animationQuality;
 
@@ -441,14 +458,15 @@ export default abstract class APLRenderer<Options = {}> {
             this.onRunTimeError = mOptions.onRunTimeError;
         }
         if (mOptions.onRequestGraphic) {
-            this.onRequestGraphic = (source) => {
-                const vectorGraphicPromise = mOptions.onRequestGraphic(source);
+            this.onRequestGraphic = (sourceUrl, headers) => {
+                const vectorGraphicPromise = mOptions.onRequestGraphic(sourceUrl, headers);
+
                 // Enables onLoad/onFail when onRequestGraphic is overridden
                 vectorGraphicPromise.then((json) => {
                     if (json) {
-                        this.mediaLoaded(source);
+                        this.mediaLoaded(sourceUrl);
                     } else if (this.context) {
-                        this.mediaLoadFailed(source, HttpStatusCodes.BadRequest, `Bad Request on ${source}`);
+                        this.mediaLoadFailed(sourceUrl, HttpStatusCodes.BadRequest, `Bad Request on ${sourceUrl}`);
                     }
                 });
                 return vectorGraphicPromise;
@@ -538,7 +556,7 @@ export default abstract class APLRenderer<Options = {}> {
             configurationChangeOptions.width = undefined;
             configurationChangeOptions.height = undefined;
         }
-        this.configChangeThrottle(configurationChangeOptions);
+        this.configurationChangeThrottle(configurationChangeOptions);
     }
 
     /**
@@ -583,20 +601,22 @@ export default abstract class APLRenderer<Options = {}> {
 
     /**
      *
-     * @param source URL of the graphic
+     * @param sourceUrl URL of the graphic
+     * @param headers headers provided by APL document to include with the request.
      * @ignore
      * @internal
      */
-    public onRequestGraphic(source: string): Promise<string | undefined> {
+    public onRequestGraphic(sourceUrl: string, headers: Headers): Promise<string | undefined> {
         const fetchVectorGraphicArgs = {
-            renderer: this
+            renderer: this,
+            extractFromResponse: extractVectorGraphicFromResponse
         };
-        return fetchVectorGraphic(source, fetchVectorGraphicArgs).then(
+        return fetchMediaResource(sourceUrl, headers, fetchVectorGraphicArgs).then(
             (response) => {
                 return response;
             }).catch(() => {
-                return undefined;
-            });
+            return undefined;
+        });
     }
 
     /**
@@ -746,6 +766,7 @@ export default abstract class APLRenderer<Options = {}> {
             }
             (this.context as any) = undefined;
         }
+        this.destroyAudioPlayer();
         this.removeRenderingComponents();
         if (this.view) {
             for (const eventName in this.viewEventListeners) {
@@ -866,7 +887,7 @@ export default abstract class APLRenderer<Options = {}> {
         if (this.context) {
             this.context.mediaLoaded(source);
         } else {
-            setTimeout( () => {
+            setTimeout(() => {
                 if (this.context) {
                     this.context.mediaLoaded(source);
                 }
@@ -881,7 +902,7 @@ export default abstract class APLRenderer<Options = {}> {
         if (this.context) {
             this.context.mediaLoadFailed(source, errorCode, error);
         } else {
-            setTimeout( () => {
+            setTimeout(() => {
                 if (this.context) {
                     this.context.mediaLoadFailed(source, errorCode, error);
                 }
@@ -1258,6 +1279,13 @@ export default abstract class APLRenderer<Options = {}> {
             if (component['focus']) {
                 component.focus();
             }
+        }
+    }
+
+    private destroyAudioPlayer(): void {
+        if (this.audioPlayer) {
+            this.audioPlayer.destroy();
+            this.audioPlayer = null;
         }
     }
 }

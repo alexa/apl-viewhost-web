@@ -256,6 +256,7 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
      * @ignore
      */
     public setProperties(props: PropsType) {
+
         Object.keys(props).forEach((keyString) => {
             const key = parseInt(keyString, 10) as PropertyKey;
             this.props[key] = props[key];

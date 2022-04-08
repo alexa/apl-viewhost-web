@@ -27,7 +27,7 @@ import {Stack} from './Stack';
  */
 export class BackstackExtension implements IExtension, GoBackListener {
     public readonly URI: string = 'aplext:backstack:10';
-    private static logger: ILogger = LoggerFactory.getLogger('BackExtension');
+    private logger: ILogger = LoggerFactory.getLogger('BackExtension');
     private responsibleForBackButton: boolean;
     private observer: BackstackExtensionObserverInterface;
     private backstack: Stack;
@@ -235,7 +235,7 @@ export class BackstackExtension implements IExtension, GoBackListener {
                     break;
                 }
                 default : {
-                    BackstackExtension.logger.warn(`Ignoring unknown commandType ${commandName}`);
+                    this.logger.warn(`Ignoring unknown commandType ${commandName}`);
                     break;
                 }
             }
@@ -249,7 +249,7 @@ export class BackstackExtension implements IExtension, GoBackListener {
     public addDocumentStateToBackstack(backItem: IDocumentState) {
         // only add items to the backstack if the backstackId has been provided in the settings
         if (this.activeDocumentId) {
-            BackstackExtension.logger.info(`adding ${this.activeDocumentId}`);
+            this.logger.info(`adding ${this.activeDocumentId}`);
             backItem.id = this.activeDocumentId;
             this.backstack.push(this.activeDocumentId, backItem);
             this.clearActiveDocumentId();

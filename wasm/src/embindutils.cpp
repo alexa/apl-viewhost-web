@@ -69,6 +69,8 @@ getValFromObject(const apl::Object& prop, WASMMetrics* m) {
                        "," + std::to_string(transform[5]) + ")";
             return emscripten::val(mat);
         }
+        case apl::Object::ObjectType::kURLRequestType:
+            return getValFromObject(prop.getURLRequest(), m);
         default:
             return emscripten::val::undefined();
     }
@@ -152,6 +154,22 @@ getValFromObject(const apl::MediaSource& mediaSource, WASMMetrics* m) {
     propObject.set("duration", emscripten::val(mediaSource.getDuration()));
     propObject.set("repeatCount", emscripten::val(mediaSource.getRepeatCount()));
     propObject.set("offset", emscripten::val(mediaSource.getOffset()));
+
+    return propObject;
+}
+
+emscripten::val
+getValFromObject(const apl::URLRequest& urlRequest, WASMMetrics* m) {
+    emscripten::val propObject = emscripten::val::object();
+
+    propObject.set("url", emscripten::val(urlRequest.getUrl()));
+
+    emscripten::val headers = emscripten::val::array();
+    for (auto& header : urlRequest.getHeaders()) {
+        headers.call<void>("push", header);
+    }
+
+    propObject.set("headers", headers);
 
     return propObject;
 }

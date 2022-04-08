@@ -1,9 +1,9 @@
 {
   "name": "dts-packer",
   "version": "1.0.0",
+  "license": "SEE LICENSE IN LICENSE.txt",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
-  "license": "SEE LICENSE IN LICENSE.txt",
   "scripts": {
     "build": "npx webpack --config webpack.js",
     "clean": "rimraf node_modules lib",

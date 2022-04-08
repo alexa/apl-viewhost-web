@@ -4,7 +4,6 @@
  */
 
 'use strict';
-
 import APLRenderer, { IAPLOptions } from '../../APLRenderer';
 import { Component, FactoryFunction } from '../Component';
 import { AbstractVideoComponent } from './AbstractVideoComponent';

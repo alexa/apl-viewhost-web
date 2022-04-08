@@ -9,6 +9,8 @@ import { GraphicLayoutDirection } from '../../enums/GraphicLayoutDirection';
 import { GraphicPropertyKey } from '../../enums/GraphicPropertyKey';
 import { PropertyKey } from '../../enums/PropertyKey';
 import { VectorGraphicScale } from '../../enums/VectorGraphicScale';
+import { IURLRequest, parseHeaders, toUrlRequest } from '../../media/IURLRequest';
+
 import { ActionableComponent } from '../ActionableComponent';
 import { Component, FactoryFunction, IComponentProperties } from '../Component';
 import { VectorGraphicElementUpdater } from './VectorGraphicElementUpdater';
@@ -25,13 +27,22 @@ export interface IVectorGraphicProperties extends IComponentProperties {
     [PropertyKey.kPropertySource]: string;
 }
 
+const defaultHeaders = new Headers({
+    'Accept': 'application/json',
+    'Content-Type': 'application/json'
+});
+
+export function extractVectorGraphicFromResponse(response: Response): Promise<string> {
+    return response.text();
+}
+
 /**
  * @ignore
  */
 export class VectorGraphic extends ActionableComponent<IVectorGraphicProperties> {
     public static readonly SVG_NS: string = 'http://www.w3.org/2000/svg';
     private graphic: APL.Graphic;
-    private svg: SVGElement;
+    private readonly svg: SVGElement;
     private vectorGraphicUpdater: VectorGraphicElementUpdater;
 
     constructor(renderer: APLRenderer,
@@ -51,10 +62,14 @@ export class VectorGraphic extends ActionableComponent<IVectorGraphicProperties>
         this.graphic = this.component.getCalculatedByKey<APL.Graphic>(PropertyKey.kPropertyGraphic);
 
         if (!this.graphic) {
-            const source = this.component.getCalculatedByKey<string>(PropertyKey.kPropertySource);
-            const json = await this.renderer.onRequestGraphic(source);
+            const source = this.component.getCalculatedByKey<string | IURLRequest>(PropertyKey.kPropertySource);
+            const urlRequest = toUrlRequest(source);
+            const headers = parseHeaders(urlRequest.headers);
+
+            defaultHeaders.forEach((value, key) => headers.append(key, value));
+            const json = await this.renderer.onRequestGraphic(urlRequest.url, parseHeaders(urlRequest.headers));
             if (!json || !this.component.updateGraphic(json)) {
-                this.logger.warn(`Invalid graphic at source ${source}`);
+                this.logger.warn(`Invalid graphic at source ${urlRequest.url}`);
             }
             return;
         }

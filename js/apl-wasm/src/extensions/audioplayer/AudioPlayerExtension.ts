@@ -38,7 +38,7 @@ export class AudioPlayerExtension implements IExtension {
     public static readonly ACTIVITY_PAUSED: string = 'PAUSED';
     public static readonly ACTIVITY_BUFFER_UNDERRUN: string = 'BUFFER_UNDERRUN';
 
-    private static logger: ILogger = LoggerFactory.getLogger('AudioPlayerExtension');
+    private logger: ILogger = LoggerFactory.getLogger('AudioPlayerExtension');
     private observer: AudioPlayerExtensionObserverInterface;
     private context: APL.Context;
     private playbackState: LiveMap;
@@ -180,20 +180,20 @@ export class AudioPlayerExtension implements IExtension {
      */
     public setContext(context: APL.Context): void {
         this.context = context;
-        AudioPlayerExtension.logger.debug(`context is set to ${context}`);
+        this.logger.debug(`context is set to ${context}`);
     }
 
     /**
      * Apply extension settings retrieved from Content.
-     * @param settings Backstack settings object.
+     * @param settings AudioPlayer settings object.
      */
     public applySettings(settings: object): void {
-        AudioPlayerExtension.logger.debug(`AudioPlayerExtension.applySettings`);
+        this.logger.debug(`AudioPlayerExtension.applySettings`);
         this.playbackStateName = undefined;
-        if (settings && settings.hasOwnProperty(AudioPlayerExtension.SETTINGS_PLAYBACK_STATE_NAME)) {
+        if (settings.hasOwnProperty(AudioPlayerExtension.SETTINGS_PLAYBACK_STATE_NAME)) {
             this.playbackState = LiveMap.create({offset: 0, playerActivity: AudioPlayerExtension.ACTIVITY_STOPPED});
             this.playbackStateName = settings[AudioPlayerExtension.SETTINGS_PLAYBACK_STATE_NAME];
-            AudioPlayerExtension.logger.debug(
+            this.logger.debug(
                 `binding ${this.playbackStateName} to playbackState ${this.playbackState}`);
         }
     }
@@ -277,11 +277,11 @@ export class AudioPlayerExtension implements IExtension {
                     break;
 
                 default:
-                    AudioPlayerExtension.logger.warn(`Invalid Command: ${commandName}`);
+                    this.logger.warn(`Invalid Command: ${commandName}`);
                     succeeded = false;
             }
         } else {
-            AudioPlayerExtension.logger.warn('No valid observer is set');
+            this.logger.warn('No valid observer is set');
             succeeded = false;
         }
 
@@ -295,7 +295,7 @@ export class AudioPlayerExtension implements IExtension {
         expectedParams.forEach((param) => {
             if (!params.hasOwnProperty(param)) {
                 isMissingParams = true;
-                AudioPlayerExtension.logger.warn(`${tag} is missing a parameter ${param}`);
+                this.logger.warn(`${tag} is missing a parameter ${param}`);
             }
         });
 
@@ -309,7 +309,7 @@ export class AudioPlayerExtension implements IExtension {
 
     public reportPlaybackStateChange(state: string, offset: number) {
         this.reportPlaybackProgress(state, offset);
-        AudioPlayerExtension.logger.info(`reportPlabackStateChange: ${state} ${offset}`);
+        this.logger.info(`reportPlaybackStateChange: ${state} ${offset}`);
 
         if (this.context) {
             this.context.invokeExtensionEventHandler(AudioPlayerExtension.URI,
@@ -318,7 +318,7 @@ export class AudioPlayerExtension implements IExtension {
                 false
             );
         } else {
-            AudioPlayerExtension.logger.warn(`reportPlabackStateChange: no context is set`);
+            this.logger.warn(`reportPlaybackStateChange: no context is set`);
         }
     }
 }

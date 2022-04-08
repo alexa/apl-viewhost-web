@@ -19,15 +19,31 @@ RootConfigMethods::create(emscripten::val environment) {
     std::string agentVersion = environment["agentVersion"].as<std::string>();
     bool allowOpenUrl = environment["allowOpenUrl"].as<bool>();
     bool disallowVideo = environment["disallowVideo"].as<bool>();
+    bool disallowEditText = environment["disallowEditText"].as<bool>();
+    bool disallowDialog = environment["disallowDialog"].as<bool>();
     auto animationQuality = static_cast<RootConfig::AnimationQuality>(environment["animationQuality"].as<int>());
 
     auto config = std::make_shared<RootConfig>();
     config->agent(agentName, agentVersion)
         .allowOpenUrl(allowOpenUrl)
-        .disallowVideo(disallowVideo)
+        .set(apl::RootProperty::kDisallowVideo, disallowVideo)
+        .set(apl::RootProperty::kDisallowEditText, disallowEditText)
+        .set(apl::RootProperty::kDisallowDialog, disallowDialog)
         .animationQuality(animationQuality)
         .enforceAPLVersion(apl::APLVersion::kAPLVersionIgnore)
         .enableExperimentalFeature(apl::RootConfig::ExperimentalFeature::kExperimentalFeatureManageMediaRequests);
+
+    /** Add custom environment properties **/
+    auto environmentValues = environment["environmentValues"].as<emscripten::val>();
+    if (environmentValues != emscripten::val::undefined()) {
+        emscripten::val keys = emscripten::val::global("Object").call<emscripten::val>("keys", environmentValues);
+        int length = keys["length"].as<int>();
+        for (int i = 0; i < length; ++i) {
+            auto key = keys[i].as<std::string>();
+            auto envVal = emscripten::getObjectFromVal(environmentValues[key].as<emscripten::val>());
+            config->setEnvironmentValue(key, envVal);
+        }
+    }
 
     return config;
 }

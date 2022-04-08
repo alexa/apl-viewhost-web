@@ -1,6 +1,6 @@
 {
   "name": "apl-viewhost-web",
-  "version": "1.8.2",
+  "version": "1.9.0",
   "description": "This is a Web-assembly version (WASM) of apl viewhost web.",
   "license": "Apache 2.0",
   "repository": {

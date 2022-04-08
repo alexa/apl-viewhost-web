@@ -36,6 +36,8 @@ struct ConfigurationChangeMethods {
     static ConfigurationChangePtr& fontScale(ConfigurationChangePtr& configurationChange, double scale);
     static ConfigurationChangePtr& screenMode(ConfigurationChangePtr& configurationChange, const std::string& screenMode);
     static ConfigurationChangePtr& screenReader(ConfigurationChangePtr& configurationChange, bool enabled);
+    static ConfigurationChangePtr& disallowVideo(ConfigurationChangePtr& configurationChange, bool disallowVideo);
+    static ConfigurationChangePtr& environmentValue(ConfigurationChangePtr& configurationChange, const std::string& name, const emscripten::val value);
     static void mergeConfigurationChange(ConfigurationChangePtr& configurationChange, emscripten::val other);
 };
 

@@ -1,10 +1,21 @@
 # Changelog for apl-viewhost-web
 
-## [1.8.2]
+## [1.9.0]
+
+This release adds support for version 1.9 of the APL specification. Please also see APL Core Library for changes: [apl-core-library CHANGELOG](https://github.com/alexa/apl-core-library/blob/master/CHANGELOG.md)
+
+### Added
+
+- Image/VectorGraphics sources now allow request headers
+- Additional disallow flags
 
 ### Changed
 
-- Fixed scrolling issue with SpeakItem command when highlight mode set to line
+- Bug fixes
+  - Audio player fix with AudioNode and AudioContext
+  - Pager highlight
+  - Video player release
+
 ## [1.8.0]
 
 This release adds support for version 1.8 of the APL specification. Please also see APL Core Library for changes: [apl-core-library CHANGELOG](https://github.com/alexa/apl-core-library/blob/master/CHANGELOG.md)

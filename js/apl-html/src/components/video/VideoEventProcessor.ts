@@ -200,8 +200,6 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
                 startingPoint
             );
 
-            // This isn't the responsibility of play, it's the responsibility of the callee
-            // We need to pull this out
             if (waitForFinish) {
                 await new Promise((resolve) => {
                     endEventPromiseListeners.push(resolve);
@@ -413,7 +411,7 @@ function isValidPlayer(player: any): player is IVideoPlayer {
 }
 
 function ensureValidMediaState(mediaState: any): mediaState is APL.IMediaState {
-    const keysToClean = ['currentTime', 'currentTime', 'trackCount', 'trackIndex'];
+    const keysToClean = ['currentTime', 'currentTime', 'trackCount', 'trackIndex', 'duration'];
 
     for (const key of keysToClean) {
         if (mediaState.hasOwnProperty(key) && !isValidMediaStateValue(mediaState[key])) {

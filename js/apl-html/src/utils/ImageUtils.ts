@@ -10,6 +10,7 @@ import { GradientType } from '../enums/GradientType';
 import { ImageScale } from '../enums/ImageScale';
 import { ILogger } from '../logging/ILogger';
 import { LoggerFactory } from '../logging/LoggerFactory';
+import { IURLRequest } from '../media/IURLRequest';
 import { browserIsFirefox } from './BrowserUtils';
 import { numberToColor } from './ColorUtils';
 import { Filter } from './FilterUtils';
@@ -74,7 +75,7 @@ export interface ImageDimensions {
 }
 
 export interface ImageScalerArgs {
-    imageSourceUrl: string;
+    imageSource: IURLRequest;
     renderer: APLRenderer;
     scalingOption?: ImageScale;
     imageDimensions: ImageDimensions;
@@ -108,7 +109,7 @@ export async function createScaledImageProcessor(args: ImageScalerArgs): Promise
         imageDimensions,
         renderer,
         logger,
-        imageSourceUrl
+        imageSource
     } = args;
 
     let {
@@ -120,7 +121,7 @@ export async function createScaledImageProcessor(args: ImageScalerArgs): Promise
             type: ImageRetrievalType.HTML,
             renderer,
             logger
-        }).getImageElement(imageSourceUrl);
+        }).getImageElement(imageSource);
 
     const {
         height: sourceHeight,
@@ -215,7 +216,7 @@ export async function createScaledImageProcessor(args: ImageScalerArgs): Promise
             return {
                 scaledImageHeight: scaledImageDimension.height,
                 scaledImageWidth: scaledImageDimension.width,
-                scaledSource: imageSourceUrl
+                scaledSource: imageSource
             };
         }
     };
@@ -234,7 +235,7 @@ export async function createCanvasScaledImageProcessor(args: CanvasImageScalerAr
         filters,
         renderer,
         imageDimensions,
-        imageSourceUrl,
+        imageSource,
         applyFilterArgs
     } = args;
 
@@ -247,7 +248,7 @@ export async function createCanvasScaledImageProcessor(args: CanvasImageScalerAr
             type: ImageRetrievalType.HTML,
             renderer,
             logger
-        }).getImageElement(imageSourceUrl);
+        }).getImageElement(imageSource);
 
     const {
         height: sourceHeight,
@@ -265,7 +266,7 @@ export async function createCanvasScaledImageProcessor(args: CanvasImageScalerAr
             logger,
             imageDimensions,
             renderer,
-            imageSourceUrl,
+            imageSource,
             scalingOption
         });
     }
@@ -275,7 +276,7 @@ export async function createCanvasScaledImageProcessor(args: CanvasImageScalerAr
             type: ImageRetrievalType.CORS,
             renderer,
             logger
-        }).getImageElement(imageSourceUrl);
+        }).getImageElement(imageSource);
 
     const xScale = destinationWidth / sourceWidth;
     const yScale = destinationHeight / sourceHeight;
@@ -445,7 +446,7 @@ export async function createCanvasScaledImageProcessor(args: CanvasImageScalerAr
             }).applyFiltersToImage(applyFilterArgs);
 
             return {
-                scaledSource: canvas.toDataURL('image/png', 1.0),
+                scaledSource: {url: canvas.toDataURL('image/png', 1.0)},
                 scaledImageWidth: canvas.width,
                 scaledImageHeight: canvas.height
             };

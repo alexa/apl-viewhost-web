@@ -4,6 +4,7 @@
  */
 
 import { EventProperty } from '../enums/EventProperty';
+import { parseHeaders } from '../media/IURLRequest';
 import { requestMedia } from '../utils/MediaRequestUtils';
 import { Event } from './Event';
 
@@ -13,12 +14,13 @@ import { Event } from './Event';
 export class MediaRequest extends Event {
     public async execute() {
         const mediaType = this.event.getValue<number>(EventProperty.kEventPropertyMediaType);
-        const source = this.event.getValue<string[]>(EventProperty.kEventPropertySource);
-
+        const sources = this.event.getValue<string[]>(EventProperty.kEventPropertySource);
+        const eventHeaders: string[][] = this.event.getValue(EventProperty.kEventPropertyHeaders);
+        const headers = eventHeaders.map((value, index, array) => parseHeaders(value));
         const requestMediaArgs = {
             renderer: this.renderer
         };
-        await requestMedia(mediaType, source, requestMediaArgs);
+        await requestMedia(mediaType, sources, headers, requestMediaArgs);
         this.resolve();
         this.destroy();
     }

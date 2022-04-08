@@ -4,6 +4,7 @@
  */
 
 #include "wasm/configurationchange.h"
+#include "wasm/embindutils.h"
 
 namespace apl {
 namespace wasm {
@@ -51,6 +52,18 @@ ConfigurationChangeMethods::screenReader(ConfigurationChangePtr& configurationCh
     return configurationChange;
 }
 
+ConfigurationChangePtr&
+ConfigurationChangeMethods::disallowVideo(ConfigurationChangePtr& configurationChange, bool disallowVideo) {
+    configurationChange->disallowVideo(disallowVideo);
+    return configurationChange;
+}
+
+ConfigurationChangePtr&
+ConfigurationChangeMethods::environmentValue(ConfigurationChangePtr& configurationChange, const std::string& name, emscripten::val value) {
+    configurationChange->environmentValue(name.c_str(), emscripten::getObjectFromVal(value));
+    return configurationChange;
+}
+
 void
 ConfigurationChangeMethods::mergeConfigurationChange(ConfigurationChangePtr& configurationChange, emscripten::val other) {
     auto configChange = *(other.as<std::shared_ptr<ConfigurationChange>>());
@@ -70,6 +83,8 @@ EMSCRIPTEN_BINDINGS(apl_wasm_configurationchange) {
         .function("fontScale", &internal::ConfigurationChangeMethods::fontScale)
         .function("screenMode", &internal::ConfigurationChangeMethods::screenMode)
         .function("screenReader", &internal::ConfigurationChangeMethods::screenReader)
+        .function("disallowVideo", &internal::ConfigurationChangeMethods::disallowVideo)
+        .function("environmentValue", &internal::ConfigurationChangeMethods::environmentValue)
         .function("mergeConfigurationChange", &internal::ConfigurationChangeMethods::mergeConfigurationChange);
 }
 

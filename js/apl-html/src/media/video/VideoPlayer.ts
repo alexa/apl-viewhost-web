@@ -198,6 +198,8 @@ export function createVideoPlayer(eventListener: IMediaEventListener): IVideoPla
             this.player.pause();
             // Empty out the source
             this.player.removeAttribute('src');
+            // Reload the player to refresh its state
+            this.player.load();
             // Remove from DOM
             this.player.remove();
         }

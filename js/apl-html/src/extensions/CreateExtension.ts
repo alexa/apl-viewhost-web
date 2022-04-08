@@ -2,7 +2,6 @@
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0
  */
-import {createE2EEncryptionExtension, E2EEncryptionExtensionUri} from './e2eencryption/E2EEncryptionExtension';
 import {
     CreateAplExtensionCommandDefintion,
     CreateAplExtensionEventHandler,
@@ -14,7 +13,6 @@ import {
 import {IExtensionEventCallbackResult} from './IExtensionEventCallbackResult';
 
 const extensionFactories = {
-    [E2EEncryptionExtensionUri]: createE2EEncryptionExtension
 };
 
 export interface CreateExtensionArgs {

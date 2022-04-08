@@ -161,10 +161,15 @@ export abstract class AudioPlayer {
   }
 
   protected disconnectCurrentAudioNode(): void {
-    if (this._audioNode !== undefined) {
+    if (this._audioNode) {
       this._audioNode.disconnect();
     }
   }
+
+  /**
+   * Releases AudioContext. Called when destroying AudioPlayer.
+   */
+  public abstract releaseAudioContext(): void;
 
   protected cancelPendingAndRemoveCompleted(): void {
     const toDelete: string[] = [];

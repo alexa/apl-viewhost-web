@@ -1,30 +1,29 @@
 {
   "name": "apl-wasm",
   "version": "1.0.0",
+  "private": true,
+  "license": "SEE LICENSE IN LICENSE.txt",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
-  "license": "SEE LICENSE IN LICENSE.txt",
-  "private": true,
   "scripts": {
     "build:dev": "npx webpack --config webpack.dev.js",
+    "build:happynpm": "npx webpack --config webpack.happynpm.js",
+    "build:prod": "npx webpack --config webpack.prod.js",
+    "build:prod:analyze": "npx webpack --config webpack.prod.js --env.analyze",
     "build:test": "npx webpack --config webpack.test.js",
     "build:wasm": "npx webpack --config webpack.wasm.js",
-    "build:prod": "npx webpack --config webpack.prod.js",
-    "build:happynpm": "npx webpack --config webpack.happynpm.js",
-    "build:prod:analyze": "npx webpack --config webpack.prod.js --env.analyze",
     "clean": "rimraf node_modules lib",
+    "docs": "typedoc lib",
+    "lint": "tslint --fix 'src/**/*.ts'",
     "test": "npm run test:electron",
-    "test:electron": "TS_NODE_PROJECT=tests/tsconfig.json electron-mocha  --opts .mocha",
     "test:cypress": "TS_NODE_PROJECT=cypress/tsconfig.json cypress open",
     "test:cypress:headless": "TS_NODE_PROJECT=cypress/tsconfig.json cypress run",
-    "test:s": "TS_NODE_PROJECT=tests/tsconfig.json electron-mocha  --opts .mocha.single",
+    "test:electron": "TS_NODE_PROJECT=tests/tsconfig.json electron-mocha  --opts .mocha",
     "test:i": "TS_NODE_PROJECT=tests/tsconfig.json electron-mocha --interactive --opts .mocha",
-    "test:si": "TS_NODE_PROJECT=tests/tsconfig.json electron-mocha --interactive --opts .mocha.single",
-    "lint": "tslint --fix 'src/**/*.ts'",
-    "docs": "typedoc lib"
+    "test:s": "TS_NODE_PROJECT=tests/tsconfig.json electron-mocha  --opts .mocha.single",
+    "test:si": "TS_NODE_PROJECT=tests/tsconfig.json electron-mocha --interactive --opts .mocha.single"
   },
-  "dependencies": {
-  },
+  "dependencies": {},
   "devDependencies": {
     "@cypress/webpack-preprocessor": "^5.5.0",
     "@types/chai": "~4.1.7",
@@ -36,8 +35,8 @@
     "chai": "^4.2.0",
     "chai-exclude": "^2.0.3",
     "cross-env": "^5.2.0",
-    "cypress-watch-and-reload": "^1.3.4",
     "cypress": "5.6.0",
+    "cypress-watch-and-reload": "^1.3.4",
     "dts-packer": "link:../dts-packer",
     "electron": "^4.0.4",
     "electron-mocha": "^6.0.4",
@@ -57,7 +56,7 @@
     "uglifyjs-webpack-plugin": "^2.1.2",
     "webpack": "^4.26.1",
     "webpack-bundle-analyzer": "^3.1.0",
-    "webpack-cli": "^3.1.2",
+    "webpack-cli": "^3.3.12",
     "webpack-merge": "^4.2.1"
   }
 }

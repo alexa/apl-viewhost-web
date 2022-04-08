@@ -12,6 +12,7 @@ import { EditText } from './components/EditText';
 import { Frame } from './components/Frame';
 import { GridSequence } from './components/GridSequence';
 import { Image } from './components/Image';
+import { NoOpComponent } from './components/NoOpComponent';
 import { PagerComponent } from './components/pager/PagerComponent';
 import { ScrollView } from './components/ScrollView';
 import { Sequence } from './components/Sequence';
@@ -66,7 +67,9 @@ const factoryMap = {
         return new Container(renderer, component, componentFactory, parent);
     },
     [ComponentType.kComponentTypeEditText]: (renderer: APLRenderer, component: APL.Component, parent?: Component) => {
-        return new EditText(renderer, component, componentFactory, parent);
+        return  renderer.options.environment.disallowEditText ?
+            new NoOpComponent(renderer, component, componentFactory, parent) :
+            new EditText(renderer, component, componentFactory, parent);
     },
     [ComponentType.kComponentTypeFrame]: (renderer: APLRenderer, component: APL.Component, parent?: Component) => {
         return new Frame(renderer, component, componentFactory, parent);
@@ -94,8 +97,10 @@ const factoryMap = {
         return new TouchWrapper(renderer, component, componentFactory, parent);
     },
     [ComponentType.kComponentTypeVideo]: (renderer: APLRenderer, component: APL.Component, parent?: Component) => {
-        return renderer.videoFactory.create(renderer, component, componentFactory, parent);
-    },
+        return  renderer.options.environment.disallowVideo ?
+            new NoOpComponent(renderer, component, componentFactory, parent) :
+            renderer.videoFactory.create(renderer, component, componentFactory, parent);
+        },
     [ComponentType.kComponentTypeVectorGraphic]: (renderer: APLRenderer, component: APL.Component,
                                                   parent?: Component) => {
         return new VectorGraphic(renderer, component, componentFactory, new VectorGraphicElementUpdater(), parent);

@@ -4,14 +4,16 @@
  */
 
 import APLRenderer from '../APLRenderer';
-import { FilterType } from '../enums/FilterType';
-import { ImageAlign } from '../enums/ImageAlign';
-import { ImageScale } from '../enums/ImageScale';
-import { PropertyKey } from '../enums/PropertyKey';
-import { arrayEquals, last } from '../utils/ArrayUtils';
-import { numberToColor } from '../utils/ColorUtils';
-import { createSVGImageFiltersApplier, Filter } from '../utils/FilterUtils';
+import {FilterType} from '../enums/FilterType';
+import {ImageAlign} from '../enums/ImageAlign';
+import {ImageScale} from '../enums/ImageScale';
+import {PropertyKey} from '../enums/PropertyKey';
+import {IURLRequest, toUrlRequest} from '../media/IURLRequest';
+import {arrayEquals, last} from '../utils/ArrayUtils';
+import {numberToColor} from '../utils/ColorUtils';
+import {createSVGImageFiltersApplier, Filter} from '../utils/FilterUtils';
 import {
+    getFetchedBlobUrlFrom,
     loadAllImagesFromMediaSource
 } from '../utils/ImageRetrievalUtils';
 import {
@@ -21,16 +23,16 @@ import {
     IGradient,
     ImageDimensions, ScaledImageSource
 } from '../utils/ImageUtils';
-import { isSomething, Maybe, Nothing } from '../utils/Maybe';
-import { Component, FactoryFunction, IComponentProperties, SVG_NS, uuidv4 } from './Component';
-import { createAligner } from './helpers/ImageAligner';
-import { createStylesApplier, CssUnitType, ElementType } from './helpers/StylesApplier';
+import {isSomething, Maybe, Nothing} from '../utils/Maybe';
+import {Component, FactoryFunction, IComponentProperties, SVG_NS, uuidv4} from './Component';
+import {createAligner} from './helpers/ImageAligner';
+import {createStylesApplier, CssUnitType, ElementType} from './helpers/StylesApplier';
 
 /**
  * @ignore
  */
 export interface IImageProperties extends IComponentProperties {
-    [PropertyKey.kPropertySource]: string | string [];
+    [PropertyKey.kPropertySource]: IURLRequest | string[];
     [PropertyKey.kPropertyAlign]: ImageAlign;
     [PropertyKey.kPropertyBorderRadius]: number;
     [PropertyKey.kPropertyBorderWidth]: number;
@@ -60,7 +62,7 @@ interface ImageProperties {
  */
 export class Image extends Component<IImageProperties> {
     private uuid = uuidv4();
-    private imageSourcesArray: Maybe<string[]>;
+    private imageSources: Maybe<IURLRequest[]>;
     private imageProperties: ImageProperties = {} as ImageProperties;
     private canvasElement: HTMLCanvasElement = document.createElement('canvas');
     private svgElement: SVGElement = document.createElementNS(SVG_NS, 'svg') as SVGElement;
@@ -109,7 +111,7 @@ export class Image extends Component<IImageProperties> {
 
     protected onPropertiesUpdated() {
         if (this.hasSourceChanged()) {
-            this.imageSourcesArray = Nothing;
+            this.imageSources = Nothing;
         }
         this.draw();
     }
@@ -126,16 +128,16 @@ export class Image extends Component<IImageProperties> {
 
     private hasSourceChanged(): boolean {
         const sourceArray = this.getSourceArrayFromProperty();
-        if (isSomething(this.imageSourcesArray)) {
-            return !arrayEquals(sourceArray, this.imageSourcesArray);
+        if (isSomething(this.imageSources)) {
+            return !arrayEquals(sourceArray, this.imageSources);
         }
         return true;
     }
 
-    private getSourceArrayFromProperty = (): string[] => {
+    private getSourceArrayFromProperty = (): IURLRequest[] => {
         let sourceArray = this.props[PropertyKey.kPropertySource];
         sourceArray = sourceArray instanceof Array ? sourceArray : [sourceArray];
-        return sourceArray;
+        return sourceArray.map(toUrlRequest);
     }
 
     private draw = () => {
@@ -157,19 +159,19 @@ export class Image extends Component<IImageProperties> {
     }
 
     private fetchSource = async () => {
-        if (isSomething(this.imageSourcesArray)) {
+        if (isSomething(this.imageSources)) {
             return;
         }
-        this.imageSourcesArray = this.getSourceArrayFromProperty();
-        await loadAllImagesFromMediaSource(this.imageSourcesArray, this.renderer);
+        this.imageSources = this.getSourceArrayFromProperty();
+        await loadAllImagesFromMediaSource(this.imageSources, this.renderer);
     }
 
     private async renderImage() {
-        if (!isSomething(this.imageSourcesArray)) {
+        if (!isSomething(this.imageSources)) {
             return;
         }
 
-        const mainImageSource = last(this.imageSourcesArray);
+        const mainImageSource = last(this.imageSources);
 
         if (!isSomething(mainImageSource)) {
             this.logger.warn('Attempted to render image without image url.');
@@ -188,17 +190,16 @@ export class Image extends Component<IImageProperties> {
         };
         const useCanvas = this.hasNoiseFilter || this.imageScale === ImageScale.kImageScaleNone;
 
-        const lastIndex = this.imageSourcesArray.length - 1;
+        const lastIndex = this.imageSources.length - 1;
         // Scale all images
         const scaledImageSources: ScaledImageSource[] = await Promise.all(
-            this.imageSourcesArray.map(async (imageSourceUrl, index) => {
+            this.imageSources.map(async (imageSource, index) => {
 
                 let imageProcessor;
-
                 // Select the corresponding image processor
                 if (useCanvas) {
                     imageProcessor = await createCanvasScaledImageProcessor({
-                        imageSourceUrl,
+                        imageSource,
                         canvas: this.canvasElement,
                         imageDimensions,
                         renderer: this.renderer,
@@ -211,7 +212,7 @@ export class Image extends Component<IImageProperties> {
                     });
                 } else {
                     imageProcessor = await createScaledImageProcessor({
-                        imageSourceUrl,
+                        imageSource,
                         imageDimensions,
                         renderer: this.renderer,
                         scalingOption: this.imageScale
@@ -228,17 +229,23 @@ export class Image extends Component<IImageProperties> {
             scaledSource
         } = last(scaledImageSources) as ScaledImageSource;
 
+        const filterImageSources = await
+            Promise.all(scaledImageSources.map(
+                async (imageSource) =>
+                    await getFetchedBlobUrlFrom(imageSource.scaledSource.url)));
         // Apply SVG Filters
         createSVGImageFiltersApplier({
             uuid: this.uuid,
             svgElement: this.svgElement,
             imageElement: this.imageSVGElement,
             filters: this.imageFilters,
-            imageSources: scaledImageSources.map((imageSource) => imageSource.scaledSource)
+            imageSources: filterImageSources
         }).applyFiltersToSVGImage();
 
+        const scaledActualURL = await getFetchedBlobUrlFrom(scaledSource.url);
+
         // Update Image
-        this.imageSVGElement.setAttribute('href', scaledSource);
+        this.imageSVGElement.setAttribute('href', scaledActualURL);
 
         // Sizing
         createStylesApplier({

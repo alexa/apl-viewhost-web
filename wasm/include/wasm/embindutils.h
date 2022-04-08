@@ -85,6 +85,15 @@ emscripten::val
 getValFromObject(const apl::MediaSource& mediaSource, WASMMetrics* metrics);
 
 /**
+ * Converts an apl::URLRequest into an emscripten::object.
+ * @param urlRequest The URLRequest to convert
+ * @param metrics Metrics for transforming dimensions to and from core to viewhost
+ * @return The emscripten object
+ */
+emscripten::val
+getValFromObject(const apl::URLRequest& urlRequest, WASMMetrics* metrics);
+
+/**
  * Converts an apl::StyledText into an emscripten::object.
  * @param styledText The StyledText to convert
  * @param metrics Metrics for transforming dimensions to and from core to viewhost

@@ -21,23 +21,31 @@ export class ConfigurationChange {
     public static create(options?: IConfigurationChangeOptions) {
         const configChange = new ConfigurationChange();
         if (options) {
-            if (options.width && options.height) {
-                configChange.size(options.width, options.height);
+            if ('width' in options && 'height' in options) {
+                configChange.size(options.width!, options.height!);
             }
-            if (options.docTheme) {
-                configChange.theme(options.docTheme);
+            if ('docTheme' in options) {
+                configChange.theme(options.docTheme!);
             }
-            if (options.mode) {
-                configChange.viewportMode(options.mode);
+            if ('mode' in options) {
+                configChange.viewportMode(options.mode!);
             }
-            if (options.screenMode) {
-                configChange.screenMode(options.screenMode);
+            if ('screenMode' in options) {
+                configChange.screenMode(options.screenMode!);
             }
-            if (options.screenReader) {
-                configChange.screenReader(options.screenReader);
+            if ('screenReader' in options) {
+                configChange.screenReader(options.screenReader!);
             }
-            if (options.fontScale) {
-                configChange.fontScale(options.fontScale);
+            if ('fontScale' in options) {
+                configChange.fontScale(options.fontScale!);
+            }
+            if ('disallowVideo' in options) {
+                configChange.disallowVideo(options.disallowVideo!);
+            }
+            if ('environmentValues' in options) {
+                Object.keys(options.environmentValues!).forEach((key) =>
+                    configChange.environmentValue(key, options.environmentValues![key])
+                );
             }
         }
         return configChange;
@@ -104,6 +112,16 @@ export class ConfigurationChange {
      */
     public screenReader(enabled: boolean): ConfigurationChange {
         this.configurationChange.screenReader(enabled);
+        return this;
+    }
+
+    public disallowVideo(disallowVideo: boolean): ConfigurationChange {
+        this.configurationChange.disallowVideo(disallowVideo);
+        return this;
+    }
+
+    public environmentValue(key: string, value: object): ConfigurationChange {
+        this.configurationChange.environmentValue(key, value);
         return this;
     }
 
