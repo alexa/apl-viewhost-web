@@ -25,8 +25,7 @@ export class Frame extends Component<IFrameProperties> {
     constructor(renderer: APLRenderer, component: APL.Component, factory: FactoryFunction, parent?: Component) {
         super(renderer, component, factory, parent);
         this.$container.css({
-            'border-style': 'solid',
-            'overflow': 'hidden'
+            'border-style': 'solid'
         });
         this.propExecutor
             (this.setBackgroundColor, PropertyKey.kPropertyBackgroundColor)

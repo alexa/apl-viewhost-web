@@ -56,6 +56,9 @@ export class VideoHolder extends AbstractVideoComponent {
     protected setAudioTrack(audioTrack: AudioTrack) {
     }
 
+    protected setMuted(muted: boolean) {
+    }
+
     protected setSource(source: IMediaSource | IMediaSource[]) {
     }
 

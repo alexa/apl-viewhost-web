@@ -2,22 +2,22 @@
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  */
 
-import {AudioTrack} from '../../enums/AudioTrack';
-import {CommandControlMedia} from '../../enums/CommandControlMedia';
-import {PropertyKey} from '../../enums/PropertyKey';
-import {TrackState} from '../../enums/TrackState';
-import {VideoScale} from '../../enums/VideoScale';
-import {ILogger} from '../../logging/ILogger';
-import {LoggerFactory} from '../../logging/LoggerFactory';
-import {IMediaEventListener} from '../../media/IMediaEventListener';
-import {IVideoPlayer} from '../../media/IVideoPlayer';
-import {MediaErrorCode} from '../../media/MediaErrorCode';
-import {MediaState} from '../../media/MediaState';
-import {IMediaResource, PlaybackManager} from '../../media/PlaybackManager';
-import {PlaybackState} from '../../media/Resource';
-import {VideoPlayer} from '../../media/video';
-import {Video} from './Video';
-import {PromiseCallback, SetTrackCurrentTimeArgs} from './VideoCallTypes';
+import { AudioTrack } from '../../enums/AudioTrack';
+import { CommandControlMedia } from '../../enums/CommandControlMedia';
+import { PropertyKey } from '../../enums/PropertyKey';
+import { TrackState } from '../../enums/TrackState';
+import { VideoScale } from '../../enums/VideoScale';
+import { ILogger } from '../../logging/ILogger';
+import { LoggerFactory } from '../../logging/LoggerFactory';
+import { IMediaEventListener } from '../../media/IMediaEventListener';
+import { IVideoPlayer } from '../../media/IVideoPlayer';
+import { MediaErrorCode } from '../../media/MediaErrorCode';
+import { MediaState } from '../../media/MediaState';
+import { IMediaResource, PlaybackManager } from '../../media/PlaybackManager';
+import { PlaybackState } from '../../media/Resource';
+import { VideoPlayer } from '../../media/video';
+import { Video } from './Video';
+import { PromiseCallback, SetTrackCurrentTimeArgs } from './VideoCallTypes';
 
 export interface VideoEventProcessorArgs {
     videoComponent: Video;
@@ -120,9 +120,10 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
             this.updateMediaState(fromEvent, isSettingSource);
         },
         // Event Methods
-        async playMedia({source, audioTrack}) {
+        async playMedia({ source, audioTrack }) {
             this.fromEvent = true;
 
+            this.player.reset();
             this.playbackManager.setup(source);
             this.audioTrack = audioTrack;
 
@@ -139,9 +140,8 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
                 });
             }
         },
-        async controlMedia({operation, optionalValue}) {
+        async controlMedia({ operation, optionalValue }) {
             this.fromEvent = true;
-
             switch (operation) {
                 case CommandControlMedia.kCommandControlMediaPlay:
                     if (this.player.getMediaState() !== PlaybackState.PLAYING) {
@@ -175,9 +175,10 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
         },
         // Playback Control Methods
         // Event-Aware Methods
-        async play({waitForFinish, fromEvent, isSettingSource}): Promise<any> {
+        async play({ waitForFinish, fromEvent, isSettingSource }): Promise<any> {
             // Adjust Audio
-            if (this.audioTrack === AudioTrack.kAudioTrackNone) {
+            if (this.audioTrack === AudioTrack.kAudioTrackNone || this.muted) {
+                this.muted = true;
                 this.player.mute();
             } else {
                 this.player.unmute();
@@ -187,12 +188,11 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
 
             const currentMediaResource = this.playbackManager.getCurrent();
 
-            if (currentMediaResource.duration > 0) {
-                const endTime = toSecondsFromMilliseconds(currentMediaResource.offset + currentMediaResource.duration);
-                this.player.setEndTimeInSeconds(endTime);
+            let startingPoint = toMillisecondsFromSeconds(this.player.getCurrentPlaybackPositionInSeconds());
+            if (startingPoint < currentMediaResource.offset) {
+                startingPoint = currentMediaResource.offset;
+                this.player.setCurrentTimeInSeconds(toSecondsFromMilliseconds(startingPoint));
             }
-
-            const startingPoint = toMillisecondsFromSeconds(this.player.getCurrentPlaybackPositionInSeconds());
 
             await this.player.play(
                 currentMediaResource.id,
@@ -206,26 +206,43 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
                 });
             }
         },
-        async pause({fromEvent}): Promise<any> {
+        async pause({ fromEvent }): Promise<any> {
             if (videoState === PlaybackState.PLAYING || videoState === PlaybackState.BUFFERING) {
                 await this.player.pause();
             }
         },
-        async seek({seekOffset, fromEvent}): Promise<any> {
-            const mediaResource: IMediaResource = this.playbackManager.getCurrent();
-            const mediaOffset = toSecondsFromMilliseconds(mediaResource.offset);
-            const currentPlaybackPosition: number = this.player.getCurrentPlaybackPositionInSeconds();
-            const desiredPlaybackPosition: number = currentPlaybackPosition + toSecondsFromMilliseconds(seekOffset);
-
+        async end({ fromEvent }): Promise<any> {
+            await this.player.end();
+            const endTimeMs = this.currentMediaState.duration + this.currentMediaResource.offset;
+            if (this.currentMediaState.currentTime > this.currentMediaState.duration) {
+                this.player.setCurrentTimeInSeconds(toSecondsFromMilliseconds(endTimeMs));
+            }
+        },
+        async seek({ seekOffset, fromEvent }): Promise<any> {
             await ensureLoaded.call(this, fromEvent);
+            const mediaResource: IMediaResource = this.playbackManager.getCurrent();
+            const mediaOffsetMs: number = mediaResource.offset;
+            const currentPlaybackPositionMs: number = toMillisecondsFromSeconds(
+                this.player.getCurrentPlaybackPositionInSeconds()
+            );
+            const desiredPlaybackPositionMs: number = currentPlaybackPositionMs + seekOffset;
+            const videoDurationMs = toMillisecondsFromSeconds(this.player.getDurationInSeconds());
+            const isNonDefaultDuration: boolean = mediaResource.duration > 0;
+            const isCurrentPositionOutOfBounds: boolean =
+                videoDurationMs <= desiredPlaybackPositionMs;
 
-            if (this.player.getDurationInSeconds() <= toSecondsFromMilliseconds(desiredPlaybackPosition)) {
+            if (isCurrentPositionOutOfBounds) {
                 // minus unit time otherwise will rollover to start
-                this.player.setCurrentTimeInSeconds(this.player.getDurationInSeconds() - 0.001);
-            } else if (desiredPlaybackPosition < mediaOffset) {
-                this.player.setCurrentTimeInSeconds(mediaOffset);
+                if (isNonDefaultDuration) {
+                    this.player.setCurrentTimeInSeconds(mediaOffsetMs +
+                        toSecondsFromMilliseconds(mediaResource.duration) - 0.001);
+                } else {
+                    this.player.setCurrentTimeInSeconds(toSecondsFromMilliseconds(videoDurationMs) - 0.001);
+                }
+            } else if (desiredPlaybackPositionMs < mediaOffsetMs) {
+                this.player.setCurrentTimeInSeconds(toSecondsFromMilliseconds(mediaOffsetMs));
             } else {
-                this.player.setCurrentTimeInSeconds(desiredPlaybackPosition);
+                this.player.setCurrentTimeInSeconds(toSecondsFromMilliseconds(desiredPlaybackPositionMs));
             }
 
             this.updateMediaState(fromEvent);
@@ -233,15 +250,20 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
         async rewind(): Promise<any> {
             await this.delegate.pause();
             const currentMediaResource = this.playbackManager.getCurrent();
-            const currentTime = toMillisecondsFromSeconds(this.player.getCurrentPlaybackPositionInSeconds());
-            await this.delegate.seek(-(currentTime - currentMediaResource.offset));
+            this.player.setCurrentTimeInSeconds(
+                toSecondsFromMilliseconds(currentMediaResource.offset)
+            );
         },
-        async previous({fromEvent}): Promise<any> {
-            await this.delegate.rewind();
-            this.playbackManager.previous();
+        async previous({ fromEvent }): Promise<any> {
+            if (!this.playbackManager.hasPrevious()) {
+                await this.delegate.rewind();
+            } else {
+                await this.delegate.pause();
+                this.playbackManager.previous();
+            }
             await ensureLoaded.call(this, fromEvent);
         },
-        async next({fromEvent}): Promise<any> {
+        async next({ fromEvent }): Promise<any> {
             await this.delegate.pause();
 
             if (!this.playbackManager.hasNext()) {
@@ -251,16 +273,27 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
                 await ensureLoaded.call(this, fromEvent);
             }
         },
-        async setTrack({trackIndex, fromEvent}): Promise<any> {
+        async setTrack({ trackIndex, fromEvent }): Promise<any> {
             await this.delegate.pause();
             this.playbackManager.setCurrent(trackIndex);
+            this.updateMediaState(fromEvent);
             await ensureLoaded.call(this, fromEvent);
         },
         // End Event-Aware Methods
-        setAudioTrack({audioTrack}) {
+        setAudioTrack({ audioTrack }) {
             this.audioTrack = audioTrack;
         },
-        async setSource({source}): Promise<any> {
+        setMuted({ muted, fromEvent }) {
+            this.muted = muted;
+
+            if (this.muted) {
+                this.player.mute();
+            } else {
+                this.player.unmute();
+            }
+            this.updateMediaState(fromEvent);
+        },
+        async setSource({ source }): Promise<any> {
             this.isSettingSource = true;
 
             // Configure Player and Playback
@@ -284,18 +317,18 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
             trackCurrentTime = updatedTrackCurrentTime;
             this.player.setCurrentTimeInSeconds(toSecondsFromMilliseconds(trackCurrentTime));
         },
-        setTrackIndex({trackIndex}) {
+        setTrackIndex({ trackIndex }) {
             if (this.props[PropertyKey.kPropertyTrackIndex]) {
                 // Fire and Forget
                 this.delegate.setTrack(trackIndex);
             }
         },
-        async setTrackPaused({shouldBePaused}) {
+        async setTrackPaused({ shouldBePaused }) {
             if (shouldBePaused && trackShouldBePaused.call(this)) {
                 await this.delegate.pause();
             }
         },
-        setScale({scale}) {
+        setScale({ scale }) {
             let scaleType: 'contain' | 'cover' = 'contain';
             switch (scale) {
                 case VideoScale.kVideoScaleBestFit:
@@ -315,21 +348,40 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
                 return;
             }
 
-            let offset: number = 0;
+            let offsetMs: number = 0;
+            let mediaResourceDurationMs = 0;
             try {
-                offset = playBackManager.getCurrent().offset;
+                const mediaResource = playBackManager.getCurrent();
+                mediaResourceDurationMs = mediaResource.duration;
+                offsetMs = mediaResource.offset;
             } catch (error) {
                 logger.warn('Can not get current media resource');
             }
+
             this.currentMediaState.currentTime = toMillisecondsFromSeconds(
                 this.player.getCurrentPlaybackPositionInSeconds()
-            ) - offset;
+            ) - offsetMs;
             this.currentMediaState.duration = toMillisecondsFromSeconds(
                 this.player.getDurationInSeconds()
-            ) - offset;
+            );
+
+            const isNonDefaultDuration: boolean = mediaResourceDurationMs > 0;
+            if (isNonDefaultDuration) {
+                if (mediaResourceDurationMs > this.currentMediaState.duration - offsetMs) {
+                    this.currentMediaState.duration = this.currentMediaState.duration - offsetMs;
+                } else {
+                    this.currentMediaState.duration = mediaResourceDurationMs;
+                }
+                if (this.currentMediaState.currentTime > this.currentMediaState.duration) {
+                    this.delegate.end();
+                }
+            } else {
+                this.currentMediaState.duration -= offsetMs;
+            }
 
             this.currentMediaState.trackCount = this.playbackManager.getTrackCount();
             this.currentMediaState.trackIndex = this.playbackManager.getCurrentIndex();
+            this.currentMediaState.muted = this.muted;
 
             ensureValidMediaState(this.currentMediaState);
             if (!isSettingSource) {
@@ -338,7 +390,7 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
             }
         },
         // Component Methods
-        applyCssShadow({shadowParams}) {
+        applyCssShadow({ shadowParams }) {
             if (this.player) {
                 this.player.applyCssShadow(shadowParams);
             }

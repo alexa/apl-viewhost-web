@@ -91,7 +91,8 @@ ComponentMethods::updateMediaState(apl::ComponentPtr& component, const emscripte
     if (!state.hasOwnProperty("trackIndex") || !state.hasOwnProperty("trackCount") ||
         !state.hasOwnProperty("currentTime") || !state.hasOwnProperty("duration") ||
         !state.hasOwnProperty("paused") || !state.hasOwnProperty("ended") ||
-        !state.hasOwnProperty("errorCode") || !state.hasOwnProperty("trackState"))
+        !state.hasOwnProperty("errorCode") || !state.hasOwnProperty("trackState") ||
+        !state.hasOwnProperty("muted"))
         {
         LOG(LogLevel::ERROR) << "Can't update media state. MediaStatus structure is wrong.";
         return;
@@ -99,7 +100,8 @@ ComponentMethods::updateMediaState(apl::ComponentPtr& component, const emscripte
 
     MediaState mediaState(state["trackIndex"].as<int>(), state["trackCount"].as<int>(),
                                 state["currentTime"].as<int>(), state["duration"].as<int>(),
-                                state["paused"].as<bool>(), state["ended"].as<bool>());
+                                state["paused"].as<bool>(), state["ended"].as<bool>(),
+                                state["muted"].as<bool>());
     mediaState.withTrackState(static_cast<apl::TrackState>(state["trackState"].as<int>()));
     mediaState.withErrorCode(state["errorCode"].as<int>());
 

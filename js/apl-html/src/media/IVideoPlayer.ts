@@ -17,11 +17,13 @@ export interface IVideoPlayer extends IPlayer {
 
     getCurrentPlaybackPositionInSeconds(): number;
 
-    setEndTimeInSeconds(endTimeInSeconds: number): void;
-
     getDurationInSeconds(): number;
 
-    pause(): Promise<void>;
+    pause(): void;
+
+    end(): void;
+
+    reset(): void;
 
     destroy(): void;
 }

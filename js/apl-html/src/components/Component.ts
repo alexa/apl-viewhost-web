@@ -29,6 +29,7 @@ import {applyAplRectToStyle, applyPaddingToStyle} from './helpers/StylesUtil';
  */
 const COMPONENT_TYPE_MAP = {
     [ComponentType.kComponentTypeContainer]: 'Container',
+    [ComponentType.kComponentTypeEditText]: 'EditText',
     [ComponentType.kComponentTypeFrame]: 'Frame',
     [ComponentType.kComponentTypeImage]: 'Image',
     [ComponentType.kComponentTypePager]: 'Pager',
@@ -45,6 +46,22 @@ const SUPPORTED_LAYOUT_DIRECTIONS = {
     [LayoutDirection.kLayoutDirectionLTR]: 'ltr',
     [LayoutDirection.kLayoutDirectionRTL]: 'rtl'
 };
+
+const LEGACY_CLIPPING_COMPONENTS_SET = new Set([
+    ComponentType.kComponentTypeFrame,
+    ComponentType.kComponentTypePager,
+    ComponentType.kComponentTypeScrollView,
+    ComponentType.kComponentTypeSequence,
+    ComponentType.kComponentTypeGridSequence
+]);
+
+const NO_CLIPPING_COMPONENTS_SET = new Set([
+    ComponentType.kComponentTypeEditText,
+    ComponentType.kComponentTypeImage,
+    ComponentType.kComponentTypeText,
+    ComponentType.kComponentTypeTouchWrapper,
+    ComponentType.kComponentTypeVideo
+]);
 
 export const SVG_NS = 'http://www.w3.org/2000/svg';
 export const uuidv4 = require('uuid/v4');
@@ -151,6 +168,7 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
             '-moz-box-sizing': 'border-box',
             'box-sizing': 'border-box'
         });
+        this.checkComponentTypeAndEnableClipping();
         this.id = component.getUniqueId();
         this.$container.attr('id', this.id);
 
@@ -415,6 +433,9 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
      * Resizes child component to fit parent component when applicable
      */
     private sizeToFit(): void {
+        if (this.renderer && this.renderer.getLegacyClippingEnabled()) {
+            return;
+        }
         // adjust bounds
         const componentHasBounds = !!this.bounds;
         const componentHasParent = !!this.parent;
@@ -701,5 +722,34 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
             return lang;
         }
         return '';
+    }
+
+    /**
+     * Enable clipping if version is <= 1.5 or if component is part the legacy-clipping set.
+     * Never enable clipping for if component is part of the no-clipping set.
+     *
+     */
+    private checkComponentTypeAndEnableClipping() {
+        const componentType = this.component.getType();
+
+        // Don't clip for these components
+        if (NO_CLIPPING_COMPONENTS_SET.has(componentType)) {
+            return;
+        }
+
+        const isParentLegacy = this.parent && LEGACY_CLIPPING_COMPONENTS_SET.has(this.parent.component.getType());
+        const isLegacyComponentType: boolean = LEGACY_CLIPPING_COMPONENTS_SET.has(componentType);
+        const isLegacyAplVersion: boolean = this.renderer && this.renderer.getLegacyClippingEnabled();
+
+        if (isLegacyComponentType || isParentLegacy || !isLegacyAplVersion) {
+            this.enableClipping();
+        }
+    }
+
+    /**
+     * Enable clipping
+     */
+    protected enableClipping() {
+        this.$container.css('overflow', 'hidden');
     }
 }

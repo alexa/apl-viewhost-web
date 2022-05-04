@@ -15,6 +15,7 @@ export class MediaState implements APL.IMediaState  {
     public duration: number;
     public ended: boolean;
     public paused: boolean;
+    public muted: boolean;
     public trackCount: number;
     public trackIndex: number;
     private errorCode: number;
@@ -25,6 +26,7 @@ export class MediaState implements APL.IMediaState  {
         this.duration = 0;
         this.ended = false;
         this.paused = true;
+        this.muted = false;
         this.trackCount = 0;
         this.trackIndex = 0;
         this.errorCode = MediaErrorCode.DEFAULT;

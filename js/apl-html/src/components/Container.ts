@@ -12,10 +12,6 @@ import { Component, FactoryFunction } from './Component';
 export class Container extends Component {
     constructor(renderer: APLRenderer, component: APL.Component, factory: FactoryFunction, parent?: Component) {
         super(renderer, component, factory, parent);
-
-        this.$container.css({
-            overflow: 'hidden'
-        });
     }
 
     protected isLayout(): boolean {

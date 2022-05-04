@@ -66,6 +66,7 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
         return new APLWASMRenderer(options);
     }
 
+    protected documentAplVersion: string;
     protected legacyKaroke: boolean;
 
     /// Logger to be used for core engine logs.
@@ -91,6 +92,7 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
         super(options);
         this.coreLogger = LoggerFactory.getLogger('Core');
         this.legacyKaroke = options.content.getAPLVersion() === LEGACY_KARAOKE_APL_VERSION;
+        this.documentAplVersion = options.content.getAPLVersion();
         this.metrics = Module.Metrics.create();
         this.metrics.size(this.options.viewport.width, this.options.viewport.height)
             .dpi(this.options.viewport.dpi)
@@ -133,6 +135,14 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
      */
     public getLegacyKaraoke(): boolean {
         return this.legacyKaroke;
+    }
+
+    /**
+     * @internal
+     * @ignore
+     */
+    protected getDocumentAplVersion(): string {
+        return this.documentAplVersion;
     }
 
     /**

@@ -28,7 +28,6 @@ export class ScrollView extends Scrollable<IScrollViewProperties> {
 
     public init() {
         super.init();
-        this.$container.css('overflow', 'hidden');
     }
 
     /**

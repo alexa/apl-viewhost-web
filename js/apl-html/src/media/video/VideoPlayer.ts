@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {IMediaEventListener} from '../IMediaEventListener';
-import {IVideoPlayer} from '../IVideoPlayer';
-import {PlaybackState} from '../Resource';
-import {EmitBehavior, IPlaybackStateHandler, PlaybackStateHandler} from './PlaybackStateHandler';
+import { IMediaEventListener } from '../IMediaEventListener';
+import { IVideoPlayer } from '../IVideoPlayer';
+import { PlaybackState } from '../Resource';
+import { EmitBehavior, IPlaybackStateHandler, PlaybackStateHandler } from './PlaybackStateHandler';
 
 export interface PlayerInitializationArgs {
     player: HTMLVideoElement;
@@ -15,9 +15,6 @@ export interface PlayerInitializationArgs {
 }
 
 export function createVideoPlayer(eventListener: IMediaEventListener): IVideoPlayer {
-    // Private Variables
-    let playerEndTime: number = undefined;
-
     // Private Functions
     function initializePlayer(args: PlayerInitializationArgs) {
         const {
@@ -45,16 +42,6 @@ export function createVideoPlayer(eventListener: IMediaEventListener): IVideoPla
 
     function updateCurrentTimeTo(time: number): void {
         this.player.currentTime = time / 1000;
-    }
-
-    function videoTimeWasUpdated(endTime: number) {
-        if (!isValidNumber(endTime)) {
-            return;
-        }
-        const currentTimeAtOrBeyondEndTime = this.player.currentTime >= endTime;
-        if (currentTimeAtOrBeyondEndTime) {
-            this.pause();
-        }
     }
 
     // Video LifeCycle Callbacks
@@ -107,10 +94,10 @@ export function createVideoPlayer(eventListener: IMediaEventListener): IVideoPla
 
     function attachOnTimeUpdateCallback() {
         function onTimeUpdateCallback() {
-            if (this.playbackStateHandler.currentPlaybackState !== PlaybackState.PAUSED) {
-                this.playbackStateHandler.transitionToState(PlaybackState.PLAYING, EmitBehavior.AlwaysEmit);
+            const currentPlaybackState = this.playbackStateHandler.currentPlaybackState;
+            if (currentPlaybackState === PlaybackState.PLAYING) {
+                this.playbackStateHandler.transitionToState(currentPlaybackState, EmitBehavior.AlwaysEmit);
             }
-            videoTimeWasUpdated.bind(this, playerEndTime);
         }
 
         this.player.ontimeupdate = onTimeUpdateCallback.bind(this);
@@ -143,9 +130,6 @@ export function createVideoPlayer(eventListener: IMediaEventListener): IVideoPla
         getCurrentPlaybackPositionInSeconds(): number {
             return this.player.currentTime;
         },
-        setEndTimeInSeconds(endTimeInSeconds: number): void {
-            playerEndTime = endTimeInSeconds;
-        },
         getDurationInSeconds(): number {
             return this.player.duration;
         },
@@ -157,12 +141,12 @@ export function createVideoPlayer(eventListener: IMediaEventListener): IVideoPla
         },
         // IPlayer Interface
         load(id: string, url: string): Promise<void> {
+            attachOnLoadedDataCallback.call(this);
             this.player.id = id;
-            if (urlDifferentFromPlayerSource(this.player, url)) {
-                this.playbackStateHandler.transitionToState(PlaybackState.IDLE);
-                this.player.src = url;
-                this.player.load();
-            }
+            this.playbackStateHandler.transitionToState(PlaybackState.IDLE);
+            this.player.src = url;
+            this.player.load();
+
             return Promise.resolve(undefined);
         },
         play(id: string, url: string, offset: number): Promise<void> {
@@ -177,8 +161,12 @@ export function createVideoPlayer(eventListener: IMediaEventListener): IVideoPla
                     .catch(reject);
             });
         },
-        pause(): Promise<void> {
+        pause() {
             this.playbackStateHandler.transitionToState(PlaybackState.PAUSED);
+            return this.player.pause();
+        },
+        end() {
+            this.playbackStateHandler.transitionToState(PlaybackState.ENDED);
             return this.player.pause();
         },
         setVolume(volume: number): void {
@@ -193,13 +181,16 @@ export function createVideoPlayer(eventListener: IMediaEventListener): IVideoPla
         getMediaState(): PlaybackState {
             return this.playbackStateHandler.currentPlaybackState;
         },
-        destroy() {
+        reset() {
             // Pause any existing playback
             this.player.pause();
             // Empty out the source
             this.player.removeAttribute('src');
             // Reload the player to refresh its state
             this.player.load();
+        },
+        destroy() {
+            this.reset();
             // Remove from DOM
             this.player.remove();
         }
@@ -224,15 +215,6 @@ export function createVideoPlayer(eventListener: IMediaEventListener): IVideoPla
             configurable: false
         }
     });
-}
-
-// Helper Functions
-function urlDifferentFromPlayerSource(player: HTMLVideoElement, url: string): boolean {
-    return player.src !== url;
-}
-
-function isValidNumber(maybeNumber: any): maybeNumber is number {
-    return maybeNumber !== undefined && typeof maybeNumber === 'number';
 }
 
 // Helper Enums

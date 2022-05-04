@@ -12,6 +12,12 @@ option(WEBSOCKET "Build Websocket Server" OFF)
 option(EMSCRIPTEN_SOURCEMAPS "Builds source maps." OFF)
 option(WASM_PROFILING "WASM profiling mode." OFF)
 
+if(WASM)
+    # make sure we enable exception support when building APL core, since PEGTL
+    # relies on it
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexceptions")
+endif()
+
 if(${APL_CORE_PATH} STREQUAL "OFF")
     set(APL_CORE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../APLCoreEngine)
 endif()

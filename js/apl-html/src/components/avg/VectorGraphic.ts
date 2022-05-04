@@ -53,7 +53,6 @@ export class VectorGraphic extends ActionableComponent<IVectorGraphicProperties>
         super(renderer, component, factory, parent);
         this.svg = document.createElementNS(VectorGraphic.SVG_NS, 'svg') as SVGElement;
         this.container.appendChild(this.svg);
-        this.$container.css('overflow', 'hidden');
         this.vectorGraphicUpdater = vectorGraphicUpdater;
     }
 

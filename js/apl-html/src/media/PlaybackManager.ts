@@ -92,6 +92,11 @@ export class PlaybackManager {
         return !!(currentResource && this.resources.get(this.current + 1));
     }
 
+    public hasPrevious(): boolean {
+        const currentResource = this.resources.get(this.current);
+        return !!(currentResource && this.resources.get(this.current - 1));
+    }
+
     public repeat(): boolean {
         const currentResource = this.resources.get(this.current);
         if (currentResource && currentResource.repeatCount === -1) {

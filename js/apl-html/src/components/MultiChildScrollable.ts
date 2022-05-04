@@ -36,7 +36,6 @@ export abstract class MultiChildScrollable extends Scrollable<IMultiChildScrolla
 
     public init() {
         super.init();
-        this.$container.css('overflow', 'hidden');
     }
 
     protected allowFocus(requestedDistance: number, moveTo: HTMLDivElement) {

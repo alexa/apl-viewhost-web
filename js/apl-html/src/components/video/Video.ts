@@ -76,6 +76,12 @@ export class Video extends AbstractVideoComponent {
         });
     }
 
+    public async end(): Promise<any> {
+        this.videoEventSequencer.enqueueForProcessing(VideoInterface.END, {
+            fromEvent: this.fromEvent
+        });
+    }
+
     public async seek(offset: number): Promise<any> {
         this.videoEventSequencer.enqueueForProcessing(VideoInterface.SEEK, {
             seekOffset: offset,
@@ -111,6 +117,13 @@ export class Video extends AbstractVideoComponent {
     protected setAudioTrack(audioTrack: AudioTrack) {
         this.videoEventSequencer.enqueueForProcessing(VideoInterface.SET_AUDIO_TRACK, {
             audioTrack
+        });
+    }
+
+    protected setMuted(muted: boolean) {
+        this.videoEventSequencer.enqueueForProcessing(VideoInterface.SET_MUTED, {
+            muted,
+            fromEvent: this.fromEvent
         });
     }
 

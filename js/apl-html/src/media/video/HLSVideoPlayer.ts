@@ -106,7 +106,7 @@ export function createHLSVideoPlayer(hlsVideoPlayerArgs: HLSVideoPlayerArgs): IV
         offset: number;
     }
 
-    function playFromHLSPlayer(args: PlayFromHLSPlayerArgs) {
+    async function playFromHLSPlayer(args: PlayFromHLSPlayerArgs) {
         const {
             player,
             url,
@@ -135,7 +135,8 @@ export function createHLSVideoPlayer(hlsVideoPlayerArgs: HLSVideoPlayerArgs): IV
         }
 
         player.startLoad(offset);
-        this.player.play()
+
+        await this.player.play()
             .then(resolve)
             .catch(reject);
     }
@@ -213,7 +214,6 @@ export function createHLSVideoPlayer(hlsVideoPlayerArgs: HLSVideoPlayerArgs): IV
                     default:
                         videoPlayerState = VideoPlayerState.ERROR;
                         handlePlaybackError.call(this, HLSPlaybackErrors.FATAL_ERROR);
-                        player.destroy();
                         reject();
                         break;
                 }
@@ -222,13 +222,20 @@ export function createHLSVideoPlayer(hlsVideoPlayerArgs: HLSVideoPlayerArgs): IV
 
         // Prepare for Video Playback
         player.on(hls.Events.MEDIA_ATTACHED, () => {
-            player.on(hls.Events.MANIFEST_PARSED, () => {
-                videoPlayerState = VideoPlayerState.READY;
+            player.loadSource(url);
+        });
+
+        if (isAlternativeHLSFormat(url)) {
+            player.on(hls.Events.FRAG_LOADED, () => {
                 this.playbackStateHandler.transitionToState(PlaybackState.LOADED);
                 resolve();
             });
-            player.loadSource(url);
-        });
+        } else {
+            player.on(hls.Events.MANIFEST_PARSED, () => {
+                this.playbackStateHandler.transitionToState(PlaybackState.LOADED);
+                resolve();
+            });
+        }
 
         player.attachMedia(this.player);
     }
@@ -267,8 +274,9 @@ export function createHLSVideoPlayer(hlsVideoPlayerArgs: HLSVideoPlayerArgs): IV
     const hlsVideoPlayer = {
         load(id: string, url: string): Promise<void> {
             this.player.id = id;
-
-            if (isHLSExtension(url)) {
+            if (isHLSSource(url)) {
+                this.player.onloadeddata = undefined;
+                this.playbackStateHandler.transitionToState(PlaybackState.IDLE);
                 return loadHLS.call(this, url);
             }
 
@@ -277,7 +285,7 @@ export function createHLSVideoPlayer(hlsVideoPlayerArgs: HLSVideoPlayerArgs): IV
         },
         play(id: string, url: string, offset: number): Promise<void> {
             this.player.id = id;
-            if (isHLSExtension(url)) {
+            if (isHLSSource(url)) {
                 return playHLS.call(this, url, offset);
             }
             return this._delegate.play.call(this, id, url, offset);
@@ -297,17 +305,33 @@ function hlsIsSupported(): boolean {
     return hls.isSupported();
 }
 
+const SupportedHLSAlternativeFormats = [
+    'format=m3u8-aapl'
+];
+
 const SupportedHLSExtensionTypes = [
     'm3u8',
     'hls'
 ];
 
 function isHLSExtension(url: string): boolean {
-    const extension = path.extname(url);
-    // tslint:disable-next-line:only-arrow-functions
-    return SupportedHLSExtensionTypes.reduce(function extensionCheck(accumulator, currentExtensionType) {
+    const urlObject = new URL(url);
+    urlObject.search = '';
+
+    const extension = path.extname(urlObject);
+    return SupportedHLSExtensionTypes.reduce((accumulator, currentExtensionType) => {
         return accumulator || extension.includes(currentExtensionType);
     }, false);
+}
+
+function isAlternativeHLSFormat(url: any): boolean {
+    return SupportedHLSAlternativeFormats.reduce((accumulator, currentFormat) => {
+        return accumulator || url.includes(currentFormat);
+    }, false);
+}
+
+function isHLSSource(url: string) {
+    return isHLSExtension(url) || isAlternativeHLSFormat(url);
 }
 
 const SupportedMediaResourceTypes = [

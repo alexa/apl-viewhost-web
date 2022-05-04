@@ -39,7 +39,7 @@ export class TouchWrapper extends ActionableComponent<ITouchWrapperProperties> {
             if (child.action === ChildAction.Insert) {
                 // hide the overflow caused by insert.
                 // It will even temporary hide eg.shadow which renders out of box during the insert.
-                this.$container.css('overflow', 'hidden');
+                this.enableClipping();
             } else {
                 // make sure the wrapper renders child element as expected.
                 this.$container.css('overflow', 'visible');

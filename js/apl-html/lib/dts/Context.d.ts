@@ -44,9 +44,9 @@ declare namespace APL {
 
         public setBackground(background: APL.IBackground): void;
 
-        public getDataSourceContext(): string;
+        public getDataSourceContext(): Promise<string>;
 
-        public getVisualContext(): string;
+        public getVisualContext(): Promise<string>;
 
         public clearPending(): void;
 

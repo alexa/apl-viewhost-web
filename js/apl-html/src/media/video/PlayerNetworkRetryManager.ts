@@ -35,7 +35,6 @@ export function createPlayerNetworkRetryManager(args: PlayerNetworkRetryManagerA
     return {
         fail(): void {
             errorCallback();
-            player.destroy();
         },
         retry(url, errorDetails): void {
             remainingTries -= 1;

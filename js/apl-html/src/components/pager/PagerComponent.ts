@@ -23,9 +23,6 @@ export class PagerComponent extends ActionableComponent<IPagerProperties> {
 
     constructor(renderer: APLRenderer, component: APL.Component, factory: FactoryFunction, parent?: Component) {
         super(renderer, component, factory, parent);
-        this.$container.css({
-            overflow: 'hidden'
-        });
     }
 
     protected isLayout(): boolean {

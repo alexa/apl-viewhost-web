@@ -23,6 +23,7 @@ import { IExtensionManager } from './extensions/IExtensionManager';
 import { ILogger } from './logging/ILogger';
 import { LoggerFactory } from './logging/LoggerFactory';
 import { AudioPlayerFactory } from './media/audio/AudioPlayer';
+import { createAplVersionUtils } from './utils/AplVersionUtils';
 import { browserIsEdge } from './utils/BrowserUtils';
 import { ARROW_DOWN, ARROW_LEFT, ARROW_RIGHT, ARROW_UP, ENTER_KEY, HttpStatusCodes } from './utils/Constant';
 import { isDisplayState } from './utils/DisplayStateUtils';
@@ -31,6 +32,8 @@ import { fetchMediaResource } from './utils/MediaRequestUtils';
 
 const agentName = 'AplWebRenderer';
 const agentVersion = '1.0.0';
+const MAX_LEGACY_CLIPPING_APL_VERSION = '1.5';
+
 // For touch enabled browser, touch event will be followed by a mouse event after 300ms-500ms up to browser.
 // This will cause issue which triggers click or press events twice.
 // setup a 500ms gap between two events.
@@ -300,6 +303,12 @@ export default abstract class APLRenderer<Options = any> {
      * @ignore
      */
     public abstract getLegacyKaraoke(): boolean;
+
+    /**
+     * @internal
+     * @ignore
+     */
+    protected abstract getDocumentAplVersion(): string;
 
     /** A reference to the APL root context */
     public context: APL.Context;
@@ -908,6 +917,19 @@ export default abstract class APLRenderer<Options = any> {
                 }
             }, 200);
         }
+    }
+
+    /**
+     * @internal
+     * @ignore
+     */
+    public getLegacyClippingEnabled(): boolean {
+        const aplVersionUtils = createAplVersionUtils();
+
+        const documentAplVersion: number = aplVersionUtils.getVersionCode(this.getDocumentAplVersion());
+        const legacyClippingAplVersion: number = aplVersionUtils.getVersionCode(MAX_LEGACY_CLIPPING_APL_VERSION);
+
+        return documentAplVersion <= legacyClippingAplVersion;
     }
 
     /**

@@ -40,6 +40,7 @@ export abstract class AbstractVideoComponent extends Component<IVideoProperties>
         this.propExecutor
         (this.setScaleFromProp, PropertyKey.kPropertyScale)
         (this.setAudioTrackFromProp, PropertyKey.kPropertyAudioTrack)
+        (this.setMutedFromProp, PropertyKey.kPropertyMuted)
         (this.setTrackCurrentTimeFromProp, PropertyKey.kPropertyTrackCurrentTime)
         (this.setPauseFromProp, PropertyKey.kPropertyTrackPaused)
         (this.setSourceFromProp, PropertyKey.kPropertySource)
@@ -70,6 +71,8 @@ export abstract class AbstractVideoComponent extends Component<IVideoProperties>
 
     protected abstract setAudioTrack(audioTrack: AudioTrack);
 
+    protected abstract setMuted(muted: boolean);
+
     protected abstract async setSource(source: IMediaSource | IMediaSource[]);
 
     protected abstract setTrackCurrentTime(trackCurrentTime: number);
@@ -87,6 +90,10 @@ export abstract class AbstractVideoComponent extends Component<IVideoProperties>
 
     private setAudioTrackFromProp = () => {
         this.setAudioTrack(this.props[PropertyKey.kPropertyAudioTrack]);
+    }
+
+    private setMutedFromProp = () => {
+        this.setMuted(this.props[PropertyKey.kPropertyMuted]);
     }
 
     private setSourceFromProp = () => {

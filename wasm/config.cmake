@@ -15,7 +15,6 @@ endif(WASM_ASMJS)
 # this prevents exporting node specific code
 set(WASM_FLAGS "${WASM_FLAGS} -s ENVIRONMENT='web' -s SINGLE_FILE=1")
 
-# removes the emulated filesystem layer in emscripten
 set(WASM_FLAGS "${WASM_FLAGS} -s NO_FILESYSTEM=1")
 
 # Bigger values do more inlining and produce bigger code for little performance increase
