@@ -1,10 +1,10 @@
 # Alexa Presentation Language (APL) Viewhost Web
 
 <p>
- <a href="https://github.com/alexa/apl-viewhost-web/tree/v2022.1" alt="version">
- <img src="https://img.shields.io/badge/stable%20version-2022.1-brightgreen" /></a>
- <a href="https://github.com/alexa/apl-core-library/tree/v2022.1" alt="APLCore">
- <img src="https://img.shields.io/badge/apl%20core%20library-2022.1-navy" /></a>
+ <a href="https://github.com/alexa/apl-viewhost-web/tree/v2022.1.1" alt="version">
+ <img src="https://img.shields.io/badge/stable%20version-2022.1.1-brightgreen" /></a>
+ <a href="https://github.com/alexa/apl-core-library/tree/v2022.1.1" alt="APLCore">
+ <img src="https://img.shields.io/badge/apl%20core%20library-2022.1.1-navy" /></a>
 </p>
 
 ## Introduction

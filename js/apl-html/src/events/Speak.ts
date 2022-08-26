@@ -25,6 +25,9 @@ export class Speak extends Event implements IPlaybackEventListener {
 
   public onPlaybackStarted() {
     this.renderer.onSpeakEventStart(this.type);
+    if (this.component === undefined) {
+      return;
+    }
     const markers = this.renderer.audioPlayer.getLatestMarkers();
     const componentType = this.component.component.getType();
     const useSequencer = HighlightSequencer.shouldUseSequencer(markers,
@@ -59,8 +62,10 @@ export class Speak extends Event implements IPlaybackEventListener {
 
   public async execute() {
     this.component = this.renderer.componentMap[this.event.getComponent().getUniqueId()];
-    this.align = this.event.getValue<CommandScrollAlign>(EventProperty.kEventPropertyAlign);
-    this.highlightMode = this.event.getValue<CommandHighlightMode>(EventProperty.kEventPropertyHighlightMode);
+    if (this.component !== undefined) {
+      this.align = this.event.getValue<CommandScrollAlign>(EventProperty.kEventPropertyAlign);
+      this.highlightMode = this.event.getValue<CommandHighlightMode>(EventProperty.kEventPropertyHighlightMode);
+    }
 
     this.renderer.audioPlayer.playLatest(this);
   }
