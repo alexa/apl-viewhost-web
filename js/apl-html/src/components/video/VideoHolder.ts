@@ -4,10 +4,7 @@
  */
 
 import APLRenderer from '../../APLRenderer';
-import { AudioTrack } from '../../enums/AudioTrack';
-import { CommandControlMedia } from '../../enums/CommandControlMedia';
 import { VideoScale } from '../../enums/VideoScale';
-import { IMediaSource } from '../../media/IMediaSource';
 import { PlaybackState } from '../../media/Resource';
 import { Component, FactoryFunction } from '../Component';
 import { AbstractVideoComponent } from './AbstractVideoComponent';
@@ -19,14 +16,7 @@ export class VideoHolder extends AbstractVideoComponent {
     constructor(renderer: APLRenderer, component: APL.Component, factory: FactoryFunction, parent?: Component) {
         super(renderer, component, factory, parent);
     }
-
     public onEvent(event: PlaybackState): void {
-    }
-
-    public async playMedia(source: IMediaSource | IMediaSource[], audioTrack: AudioTrack) {
-    }
-
-    public async controlMedia(operation: CommandControlMedia, optionalValue: number) {
     }
 
     public async play(waitForFinish: boolean = false) {
@@ -35,36 +25,6 @@ export class VideoHolder extends AbstractVideoComponent {
     public async pause() {
     }
 
-    public async next() {
-    }
-
-    public async previous() {
-    }
-
-    public async rewind() {
-    }
-
-    public async seek(offset: number) {
-    }
-
-    public async setTrack(trackIndex: number) {
-    }
-
     protected setScale(scale: VideoScale) {
-    }
-
-    protected setAudioTrack(audioTrack: AudioTrack) {
-    }
-
-    protected setMuted(muted: boolean) {
-    }
-
-    protected setSource(source: IMediaSource | IMediaSource[]) {
-    }
-
-    protected setTrackCurrentTime(trackCurrentTime: number) {
-    }
-
-    protected setTrackIndex(trackIndex: number) {
     }
 }

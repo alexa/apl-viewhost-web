@@ -5,12 +5,10 @@
 
 import APLRenderer from '../../APLRenderer';
 import {AudioTrack} from '../../enums/AudioTrack';
-import {CommandControlMedia} from '../../enums/CommandControlMedia';
 import {PropertyKey} from '../../enums/PropertyKey';
 import {VideoScale} from '../../enums/VideoScale';
-import {IMediaEventListener} from '../../media/IMediaEventListener';
 import {IMediaSource} from '../../media/IMediaSource';
-import {PlaybackState} from '../../media/Resource';
+import { PlaybackState } from '../../media/Resource';
 import {Component, FactoryFunction, IComponentProperties} from '../Component';
 
 /**
@@ -29,7 +27,7 @@ export interface IVideoProperties extends IComponentProperties {
 /**
  * @ignore
  */
-export abstract class AbstractVideoComponent extends Component<IVideoProperties> implements IMediaEventListener {
+export abstract class AbstractVideoComponent extends Component<IVideoProperties> {
 
     protected constructor(renderer: APLRenderer,
                           component: APL.Component,
@@ -38,46 +36,16 @@ export abstract class AbstractVideoComponent extends Component<IVideoProperties>
         super(renderer, component, factory, parent);
 
         this.propExecutor
-        (this.setScaleFromProp, PropertyKey.kPropertyScale)
-        (this.setAudioTrackFromProp, PropertyKey.kPropertyAudioTrack)
-        (this.setMutedFromProp, PropertyKey.kPropertyMuted)
-        (this.setTrackCurrentTimeFromProp, PropertyKey.kPropertyTrackCurrentTime)
-        (this.setPauseFromProp, PropertyKey.kPropertyTrackPaused)
-        (this.setSourceFromProp, PropertyKey.kPropertySource)
-        (this.setTrackIndexFromProp, PropertyKey.kPropertyTrackIndex);
+        (this.setScaleFromProp, PropertyKey.kPropertyScale);
     }
 
     public abstract onEvent(event: PlaybackState): void;
 
-    public abstract async playMedia(source: IMediaSource | IMediaSource[], audioTrack: AudioTrack);
+    public abstract play(waitForFinish?: boolean);
 
-    public abstract async controlMedia(operation: CommandControlMedia, optionalValue: number);
-
-    public abstract async play(waitForFinish?: boolean);
-
-    public abstract async pause();
-
-    public abstract async next();
-
-    public abstract async previous();
-
-    public abstract async rewind();
-
-    public abstract async seek(offset: number);
-
-    public abstract async setTrack(trackIndex: number);
+    public abstract pause();
 
     protected abstract setScale(scale: VideoScale);
-
-    protected abstract setAudioTrack(audioTrack: AudioTrack);
-
-    protected abstract setMuted(muted: boolean);
-
-    protected abstract async setSource(source: IMediaSource | IMediaSource[]);
-
-    protected abstract setTrackCurrentTime(trackCurrentTime: number);
-
-    protected abstract setTrackIndex(trackIndex: number);
 
     // Optional Pass-Thru
     protected setTrackPaused(isPaused: boolean) {
@@ -86,29 +54,5 @@ export abstract class AbstractVideoComponent extends Component<IVideoProperties>
 
     private setScaleFromProp = () => {
         this.setScale(this.props[PropertyKey.kPropertyScale]);
-    }
-
-    private setAudioTrackFromProp = () => {
-        this.setAudioTrack(this.props[PropertyKey.kPropertyAudioTrack]);
-    }
-
-    private setMutedFromProp = () => {
-        this.setMuted(this.props[PropertyKey.kPropertyMuted]);
-    }
-
-    private setSourceFromProp = () => {
-        this.setSource(this.props[PropertyKey.kPropertySource]);
-    }
-
-    private setTrackCurrentTimeFromProp = () => {
-        this.setTrackCurrentTime(this.props[PropertyKey.kPropertyTrackCurrentTime]);
-    }
-
-    private setTrackIndexFromProp = () => {
-        this.setTrackIndex(this.props[PropertyKey.kPropertyTrackIndex]);
-    }
-
-    private setPauseFromProp = () => {
-        this.setTrackPaused(this.props[PropertyKey.kPropertyTrackPaused]);
     }
 }

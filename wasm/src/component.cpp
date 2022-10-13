@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <apl/component/videocomponent.h>
+#include <apl/utils/log.h>
+
 #include "wasm/component.h"
-#include "apl/utils/log.h"
 #include "wasm/embindutils.h"
 
 namespace apl {
@@ -220,6 +222,12 @@ ComponentMethods::provenance(const apl::ComponentPtr& component) {
     return component->provenance();
 }
 
+MediaPlayerPtr
+ComponentMethods::getMediaPlayer(const apl::ComponentPtr& component) {
+    const auto &video = std::dynamic_pointer_cast<apl::VideoComponent>(component);
+    return std::dynamic_pointer_cast<MediaPlayer>(video->getMediaPlayer());
+}
+
 } // namespace internal
 
 EMSCRIPTEN_BINDINGS(apl_wasm_component) {
@@ -256,7 +264,8 @@ EMSCRIPTEN_BINDINGS(apl_wasm_component) {
         .function("provenance", &internal::ComponentMethods::provenance)
         .function("getDisplayedChildCount", &internal::ComponentMethods::getDisplayedChildCount)
         .function("getDisplayedChildId", &internal::ComponentMethods::getDisplayedChildId)
-        .function("getDisplayedChildAt", &internal::ComponentMethods::getDisplayedChildAt);
+        .function("getDisplayedChildAt", &internal::ComponentMethods::getDisplayedChildAt)
+        .function("getMediaPlayer", &internal::ComponentMethods::getMediaPlayer);
 }
 
 } // namespace wasm

@@ -11,7 +11,6 @@ import { IMediaSource } from './IMediaSource';
  */
 export interface IMediaResource {
     toRepeat: number;
-    description: string;
     offset: number;
     repeatCount: number;
     trackIndex: number;
@@ -111,7 +110,6 @@ export class PlaybackManager {
 
     private addToPlaylist(index: number, track: IMediaSource) {
         const mediaResource: IMediaResource = {
-            description : track.description,
             id : uuidv4(),
             offset : track.offset,
             repeatCount : track.repeatCount,

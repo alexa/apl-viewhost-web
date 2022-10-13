@@ -9,6 +9,8 @@
 #include "apl/apl.h"
 #include <emscripten/bind.h>
 
+#include "wasm/mediaplayer.h"
+
 namespace apl {
 namespace wasm {
 
@@ -51,6 +53,8 @@ struct ComponentMethods {
     static bool isCharacterValid(const apl::ComponentPtr& component, const std::wstring& c);
 
     static std::string provenance(const apl::ComponentPtr& component);
+
+    static MediaPlayerPtr getMediaPlayer(const apl::ComponentPtr& component);
 };
 } // namespace internal
 

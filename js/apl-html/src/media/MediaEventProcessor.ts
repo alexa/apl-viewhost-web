@@ -2,41 +2,40 @@
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  */
 
-import { AudioTrack } from '../../enums/AudioTrack';
-import { CommandControlMedia } from '../../enums/CommandControlMedia';
-import { PropertyKey } from '../../enums/PropertyKey';
-import { TrackState } from '../../enums/TrackState';
-import { VideoScale } from '../../enums/VideoScale';
-import { ILogger } from '../../logging/ILogger';
-import { LoggerFactory } from '../../logging/LoggerFactory';
-import { IMediaEventListener } from '../../media/IMediaEventListener';
-import { IVideoPlayer } from '../../media/IVideoPlayer';
-import { MediaErrorCode } from '../../media/MediaErrorCode';
-import { MediaState } from '../../media/MediaState';
-import { IMediaResource, PlaybackManager } from '../../media/PlaybackManager';
-import { PlaybackState } from '../../media/Resource';
-import { VideoPlayer } from '../../media/video';
-import { Video } from './Video';
-import { PromiseCallback, SetTrackCurrentTimeArgs } from './VideoCallTypes';
+import { AudioTrack } from '../enums/AudioTrack';
+import { MediaPlayerEventType } from '../enums/MediaPlayerEventType';
+import { TrackState } from '../enums/TrackState';
+import { VideoScale } from '../enums/VideoScale';
+import { ILogger } from '../logging/ILogger';
+import { LoggerFactory } from '../logging/LoggerFactory';
+import { IMediaEventListener } from './IMediaEventListener';
+import { IMediaPlayerHandle } from './IMediaPlayerHandle';
+import { IVideoPlayer } from './IVideoPlayer';
+import { MediaErrorCode } from './MediaErrorCode';
+import { MediaState } from './MediaState';
+import { IMediaResource, PlaybackManager } from './PlaybackManager';
+import { PlaybackState } from './Resource';
+import { PlaybackFailure, VideoPlayer } from './video';
 
-export interface VideoEventProcessorArgs {
-    videoComponent: Video;
+export interface MediaEventProcessorArgs {
+    mediaPlayerHandle: IMediaPlayerHandle;
     logger?: ILogger;
 }
 
-export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventProcessorArgs): any {
+export type PromiseCallback = (value?: any) => void;
+
+export function createMediaEventProcessor(mediaEventProcessorArgs: MediaEventProcessorArgs): any {
     const defaultArgs = {
         logger: LoggerFactory.getLogger('Video')
     };
-    videoEventProcessorArgs = Object.assign(defaultArgs, videoEventProcessorArgs);
+    mediaEventProcessorArgs = Object.assign(defaultArgs, mediaEventProcessorArgs);
     const {
-        videoComponent,
+        mediaPlayerHandle,
         logger
-    } = videoEventProcessorArgs;
+    } = mediaEventProcessorArgs;
 
     // Private Variables
     let videoState: PlaybackState = PlaybackState.IDLE;
-    let trackCurrentTime: number = 0;
     const endEventPromiseListeners: PromiseCallback[] = [];
 
     // Private Functions
@@ -50,24 +49,35 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
         }
     }
 
-    function shouldAutoPlay(): boolean {
-        return this.props[PropertyKey.kPropertyAutoplay];
-    }
-
-    function trackShouldBePaused(): boolean {
-        const currentTime = this.player.getCurrentPlaybackPositionInSeconds();
-        const playerNotStarted = currentTime === undefined || currentTime === 0;
-        const willAutoPlayForFirstTime = (shouldAutoPlay.call(this) && playerNotStarted);
-        return this.props[PropertyKey.kPropertyTrackPaused] && !willAutoPlayForFirstTime;
-    }
-
     // Public Interface
-    const videoEventProcessor = {
+    const mediaEventProcessor = {
+        isPlaying(): boolean {
+            return !(this.currentMediaState.paused || this.currentMediaState.ended);
+        },
+        onVideoPlayerReady() {
+            if (!this.loaded) {
+                logger.info('First loaded, refresh video');
+                this.setTrackIndex({trackIndex: 0, fromEvent: false});
+                this.rewind();
+                this.loaded = true;
+            }
+            if (this.shouldStartPlayAfterPlayerInit) {
+                logger.info('Player ready, starting playback');
+                this.play({
+                    waitForFinish: false,
+                    fromEvent: true,
+                    isSettingSource: false
+                });
+            }
+        },
         onEvent({
             event,
             fromEvent,
-            isSettingSource
+            isSettingSource,
+            aplMediaPlayer
         }): void {
+            let mediaPlayerEventType: MediaPlayerEventType;
+
             switch (event) {
                 case PlaybackState.IDLE:
                     this.currentMediaState.withTrackState(TrackState.kTrackNotReady);
@@ -75,26 +85,37 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
                     break;
                 case PlaybackState.LOADED:
                     this.currentMediaState.withTrackState(TrackState.kTrackReady);
+                    mediaPlayerEventType = MediaPlayerEventType.kMediaPlayerEventTrackReady;
                     break;
                 case PlaybackState.PLAYING:
+                    if (this.isPlaying()) {
+                        mediaPlayerEventType = MediaPlayerEventType.kMediaPlayerEventTimeUpdate;
+                    } else {
+                        mediaPlayerEventType = MediaPlayerEventType.kMediaPlayerEventPlay;
+                    }
                     this.currentMediaState.ended = false;
                     this.currentMediaState.paused = false;
                     break;
                 case PlaybackState.PAUSED:
                     this.currentMediaState.paused = true;
+                    mediaPlayerEventType = MediaPlayerEventType.kMediaPlayerEventPause;
                     break;
                 case PlaybackState.ENDED:
                     if (this.playbackManager.repeat()) {
                         this.delegate.rewind().then(() => {
-                            this.delegate.play();
+                            this.delegate.play(false);
                         });
+                        mediaPlayerEventType = MediaPlayerEventType.kMediaPlayerEventTimeUpdate;
                     } else if (this.playbackManager.hasNext()) {
                         this.delegate.next().then(() => {
-                            this.delegate.play();
+                            this.delegate.play(false);
                         });
+                        isSettingSource = true;
+                        mediaPlayerEventType = MediaPlayerEventType.kMediaPlayerEventTrackUpdate;
                     } else {
                         this.currentMediaState.ended = true;
                         this.currentMediaState.paused = true;
+                        mediaPlayerEventType = MediaPlayerEventType.kMediaPlayerEventEnd;
                     }
                     endEventPromiseListeners.forEach((resolvePromise) => {
                         try {
@@ -110,68 +131,20 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
                     this.currentMediaState.paused = true;
                     this.currentMediaState.withTrackState(TrackState.kTrackFailed);
                     this.currentMediaState.withErrorCode(MediaErrorCode.GENERIC);
+                    mediaPlayerEventType = MediaPlayerEventType.kMediaPlayerEventTrackFail;
                     break;
                 case PlaybackState.BUFFERING:
                 default:
                     return;
             }
+
             videoState = event;
 
-            this.updateMediaState(fromEvent, isSettingSource);
-        },
-        // Event Methods
-        async playMedia({ source, audioTrack }) {
-            this.fromEvent = true;
-
-            this.player.reset();
-            this.playbackManager.setup(source);
-            this.audioTrack = audioTrack;
-
-            const currentMediaResource = this.playbackManager.getCurrent();
-            await this.delegate.seek(currentMediaResource.offset);
-            await this.delegate.play();
-
-            this.fromEvent = false;
-
-            const waitForFinish = this.audioTrack === AudioTrack.kAudioTrackForeground;
-            if (waitForFinish) {
-                await new Promise((resolve) => {
-                    endEventPromiseListeners.push(resolve);
-                });
+            if (typeof mediaPlayerEventType !== 'undefined') {
+                this.updateMediaState(fromEvent, isSettingSource);
+                aplMediaPlayer.updateMediaState(this.currentMediaState);
+                aplMediaPlayer.doCallback(mediaPlayerEventType);
             }
-        },
-        async controlMedia({ operation, optionalValue }) {
-            this.fromEvent = true;
-            switch (operation) {
-                case CommandControlMedia.kCommandControlMediaPlay:
-                    if (this.player.getMediaState() !== PlaybackState.PLAYING) {
-                        await this.delegate.play();
-                    }
-                    break;
-                case CommandControlMedia.kCommandControlMediaPause:
-                    await this.delegate.pause();
-                    break;
-                case CommandControlMedia.kCommandControlMediaNext:
-                    await this.delegate.next();
-                    break;
-                case CommandControlMedia.kCommandControlMediaPrevious:
-                    await this.delegate.previous();
-                    break;
-                case CommandControlMedia.kCommandControlMediaRewind:
-                    await this.delegate.rewind();
-                    break;
-                case CommandControlMedia.kCommandControlMediaSeek:
-                    await this.delegate.seek(optionalValue);
-                    break;
-                case CommandControlMedia.kCommandControlMediaSetTrack:
-                    await this.delegate.setTrack(optionalValue);
-                    break;
-                default:
-                    logger.warn('Incorrect CommandControlMedia operation type');
-                    break;
-            }
-
-            this.fromEvent = false;
         },
         // Playback Control Methods
         // Event-Aware Methods
@@ -198,6 +171,16 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
                 currentMediaResource.id,
                 currentMediaResource.url,
                 startingPoint
+            ).then(
+                () => {
+                    this.loaded = true;
+                },
+                (reason) => {
+                    if (reason === PlaybackFailure.UNINITIALIZED) {
+                        this.shouldStartPlayAfterPlayerInit = true;
+                        logger.info('Player not ready, deferring playback');
+                    }
+                }
             );
 
             if (waitForFinish) {
@@ -206,14 +189,15 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
                 });
             }
         },
-        async pause({ fromEvent }): Promise<any> {
+        async pause(): Promise<any> {
             if (videoState === PlaybackState.PLAYING || videoState === PlaybackState.BUFFERING) {
                 await this.player.pause();
             }
         },
-        async end({ fromEvent }): Promise<any> {
+        async stop(): Promise<any> {
             await this.player.end();
-            const endTimeMs = this.currentMediaState.duration + this.currentMediaResource.offset;
+            const currentMediaResource = this.playbackManager.getCurrent();
+            const endTimeMs = this.currentMediaState.duration + currentMediaResource.offset;
             if (this.currentMediaState.currentTime > this.currentMediaState.duration) {
                 this.player.setCurrentTimeInSeconds(toSecondsFromMilliseconds(endTimeMs));
             }
@@ -248,7 +232,7 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
             this.updateMediaState(fromEvent);
         },
         async rewind(): Promise<any> {
-            await this.delegate.pause();
+            await this.pause();
             const currentMediaResource = this.playbackManager.getCurrent();
             this.player.setCurrentTimeInSeconds(
                 toSecondsFromMilliseconds(currentMediaResource.offset)
@@ -258,13 +242,13 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
             if (!this.playbackManager.hasPrevious()) {
                 await this.delegate.rewind();
             } else {
-                await this.delegate.pause();
+                await this.pause();
                 this.playbackManager.previous();
             }
             await ensureLoaded.call(this, fromEvent);
         },
         async next({ fromEvent }): Promise<any> {
-            await this.delegate.pause();
+            await this.pause();
 
             if (!this.playbackManager.hasNext()) {
                 this.player.setCurrentTimeInSeconds(this.player.getDurationInSeconds() - 0.001);
@@ -273,10 +257,10 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
                 await ensureLoaded.call(this, fromEvent);
             }
         },
-        async setTrack({ trackIndex, fromEvent }): Promise<any> {
-            await this.delegate.pause();
+        async setTrackIndex({ trackIndex, fromEvent }): Promise<any> {
+            await this.pause();
             this.playbackManager.setCurrent(trackIndex);
-            this.updateMediaState(fromEvent);
+            this.updateMediaState(fromEvent, true);
             await ensureLoaded.call(this, fromEvent);
         },
         // End Event-Aware Methods
@@ -293,55 +277,21 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
             }
             this.updateMediaState(fromEvent);
         },
-        async setSource({ source }): Promise<any> {
-            this.isSettingSource = true;
-
+        async setTrackList({ trackArray }): Promise<any> {
             // Configure Player and Playback
-            this.playbackManager.setup(source);
+            this.playbackManager.setup(trackArray);
             await ensureLoaded.call(this);
-
-            // Play on set Source
-            if (shouldAutoPlay.call(this) && !trackShouldBePaused.call(this)) {
-                await this.delegate.play();
-            }
-
-            this.isSettingSource = false;
-            // Seek Accordingly
-            await this.delegate.seek(trackCurrentTime);
         },
-        setTrackCurrentTime(args: SetTrackCurrentTimeArgs) {
-            const {
-                trackCurrentTime: updatedTrackCurrentTime
-            } = args;
-
-            trackCurrentTime = updatedTrackCurrentTime;
-            this.player.setCurrentTimeInSeconds(toSecondsFromMilliseconds(trackCurrentTime));
-        },
-        setTrackIndex({ trackIndex }) {
-            if (this.props[PropertyKey.kPropertyTrackIndex]) {
-                // Fire and Forget
-                this.delegate.setTrack(trackIndex);
+        onTimeUpdated({ aplMediaPlayer }) {
+            if (!isValidPlayer(this.player)) {
+                return;
             }
-        },
-        async setTrackPaused({ shouldBePaused }) {
-            if (shouldBePaused && trackShouldBePaused.call(this)) {
-                await this.delegate.pause();
+            if (!this.isPlaying()) {
+                return;
             }
-        },
-        setScale({ scale }) {
-            let scaleType: 'contain' | 'cover' = 'contain';
-            switch (scale) {
-                case VideoScale.kVideoScaleBestFit:
-                    scaleType = 'contain';
-                    break;
-                case VideoScale.kVideoScaleBestFill:
-                    scaleType = 'cover';
-                    break;
-                default:
-                    logger.warn('Incorrect VideoScale type');
-                    break;
-            }
-            this.player.configure(this.container, scaleType);
+            this.updateMediaState(false);
+            aplMediaPlayer.updateMediaState(this.currentMediaState);
+            aplMediaPlayer.doCallback(MediaPlayerEventType.kMediaPlayerEventTimeUpdate);
         },
         updateMediaState(fromEvent: boolean, isSettingSource: boolean = false) {
             if (!isValidPlayer(this.player)) {
@@ -355,7 +305,7 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
                 mediaResourceDurationMs = mediaResource.duration;
                 offsetMs = mediaResource.offset;
             } catch (error) {
-                logger.warn('Can not get current media resource');
+                logger.warn('Can not get current media resource', error);
             }
 
             this.currentMediaState.currentTime = toMillisecondsFromSeconds(
@@ -373,7 +323,9 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
                     this.currentMediaState.duration = mediaResourceDurationMs;
                 }
                 if (this.currentMediaState.currentTime > this.currentMediaState.duration) {
-                    this.delegate.end();
+                    if (!isSettingSource) {
+                        this.stop();
+                    }
                 }
             } else {
                 this.currentMediaState.duration -= offsetMs;
@@ -384,12 +336,23 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
             this.currentMediaState.muted = this.muted;
 
             ensureValidMediaState(this.currentMediaState);
-            if (!isSettingSource) {
-                this.component.updateMediaState(this.currentMediaState, fromEvent);
-                this.emit('onUpdateMediaState', this.currentMediaState, fromEvent);
-            }
         },
         // Component Methods
+        setScale({ videoComponent, scale }) {
+            let scaleType: 'contain' | 'cover' = 'contain';
+            switch (scale) {
+                case VideoScale.kVideoScaleBestFit:
+                    scaleType = 'contain';
+                    break;
+                case VideoScale.kVideoScaleBestFill:
+                    scaleType = 'cover';
+                    break;
+                default:
+                    logger.warn('Incorrect VideoScale type');
+                    break;
+            }
+            this.player.configure(videoComponent, scaleType);
+        },
         applyCssShadow({ shadowParams }) {
             if (this.player) {
                 this.player.applyCssShadow(shadowParams);
@@ -418,13 +381,14 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
 
     // Visible Properties
     const videoPlayer = VideoPlayer({
-        eventListener: videoComponent as IMediaEventListener,
+        eventListener: mediaPlayerHandle as IMediaEventListener,
         logger
     });
+    videoPlayer.init();
     const playBackManager = new PlaybackManager();
     const currentMediaState = new MediaState();
 
-    Object.defineProperties(videoEventProcessor, {
+    Object.defineProperties(mediaEventProcessor, {
         player: {
             value: videoPlayer,
             writable: false,
@@ -447,7 +411,7 @@ export function createVideoEventProcessor(videoEventProcessorArgs: VideoEventPro
         }
     });
 
-    return Object.setPrototypeOf(videoEventProcessor, videoComponent) as Video;
+    return Object.setPrototypeOf(mediaEventProcessor, mediaPlayerHandle);
 }
 
 function toSecondsFromMilliseconds(milliseconds: number) {

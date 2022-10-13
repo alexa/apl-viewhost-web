@@ -13,13 +13,12 @@ import { CancelablePromise } from '../../utils/PromiseUtils';
 import { Resource } from '../Resource';
 import { Demuxer } from './Demux';
 import { IAudioEventListener } from './IAudioEventListener';
+import { IAudioPlayer } from './IAudioPlayer';
 import { extractTextFrames } from './Id3Parser';
-
-export type AudioPlayerFactory = (eventListener: IAudioEventListener) => AudioPlayer;
 
 export type IAudioNode = GainNode;
 
-export abstract class AudioPlayer {
+export abstract class AudioPlayer implements IAudioPlayer {
   private eventListener: IAudioEventListener;
   private resourceMap: Map<string, Resource>;
   private currentSource: AudioBufferSourceNode;
@@ -100,7 +99,7 @@ export abstract class AudioPlayer {
     this.eventListener.onError(id, reason);
   }
 
-  public abstract play(id: string);
+  public abstract play(id: string): void;
 
   protected playWithContext(id: string, audioContext: AudioContext): void {
     const resource = this.resourceMap.get(id);

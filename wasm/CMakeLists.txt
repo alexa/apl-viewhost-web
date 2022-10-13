@@ -4,31 +4,35 @@ get_directory_property(ENUMGEN_BIN DIRECTORY ${APL_CORE_PATH} DEFINITION ENUMGEN
 include(config.cmake)
 include_directories(include)
 add_executable(apl-wasm
-        src/main.cpp
-        src/logbridge.cpp
-        src/log.cpp
-        src/configurationchange.cpp
-        src/content.cpp
-        src/rootconfig.cpp
-        src/extension.cpp
-        src/extensionclient.cpp
-        src/component.cpp
-        src/embindutils.cpp
-        src/context.cpp
-        src/textmeasurement.cpp
-        src/dimension.cpp
-        src/event.cpp
-        src/action.cpp
-        src/graphic.cpp
-        src/graphicelement.cpp
-        src/graphicpattern.cpp
-        src/livearray.cpp
-        src/livemap.cpp
-        src/localemethods.cpp
-        src/wasmmetrics.cpp
-        src/metrics.cpp
-        src/session.cpp
-        src/utils/jsparser.cpp)
+    src/audioplayer.cpp
+    src/audioplayerfactory.cpp
+    src/mediaplayer.cpp
+    src/mediaplayerfactory.cpp
+    src/main.cpp
+    src/logbridge.cpp
+    src/log.cpp
+    src/configurationchange.cpp
+    src/content.cpp
+    src/rootconfig.cpp
+    src/extension.cpp
+    src/extensionclient.cpp
+    src/component.cpp
+    src/embindutils.cpp
+    src/context.cpp
+    src/textmeasurement.cpp
+    src/dimension.cpp
+    src/event.cpp
+    src/action.cpp
+    src/graphic.cpp
+    src/graphicelement.cpp
+    src/graphicpattern.cpp
+    src/livearray.cpp
+    src/livemap.cpp
+    src/localemethods.cpp
+    src/wasmmetrics.cpp
+    src/metrics.cpp
+    src/session.cpp
+    src/utils/jsparser.cpp)
 target_link_libraries(apl-wasm apl)
 target_link_libraries(apl-wasm ${YOGA_LIB})
 target_include_directories(apl-wasm PRIVATE include)
@@ -53,6 +57,7 @@ endif(WASM_ASMJS)
 add_custom_target(generate-wasm-enums ALL
         COMMAND cd ${APL_PROJECT_DIR} && ${ENUMGEN_BIN}
         -f "AnimationQuality"
+        -f "AudioPlayerEventType"
         -f "AudioTrack"
         -f "BlendMode"
         -f "CommandAudioTrack"
@@ -95,6 +100,7 @@ add_custom_target(generate-wasm-enums ALL
         -f "KeyboardType"
         -f "LayoutDirection"
         -f "LogLevel"
+        -f "MediaPlayerEventType"
         -f "Navigation"
         -f "NoiseFilterKind"
         -f "PointerEventType"

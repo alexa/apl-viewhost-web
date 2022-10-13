@@ -43,7 +43,7 @@
     "istanbul": "^0.4.5",
     "istanbul-instrumenter-loader": "^3.0.1",
     "istanbul-threshold-checker": "^0.2.1",
-    "mocha": "^5.2.0",
+    "mocha": "^6.2.3",
     "rimraf": "^2.6.2",
     "sinon": "^7.5.0",
     "source-map-loader": "^0.2.4",
@@ -55,7 +55,7 @@
     "typescript": "2.9.2",
     "uglifyjs-webpack-plugin": "^2.1.2",
     "webpack": "^4.26.1",
-    "webpack-bundle-analyzer": "^3.1.0",
+    "webpack-bundle-analyzer": "^4.6.1",
     "webpack-cli": "^3.3.12",
     "webpack-merge": "^4.2.1"
   }

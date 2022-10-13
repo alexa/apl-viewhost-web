@@ -16,3 +16,5 @@
 #include "wasm/action.h"
 #include "wasm/event.h"
 #include "wasm/radii.h"
+#include "wasm/audioplayer.h"
+#include "wasm/audioplayerfactory.h"

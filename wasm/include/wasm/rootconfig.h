@@ -30,6 +30,9 @@ struct RootConfigMethods {
 
     static RootConfigPtr& liveMap(RootConfigPtr& rootConfig, const std::string& name, emscripten::val obj);
     static RootConfigPtr& liveArray(RootConfigPtr& rootConfig, const std::string& name, emscripten::val obj);
+
+    static RootConfigPtr& audioPlayerFactory(RootConfigPtr& rootConfig, emscripten::val factory);
+    static RootConfigPtr& mediaPlayerFactory(RootConfigPtr& rootConfig, emscripten::val factory);
 };
 } // namespace internal
 

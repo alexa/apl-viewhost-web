@@ -44,12 +44,12 @@
     "typedoc": "^0.15.0",
     "typescript": "2.7.2",
     "uglifyjs-webpack-plugin": "^2.1.2",
-    "utf8-decode": "^1.0.2",
+    "utf8": "3.0.0",
     "uuid": "^3.3.2",
     "webfontloader": "^1.6.28",
     "webpack": "^4.26.1",
-    "webpack-bundle-analyzer": "^3.1.0",
-    "webpack-cli": "^3.3.2",
+    "webpack-bundle-analyzer": "^4.6.1",
+    "webpack-cli": "^3.3.12",
     "webpack-merge": "^4.2.1",
     "xregexp": "4.2.4"
   }

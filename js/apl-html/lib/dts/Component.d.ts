@@ -33,5 +33,6 @@
         public ensureLayout() : Promise<void> | void;
         public isCharacterValid(c : string) : Promise<boolean>;
         public provenance() : string;
+        public getMediaPlayer() : APL.MediaPlayer;
     }
 }

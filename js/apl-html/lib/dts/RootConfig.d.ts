@@ -16,5 +16,7 @@ declare namespace APL {
         public registerExtension(uri : string) : RootConfig;
         public liveMap(name : string, obj : any) : RootConfig;
         public liveArray(name : string, obj : any) : RootConfig;
+        public audioPlayerFactory(factory: AudioPlayerFactory) : RootConfig;
+        public mediaPlayerFactory(factory: MediaPlayerFactory) : RootConfig;
     }
 }

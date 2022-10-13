@@ -4,10 +4,10 @@
  */
 
 import APLRenderer, {
-    commandFactory, Content, DeviceMode, DisplayState, FontUtils,
-    IAPLOptions, IConfigurationChangeOptions, ILogger, JSLogLevel, LiveArray,
-    LiveMap, LocaleMethods, LoggerFactory, LogLevel, LogTransport,
-    ViewportShape
+    commandFactory, Content, DefaultAudioPlayer, DeviceMode, DisplayState,
+    FontUtils, IAPLOptions, IAudioEventListener, IAudioPlayerFactory,
+    IConfigurationChangeOptions, ILogger, JSLogLevel, LiveArray, LiveMap,
+    LocaleMethods, LoggerFactory, LogLevel, LogTransport, MediaPlayerHandle, ViewportShape
 } from 'apl-html';
 import {ConfigurationChange} from './ConfigurationChange';
 import {ExtensionManager} from './extensions/ExtensionManager';
@@ -81,6 +81,12 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
     /// Current Configuration Change
     private configurationChange: ConfigurationChange;
 
+    /// AudioPlayer factory wrapper
+    private audioPlayerFactory: APL.AudioPlayerFactory;
+
+    /// MediaPlayer factory wrapper
+    private mediaPlayerFactory: APL.MediaPlayerFactory;
+
     /**
      * This constructor is private
      * @param options options passed in through `create`
@@ -102,6 +108,18 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
         this.rootConfig = Module.RootConfig.create(this.options.environment);
         this.rootConfig.utcTime(this.options.utcTime).localTimeAdjustment(this.options.localTimeAdjustment);
         this.rootConfig.localeMethods(LocaleMethods);
+
+        this.audioPlayerFactory = Module.AudioPlayerFactory.create(
+            this.options.audioPlayerFactory ?
+            this.options.audioPlayerFactory :
+            ((eventListener: IAudioEventListener) => new DefaultAudioPlayer(eventListener)));
+        this.rootConfig.audioPlayerFactory(this.audioPlayerFactory);
+
+        this.mediaPlayerFactory = Module.MediaPlayerFactory.create(
+            ((mediaPlayer: APL.MediaPlayer) => new MediaPlayerHandle(mediaPlayer))
+        );
+        this.rootConfig.mediaPlayerFactory(this.mediaPlayerFactory);
+
         this.handleConfigurationChange = (configurationChangeOptions: IConfigurationChangeOptions) => {
             if (this.context) {
                 const originalScaleFactor = this.context.getScaleFactor();
@@ -143,6 +161,14 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
      */
     protected getDocumentAplVersion(): string {
         return this.documentAplVersion;
+    }
+
+    /**
+     * @internal
+     * @ignore
+     */
+    protected getAudioPlayerFactory(): IAudioPlayerFactory {
+        return this.audioPlayerFactory as IAudioPlayerFactory;
     }
 
     /**

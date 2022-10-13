@@ -4,5 +4,6 @@
  */
 
 import {createHLSVideoPlayer} from './HLSVideoPlayer';
+export {PlaybackFailure} from './VideoPlayer';
 
 export const VideoPlayer = createHLSVideoPlayer;

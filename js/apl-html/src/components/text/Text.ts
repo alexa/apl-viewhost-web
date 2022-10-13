@@ -40,6 +40,8 @@ export interface ILine {
     end: number;
 }
 
+const utf8 = require('utf8');
+
 export class Text extends Component<ITextProperties> {
     /** @internal */
     protected richTextParser: RichTextParser;
@@ -78,6 +80,12 @@ export class Text extends Component<ITextProperties> {
     protected lineRanges: ILineRange[];
 
     /** @internal */
+    private cacheKaraokeLineOffset = 0;
+
+    /** @internal */
+    private cacheKaraokeLine = 0;
+
+    /** @internal */
     constructor(renderer: APLRenderer, component: APL.Component, factory: FactoryFunction, parent?: Component) {
         super(renderer, component, factory, parent);
         this.richTextParser = new RichTextParser();
@@ -101,6 +109,36 @@ export class Text extends Component<ITextProperties> {
     /** @internal */
     public getLineRanges(): ILineRange[] {
         return this.lineRanges;
+    }
+
+    /** @internal */
+    private resetKaraokeCache(): void {
+        this.cacheKaraokeLineOffset = 0;
+        this.cacheKaraokeLine = 0;
+    }
+
+    /** @internal */
+    public getLineByRange(rangeStart: number, rangeEnd: number): number {
+        if (rangeEnd < this.cacheKaraokeLineOffset) {
+            this.resetKaraokeCache();
+        }
+
+        for (; this.cacheKaraokeLine < this.lineRanges.length; this.cacheKaraokeLine++) {
+            const lineRange = this.lineRanges[this.cacheKaraokeLine];
+            const lineText = this.styledText.text.substring(lineRange.start, lineRange.end + 1);
+            const utf8TextAtLine = utf8.encode(lineText);
+
+            if (rangeStart >= this.cacheKaraokeLineOffset &&
+                rangeStart <= (this.cacheKaraokeLineOffset + utf8TextAtLine.length)) {
+                return this.cacheKaraokeLine;
+            }
+
+            this.cacheKaraokeLineOffset += utf8TextAtLine.length;
+        }
+
+        this.resetKaraokeCache();
+
+        return -1;
     }
 
     /** @internal */

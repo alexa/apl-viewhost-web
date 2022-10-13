@@ -2,9 +2,9 @@
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  */
 
-import {ILogger} from '../../logging/ILogger';
-import {LoggerFactory} from '../../logging/LoggerFactory';
-import {PromiseCallback} from './VideoCallTypes';
+import {ILogger} from '../logging/ILogger';
+import {LoggerFactory} from '../logging/LoggerFactory';
+import {PromiseCallback} from './MediaEventProcessor';
 
 export enum VideoInterface {
     ON_EVENT = 'onEvent',
@@ -12,24 +12,21 @@ export enum VideoInterface {
     CONTROL_MEDIA = 'controlMedia',
     PLAY = 'play',
     PAUSE = 'pause',
-    END = 'end',
+    STOP = 'stop',
     SEEK = 'seek',
     REWIND = 'rewind',
     PREVIOUS = 'previous',
     NEXT = 'next',
-    SET_TRACK = 'setTrack',
-    SET_TRACK_PAUSED = 'setTrackPaused',
+    SET_TRACK_LIST = 'setTrackList',
+    SET_TRACK_INDEX = 'setTrackIndex',
     SET_AUDIO_TRACK = 'setAudioTrack',
     SET_MUTED = 'setMuted',
-    SET_SOURCE = 'setSource',
-    SET_TRACK_CURRENT_TIME = 'setTrackCurrentTime',
-    SET_TRACK_INDEX = 'setTrackIndex',
     SET_SCALE = 'setScale',
-    UPDATE_MEDIA_STATE = 'updateMediaState',
+    ON_TIME_UPDATED = 'onTimeUpdated',
     APPLY_CSS_SHADOW = 'applyCssShadow'
 }
 
-export interface VideoEventSequencer {
+export interface MediaEventSequencer {
     enqueueForProcessing(event: VideoInterface, callArgs: any): void;
 
     processExclusively(event: VideoInterface, callArgs: any): Promise<void>;
@@ -37,28 +34,32 @@ export interface VideoEventSequencer {
     destroy(): void;
 }
 
-export interface VideoEventSequencerArgs {
-    videoEventProcessor: any;
+export interface MediaEventSequencerArgs {
+    mediaEventProcessor: any;
     logger?: ILogger;
 }
 
-export function createVideoEventSequencer(videoEventSequencerArgs: VideoEventSequencerArgs): VideoEventSequencer {
+export function createMediaEventSequencer(videoEventSequencerArgs: MediaEventSequencerArgs): MediaEventSequencer {
+    type EventQueueItem = [
+        VideoInterface, any
+    ];
+
     const defaultArgs = {
-        logger: LoggerFactory.getLogger('Video')
+        logger: LoggerFactory.getLogger('MediaEventSequencer')
     };
     videoEventSequencerArgs = Object.assign(defaultArgs, videoEventSequencerArgs);
     const {
-        videoEventProcessor,
+        mediaEventProcessor,
         logger
     } = videoEventSequencerArgs;
 
     let isProcessing = false;
-    let eventsQueue = [];
+    let eventsQueue = [] as EventQueueItem[];
     let currentAnimationFrame: number;
 
     async function processEvent(event: VideoInterface, callArgs: any) {
-        logger.info(`${event as string}`);
-        await videoEventProcessor[(event as string)](callArgs);
+        logger.info('processEvent ' + `${event as string}`);
+        await mediaEventProcessor[(event as string)](callArgs);
     }
 
     async function processLoop() {
@@ -67,10 +68,10 @@ export function createVideoEventSequencer(videoEventSequencerArgs: VideoEventSeq
             isProcessing = false;
             return;
         }
-        const {
+        const [
             event,
             callArgs
-        } = nextEvent;
+        ] = nextEvent;
 
         await processNextEvent(event, callArgs);
 
@@ -92,7 +93,7 @@ export function createVideoEventSequencer(videoEventSequencerArgs: VideoEventSeq
         });
     }
 
-    function ensureResolve(resolve: any, callback: PromiseCallback) {
+    function ensureResolve(resolve: any, callback?: PromiseCallback) {
         try {
             if (callback) {
                 callback();
@@ -124,10 +125,8 @@ export function createVideoEventSequencer(videoEventSequencerArgs: VideoEventSeq
             });
         },
         enqueueForProcessing(event: VideoInterface, callArgs: any): void {
-            eventsQueue.push({
-                event,
-                callArgs
-            });
+            logger.info('enqueueEvent ' + `${event as string}`);
+            eventsQueue.push([event, callArgs]);
             ensureProcessing();
         },
         destroy() {

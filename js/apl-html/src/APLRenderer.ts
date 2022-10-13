@@ -4,7 +4,6 @@
  */
 
 import throttle = require('lodash.throttle');
-import { AudioPlayerWrapper } from './AudioPlayerWrapper';
 import { commandFactory } from './CommandFactory';
 import { componentFactory } from './ComponentFactory';
 import { ActionableComponent } from './components/ActionableComponent';
@@ -22,7 +21,7 @@ import { PointerType } from './enums/PointerType';
 import { IExtensionManager } from './extensions/IExtensionManager';
 import { ILogger } from './logging/ILogger';
 import { LoggerFactory } from './logging/LoggerFactory';
-import { AudioPlayerFactory } from './media/audio/AudioPlayer';
+import { AudioPlayerFactory, IAudioPlayerFactory } from './media/audio/AudioPlayerFactory';
 import { createAplVersionUtils } from './utils/AplVersionUtils';
 import { browserIsEdge } from './utils/BrowserUtils';
 import { ARROW_DOWN, ARROW_LEFT, ARROW_RIGHT, ARROW_UP, ENTER_KEY, HttpStatusCodes } from './utils/Constant';
@@ -210,7 +209,7 @@ export interface IAPLOptions {
     /** Device mode. If no provided "HUB" is used. */
     mode?: DeviceMode;
 
-    /** Optional externalized audio player */
+    /** Optional externalized audio player factory */
     audioPlayerFactory?: AudioPlayerFactory;
 
     /** Callback for executed SendEvent commands */
@@ -310,6 +309,12 @@ export default abstract class APLRenderer<Options = any> {
      */
     protected abstract getDocumentAplVersion(): string;
 
+    /**
+     * @internal
+     * @ignore
+     */
+    protected abstract getAudioPlayerFactory(): IAudioPlayerFactory;
+
     /** A reference to the APL root context */
     public context: APL.Context;
 
@@ -329,6 +334,7 @@ export default abstract class APLRenderer<Options = any> {
         this.handleConfigurationChange(configurationChangeOptions);
     }, 200);
 
+    /** Display state change handler */
     protected handleUpdateDisplayState: (displayState: DisplayState) => void;
 
     /**
@@ -391,13 +397,15 @@ export default abstract class APLRenderer<Options = any> {
      */
     private dropFrameCount: number = 0;
 
+    /**
+     * @internal
+     * @ignore
+     */
     private isEdge: boolean = browserIsEdge(window.navigator.userAgent);
 
     public get options(): Options {
         return this.mOptions as any as Options;
     }
-
-    public audioPlayer: AudioPlayerWrapper;
 
     /**
      * THis constructor is private
@@ -499,8 +507,6 @@ export default abstract class APLRenderer<Options = any> {
         if (mOptions.onResizingIgnored) {
             this.onResizingIgnored = mOptions.onResizingIgnored;
         }
-
-        this.audioPlayer = new AudioPlayerWrapper(mOptions.audioPlayerFactory);
 
         this.maxTimeDeltaBetweenFrames = (1000 * this.TOLERANCE / this.MAXFPS);
     }
@@ -775,7 +781,6 @@ export default abstract class APLRenderer<Options = any> {
             }
             (this.context as any) = undefined;
         }
-        this.destroyAudioPlayer();
         this.removeRenderingComponents();
         if (this.view) {
             for (const eventName in this.viewEventListeners) {
@@ -974,6 +979,10 @@ export default abstract class APLRenderer<Options = any> {
      * @ignore
      */
     private coreFrameUpdate(): void {
+        if (this.getAudioPlayerFactory()) {
+            this.getAudioPlayerFactory().tick();
+        }
+
         this.updateTime();
 
         this.context.clearPending();
@@ -1301,13 +1310,6 @@ export default abstract class APLRenderer<Options = any> {
             if (component['focus']) {
                 component.focus();
             }
-        }
-    }
-
-    private destroyAudioPlayer(): void {
-        if (this.audioPlayer) {
-            this.audioPlayer.destroy();
-            this.audioPlayer = null;
         }
     }
 }

@@ -5,6 +5,8 @@
 import {IPlayer} from './IPlayer';
 
 export interface IVideoPlayer extends IPlayer {
+    init(): void;
+
     configure(parent: HTMLElement, scale: 'contain' | 'cover'): void;
 
     applyCssShadow(shadowParams: string): void;

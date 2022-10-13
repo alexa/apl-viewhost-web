@@ -6,6 +6,8 @@
 #include "wasm/rootconfig.h"
 #include "wasm/embindutils.h"
 #include "wasm/localemethods.h"
+#include "wasm/audioplayerfactory.h"
+#include "wasm/mediaplayerfactory.h"
 
 namespace apl {
 namespace wasm {
@@ -64,8 +66,7 @@ RootConfigMethods::localeMethods(RootConfigPtr& rootConfig, emscripten::val loca
     return rootConfig;
 }
 
-
-RootConfigPtr& 
+RootConfigPtr&
 RootConfigMethods::localTimeAdjustment(RootConfigPtr& rootConfig, apl_duration_t localTimeAdjustment) {
     rootConfig->localTimeAdjustment(localTimeAdjustment);
     return rootConfig;
@@ -115,6 +116,20 @@ RootConfigMethods::liveArray(RootConfigPtr& rootConfig, const std::string& name,
     return rootConfig;
 }
 
+RootConfigPtr&
+RootConfigMethods::audioPlayerFactory(RootConfigPtr& rootConfig, emscripten::val factory) {
+    auto audioPlayerFactory = factory.as<apl::wasm::AudioPlayerFactoryPtr>();
+    rootConfig->audioPlayerFactory(audioPlayerFactory);
+    return rootConfig;
+}
+
+RootConfigPtr&
+RootConfigMethods::mediaPlayerFactory(RootConfigPtr& rootConfig, emscripten::val factory) {
+    auto mediaPlayerFactory = factory.as<apl::wasm::MediaPlayerFactoryPtr>();
+    rootConfig->mediaPlayerFactory(mediaPlayerFactory);
+    return rootConfig;
+}
+
 } // namespace internal
 
 EMSCRIPTEN_BINDINGS(apl_wasm_rootconfig) {
@@ -130,7 +145,9 @@ EMSCRIPTEN_BINDINGS(apl_wasm_rootconfig) {
         .function("registerExtensionCommand", &internal::RootConfigMethods::registerExtensionCommand)
         .function("registerExtensionEventHandler", &internal::RootConfigMethods::registerExtensionEventHandler)
         .function("liveMap", &internal::RootConfigMethods::liveMap)
-        .function("liveArray", &internal::RootConfigMethods::liveArray);
+        .function("liveArray", &internal::RootConfigMethods::liveArray)
+        .function("audioPlayerFactory", &internal::RootConfigMethods::audioPlayerFactory)
+        .function("mediaPlayerFactory", &internal::RootConfigMethods::mediaPlayerFactory);
 }
 
 } // namespace wasm
