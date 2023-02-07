@@ -24,8 +24,9 @@ export const componentFactory = (renderer: APLRenderer, component: APL.Component
                                  parent?: Component, ensureLayout: boolean = false,
                                  insertAt: number = -1 ): Component<IGenericPropType> => {
     const id = component.getUniqueId();
+    let comp;
     if (renderer.componentMap[id]) {
-        const comp = renderer.componentMap[id];
+        comp = renderer.componentMap[id];
         comp.parent = parent;
         if (ensureLayout && comp instanceof Text) {
             comp.setDimensions();
@@ -40,25 +41,29 @@ export const componentFactory = (renderer: APLRenderer, component: APL.Component
         }
         return comp;
     } else if (factoryMap[component.getType()]) {
-        const item = factoryMap[component.getType()](renderer, component, parent);
-        if (ensureLayout) {
-            if (item instanceof Text) {
-                item.init();
-            }
-            item.component.ensureLayout();
-            item.init();
-            if (parent) {
-                if (insertAt >= 0 && parent.container.children.length > 0 &&
-                    insertAt < parent.container.children.length) {
-                    parent.container.insertBefore(item.container, parent.container.children.item(insertAt));
-                } else {
-                    parent.container.appendChild(item.container);
-                }
+        comp = factoryMap[component.getType()](renderer, component, parent);
+    } else {
+        // Any unknown component is effectively container
+        comp = new Container(renderer, component, componentFactory, parent);
+    }
+
+    if (ensureLayout) {
+        if (comp instanceof Text) {
+            comp.init();
+        }
+        comp.component.ensureLayout();
+        comp.init();
+        if (parent) {
+            if (insertAt >= 0 && parent.container.children.length > 0 &&
+                insertAt < parent.container.children.length) {
+                parent.container.insertBefore(comp.container, parent.container.children.item(insertAt));
+            } else {
+                parent.container.appendChild(comp.container);
             }
         }
-        return item;
     }
-    throw new Error(`Cannot create component with type ${component.getType()}`);
+
+    return comp;
 };
 
 // tslint:disable:max-line-length

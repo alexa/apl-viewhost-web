@@ -21,59 +21,58 @@ iterateProps(const apl::CalculatedPropertyMap& calculated, emscripten::val& map,
 
 emscripten::val
 getValFromObject(const apl::Object& prop, WASMMetrics* m) {
-    double scale;
-    switch (prop.getType()) {
-        case apl::Object::ObjectType::kNumberType:
-            return emscripten::val(prop.asNumber());
-        case apl::Object::ObjectType::kStringType:
-            return emscripten::val(prop.asString());
-        case apl::Object::ObjectType::kBoolType:
-            return emscripten::val(prop.asBoolean());
-        case apl::Object::ObjectType::kColorType:
-            return emscripten::val(prop.asColor().get());
-        case apl::Object::ObjectType::kAbsoluteDimensionType:
-            scale = m->toViewhost(1.0f);
-            return emscripten::val(prop.getAbsoluteDimension() * scale);
-        case apl::Object::ObjectType::kFilterType:
-            return getValFromObject(prop.getFilter(), m);
-        case apl::Object::ObjectType::kRadiiType:
-            return getValFromObject(prop.getRadii(), m);
-        case apl::Object::ObjectType::kRectType:
-            return getValFromObject(prop.getRect(), m);
-        case apl::Object::ObjectType::kGradientType:
-            return getValFromObject(prop.getGradient(), m);
-        case apl::Object::ObjectType::kGraphicFilterType:
-            return getValFromObject(prop.getGraphicFilter(), m);
-        case apl::Object::ObjectType::kGraphicPatternType:
-            return emscripten::val(prop.getGraphicPattern());
-        case apl::Object::ObjectType::kMediaSourceType:
-            return getValFromObject(prop.getMediaSource(), m);
-        case apl::Object::ObjectType::kMapType:
-            return getValFromObject(prop.getMap(), m);
-        case apl::Object::ObjectType::kArrayType:
-            return getValFromObject(prop.getArray(), m);
-        case apl::Object::ObjectType::kStyledTextType:
-            return getValFromObject(prop.getStyledText(), m);
-        case apl::Object::ObjectType::kGraphicType: {
-            // set the metrics here because we need them for scaling
-            // a graphic element, which is derived from a graphic.
-            auto graphic = prop.getGraphic();
-            graphic->setUserData(m);
-            return emscripten::val(graphic);
-        }
-        case apl::Object::ObjectType::kTransform2DType: {
-            auto transform = prop.getTransform2D().get();
-            auto mat = "matrix(" + std::to_string(transform[0]) + "," +
-                       std::to_string(transform[1]) + "," + std::to_string(transform[2]) + "," +
-                       std::to_string(transform[3]) + "," + std::to_string(transform[4]) +
-                       "," + std::to_string(transform[5]) + ")";
-            return emscripten::val(mat);
-        }
-        case apl::Object::ObjectType::kURLRequestType:
-            return getValFromObject(prop.getURLRequest(), m);
-        default:
-            return emscripten::val::undefined();
+    if (prop.isNumber())
+        return emscripten::val(prop.getDouble());
+    else if (prop.isBoolean())
+        return emscripten::val(prop.getBoolean());
+    else if (prop.isString())
+        return emscripten::val(prop.getString());
+    else if (prop.is<apl::Color>())
+        return emscripten::val(prop.getColor());
+    else if (prop.isAbsoluteDimension()) {
+        auto scale = m->toViewhost(1.0f);
+        return emscripten::val(prop.getAbsoluteDimension() * scale);
     }
+    else if (prop.is<apl::Filter>())
+        return getValFromObject(prop.get<apl::Filter>(), m);
+    else if (prop.is<apl::Radii>())
+        return getValFromObject(prop.get<apl::Radii>(), m);
+    else if (prop.is<apl::Rect>())
+        return getValFromObject(prop.get<apl::Rect>(), m);
+    else if (prop.is<apl::Gradient>())
+        return getValFromObject(prop.get<apl::Gradient>(), m);
+    else if (prop.is<apl::GraphicFilter>())
+        return getValFromObject(prop.get<apl::GraphicFilter>(), m);
+    else if (prop.is<apl::GraphicPattern>())
+        return emscripten::val(prop.get<apl::GraphicPattern>());
+    else if (prop.is<apl::MediaSource>())
+        return getValFromObject(prop.get<apl::MediaSource>(), m);
+    else if (prop.isMap())
+        return getValFromObject(prop.getMap(), m);
+    else if (prop.isArray())
+        return getValFromObject(prop.getArray(), m);
+    else if (prop.is<apl::StyledText>())
+        return getValFromObject(prop.get<apl::StyledText>(), m);
+    else if (prop.is<apl::Graphic>()) {
+        // set the metrics here because we need them for scaling
+        // a graphic element, which is derived from a graphic.
+        auto graphic = prop.get<apl::Graphic>();
+        graphic->setUserData(m);
+        return emscripten::val(graphic);
+    }
+    else if (prop.is<apl::Transform2D>()) {
+        auto transform = prop.get<apl::Transform2D>().get();
+        auto mat = "matrix(" + std::to_string(transform[0]) + "," +
+                    std::to_string(transform[1]) + "," + std::to_string(transform[2]) + "," +
+                    std::to_string(transform[3]) + "," + std::to_string(transform[4]) +
+                    "," + std::to_string(transform[5]) + ")";
+        return emscripten::val(mat);
+    }
+    else if (prop.is<apl::URLRequest>())
+        return getValFromObject(prop.get<apl::URLRequest>(), m);
+
+    return emscripten::val::undefined();
+    
 }
 
 emscripten::val

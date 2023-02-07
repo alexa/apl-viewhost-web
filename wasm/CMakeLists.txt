@@ -115,6 +115,7 @@ add_custom_target(generate-wasm-enums ALL
         -f "SubmitKeyType"
         -f "TextAlign"
         -f "TextAlignVertical"
+        -f "TextTrackType"
         -f "TrackState"
         -f "UpdateType"
         -f "VectorGraphicScale"

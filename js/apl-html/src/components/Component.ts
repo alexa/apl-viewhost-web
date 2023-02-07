@@ -741,7 +741,7 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
         const isLegacyComponentType: boolean = LEGACY_CLIPPING_COMPONENTS_SET.has(componentType);
         const isLegacyAplVersion: boolean = this.renderer && this.renderer.getLegacyClippingEnabled();
 
-        if (isLegacyComponentType || isParentLegacy || !isLegacyAplVersion) {
+        if (!this.parent || isLegacyComponentType || isParentLegacy || !isLegacyAplVersion) {
             this.enableClipping();
         }
     }

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 const uuidv4 = require('uuid/v4');
-import { IMediaSource } from './IMediaSource';
+import { IMediaSource, ITextTrackSource } from './IMediaSource';
 
 /**
  * Media resource state
@@ -18,6 +18,7 @@ export interface IMediaResource {
     id: string;
     loaded: boolean;
     duration: number;
+    textTracks: ITextTrackSource[];
 }
 
 /**
@@ -117,7 +118,8 @@ export class PlaybackManager {
             trackIndex : index,
             url : track.url,
             loaded : false,
-            duration : track.duration
+            duration : track.duration,
+            textTracks: track.textTracks
         };
 
         this.resources.set(index, mediaResource);

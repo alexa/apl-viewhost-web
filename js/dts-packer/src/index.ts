@@ -221,7 +221,7 @@ export default class DtsPackerPlugin {
         compiler.plugin('done', () => {
             const name = path.basename(compiler.context);
             const m = new NodeModules(this.options.require, compiler.outputPath);
-            m.addModule(name, true);
+            m.addModule('@amzn/'+name, true);
             m.transformAll();
         });
     }

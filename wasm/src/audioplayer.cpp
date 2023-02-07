@@ -81,7 +81,7 @@ static inline apl::SpeechMarkType stringToMarkType(const std::string& type) {
     auto result = apl::SpeechMarkType::kSpeechMarkUnknown;
     if (type == "word") {
         result = apl::SpeechMarkType::kSpeechMarkWord;
-    } else if (type == "visime") {
+    } else if (type == "viseme") {
         result = apl::SpeechMarkType::kSpeechMarkViseme;
     } else if (type == "sentence") {
         result = apl::SpeechMarkType::kSpeechMarkSentence;

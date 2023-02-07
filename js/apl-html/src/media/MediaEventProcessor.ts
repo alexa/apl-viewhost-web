@@ -12,6 +12,7 @@ import { IMediaEventListener } from './IMediaEventListener';
 import { IMediaPlayerHandle } from './IMediaPlayerHandle';
 import { IVideoPlayer } from './IVideoPlayer';
 import { MediaErrorCode } from './MediaErrorCode';
+import { MediaPlayerHandle } from './MediaPlayerHandle';
 import { MediaState } from './MediaState';
 import { IMediaResource, PlaybackManager } from './PlaybackManager';
 import { PlaybackState } from './Resource';
@@ -36,7 +37,6 @@ export function createMediaEventProcessor(mediaEventProcessorArgs: MediaEventPro
 
     // Private Variables
     let videoState: PlaybackState = PlaybackState.IDLE;
-    const endEventPromiseListeners: PromiseCallback[] = [];
 
     // Private Functions
     async function ensureLoaded(fromEvent: boolean, isSettingSource: boolean = false) {
@@ -44,6 +44,7 @@ export function createMediaEventProcessor(mediaEventProcessorArgs: MediaEventPro
         if (!currentMediaResource.loaded) {
             await this.player.load(currentMediaResource.id, currentMediaResource.url);
             currentMediaResource.loaded = true;
+            this.player.loadTextTracks(currentMediaResource.textTracks);
         } else {
             this.updateMediaState(fromEvent, isSettingSource);
         }
@@ -58,14 +59,14 @@ export function createMediaEventProcessor(mediaEventProcessorArgs: MediaEventPro
             if (!this.loaded) {
                 logger.info('First loaded, refresh video');
                 this.setTrackIndex({trackIndex: 0, fromEvent: false});
-                this.rewind();
+                this.rewind({fromEvent: false});
                 this.loaded = true;
             }
             if (this.shouldStartPlayAfterPlayerInit) {
                 logger.info('Player ready, starting playback');
                 this.play({
                     waitForFinish: false,
-                    fromEvent: true,
+                    fromEvent: false,
                     isSettingSource: false
                 });
             }
@@ -117,12 +118,6 @@ export function createMediaEventProcessor(mediaEventProcessorArgs: MediaEventPro
                         this.currentMediaState.paused = true;
                         mediaPlayerEventType = MediaPlayerEventType.kMediaPlayerEventEnd;
                     }
-                    endEventPromiseListeners.forEach((resolvePromise) => {
-                        try {
-                            resolvePromise();
-                        } catch (e) {
-                        }
-                    });
                     break;
                 case PlaybackState.ERROR:
                     logger.error('Playback error.');
@@ -182,12 +177,6 @@ export function createMediaEventProcessor(mediaEventProcessorArgs: MediaEventPro
                     }
                 }
             );
-
-            if (waitForFinish) {
-                await new Promise((resolve) => {
-                    endEventPromiseListeners.push(resolve);
-                });
-            }
         },
         async pause(): Promise<any> {
             if (videoState === PlaybackState.PLAYING || videoState === PlaybackState.BUFFERING) {
@@ -231,8 +220,10 @@ export function createMediaEventProcessor(mediaEventProcessorArgs: MediaEventPro
 
             this.updateMediaState(fromEvent);
         },
-        async rewind(): Promise<any> {
-            await this.pause();
+        async rewind({ fromEvent }): Promise<any> {
+            if (fromEvent) {
+                await this.pause();
+            }
             const currentMediaResource = this.playbackManager.getCurrent();
             this.player.setCurrentTimeInSeconds(
                 toSecondsFromMilliseconds(currentMediaResource.offset)
@@ -240,16 +231,19 @@ export function createMediaEventProcessor(mediaEventProcessorArgs: MediaEventPro
         },
         async previous({ fromEvent }): Promise<any> {
             if (!this.playbackManager.hasPrevious()) {
-                await this.delegate.rewind();
+                await this.delegate.rewind(fromEvent);
             } else {
-                await this.pause();
+                if (fromEvent) {
+                    await this.pause();
+                }
                 this.playbackManager.previous();
             }
             await ensureLoaded.call(this, fromEvent);
         },
         async next({ fromEvent }): Promise<any> {
-            await this.pause();
-
+            if (fromEvent) {
+                await this.pause();
+            }
             if (!this.playbackManager.hasNext()) {
                 this.player.setCurrentTimeInSeconds(this.player.getDurationInSeconds() - 0.001);
             } else {
@@ -258,7 +252,9 @@ export function createMediaEventProcessor(mediaEventProcessorArgs: MediaEventPro
             }
         },
         async setTrackIndex({ trackIndex, fromEvent }): Promise<any> {
-            await this.pause();
+            if (fromEvent) {
+                await this.pause();
+            }
             this.playbackManager.setCurrent(trackIndex);
             this.updateMediaState(fromEvent, true);
             await ensureLoaded.call(this, fromEvent);
@@ -268,14 +264,16 @@ export function createMediaEventProcessor(mediaEventProcessorArgs: MediaEventPro
             this.audioTrack = audioTrack;
         },
         setMuted({ muted, fromEvent }) {
-            this.muted = muted;
+            if (this.audioTrack !== AudioTrack.kAudioTrackNone) {
+                this.muted = muted;
 
-            if (this.muted) {
-                this.player.mute();
-            } else {
-                this.player.unmute();
+                if (this.muted) {
+                    this.player.mute();
+                } else {
+                    this.player.unmute();
+                }
+                this.updateMediaState(fromEvent);
             }
-            this.updateMediaState(fromEvent);
         },
         async setTrackList({ trackArray }): Promise<any> {
             // Configure Player and Playback
@@ -411,7 +409,7 @@ export function createMediaEventProcessor(mediaEventProcessorArgs: MediaEventPro
         }
     });
 
-    return Object.setPrototypeOf(mediaEventProcessor, mediaPlayerHandle);
+    return Object.setPrototypeOf(mediaEventProcessor, mediaPlayerHandle) as MediaPlayerHandle;
 }
 
 function toSecondsFromMilliseconds(milliseconds: number) {

@@ -1,5 +1,5 @@
 {
-  "name": "dts-packer",
+  "name": "@amzn/dts-packer",
   "version": "1.0.0",
   "license": "SEE LICENSE IN LICENSE.txt",
   "main": "lib/index.js",
@@ -20,5 +20,8 @@
     "webpack": "^4.26.1",
     "webpack-cli": "^3.3.12",
     "webpack-merge": "^4.2.1"
+  },
+  "npm-pretty-much": {
+    "legacyPackageNameAlias": "dts-packer"
   }
 }

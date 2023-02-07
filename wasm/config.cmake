@@ -44,5 +44,5 @@ if(WASM_PROFILING)
 endif()
 
 #set compiler flags
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${WASM_FLAGS} --bind")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WASM_FLAGS} --bind")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${WASM_FLAGS} --bind -O1")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WASM_FLAGS} --bind -O1")

@@ -128,17 +128,17 @@ export class MediaPlayerHandle implements IMediaPlayerHandle, IMediaEventListene
     }
 
     public onEvent(event: PlaybackState): void {
-        this.eventProcessor.onEvent({
-            event,
-            fromEvent: false,
-            isSettingSource: false,
-            aplMediaPlayer: this.mediaPlayer
-        });
         if (this.videoComponent) {
             this.videoComponent.onEvent(event);
         } else {
             this.lastPlaybackState = event;
         }
+        this.eventSequencer.enqueueForProcessing(VideoInterface.ON_EVENT, {
+            event,
+            fromEvent: false,
+            isSettingSource: false,
+            aplMediaPlayer: this.mediaPlayer
+        });
     }
 
     public onPlayerReady(): void {

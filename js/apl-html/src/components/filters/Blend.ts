@@ -26,11 +26,21 @@ export interface IBlend extends IBaseFilter {
  * https://developer.mozilla.org/en-US/docs/Web/SVG/Element/feBlend
  */
 
+enum BlendType {
+    Blend = 'feBlend',
+    Composite = 'feComposite'
+}
+
 export function getBlendFilter(filter: Filter, imageSrcArray: string[]): IImageFilterElement | undefined {
     const blendId: string = uuidv4().toString();
     let filterImageArray: SVGFEImageElement[] = [];
-    const blend: SVGElement = document.createElementNS(SVG_NS, 'feBlend');
-    blend.setAttributeNS('', 'mode', getBlendMode((filter as IBlend).mode));
+    const [elementType, operator] = getBlendMode((filter as IBlend).mode);
+    const blend: SVGElement = document.createElementNS(SVG_NS, elementType);
+    if (elementType === BlendType.Composite) {
+        blend.setAttributeNS('', 'operator', operator);
+    } else {
+        blend.setAttributeNS('', 'mode', operator);
+    }
     blend.setAttributeNS('', 'result', blendId);
 
     /*
@@ -78,41 +88,47 @@ export function getBlendFilter(filter: Filter, imageSrcArray: string[]): IImageF
  * Return Blend Mode
  * https://codepen.io/yoksel/pen/BiExv
  */
-export function getBlendMode(mode: BlendMode): string {
+function getBlendMode(mode: BlendMode): [BlendType, string] {
     switch (mode) {
         case BlendMode.kBlendModeNormal:
-            return 'normal';
+            return [BlendType.Blend, 'normal'];
         case BlendMode.kBlendModeMultiply:
-            return 'multiply';
+            return [BlendType.Blend, 'multiply'];
         case BlendMode.kBlendModeScreen:
-            return 'screen';
+            return [BlendType.Blend, 'screen'];
         case BlendMode.kBlendModeOverlay:
-            return 'overlay';
+            return [BlendType.Blend, 'overlay'];
         case BlendMode.kBlendModeDarken:
-            return 'darken';
+            return [BlendType.Blend, 'darken'];
         case BlendMode.kBlendModeLighten:
-            return 'lighten';
+            return [BlendType.Blend, 'lighten'];
         case BlendMode.kBlendModeColorDodge:
-            return 'color-dodge';
+            return [BlendType.Blend, 'color-dodge'];
         case BlendMode.kBlendModeColorBurn:
-            return 'color-burn';
+            return [BlendType.Blend, 'color-burn'];
         case BlendMode.kBlendModeHardLight:
-            return 'hard-light';
+            return [BlendType.Blend, 'hard-light'];
         case BlendMode.kBlendModeSoftLight:
-            return 'soft-light';
+            return [BlendType.Blend, 'soft-light'];
         case BlendMode.kBlendModeDifference:
-            return 'difference';
+            return [BlendType.Blend, 'difference'];
         case BlendMode.kBlendModeExclusion:
-            return 'exclusion';
+            return [BlendType.Blend, 'exclusion'];
         case BlendMode.kBlendModeHue:
-            return 'hue';
+            return [BlendType.Blend, 'hue'];
         case BlendMode.kBlendModeSaturation:
-            return 'saturation';
+            return [BlendType.Blend, 'saturation'];
         case BlendMode.kBlendModeColor:
-            return 'color';
+            return [BlendType.Blend, 'color'];
         case BlendMode.kBlendModeLuminosity:
-            return 'luminosity';
+            return [BlendType.Blend, 'luminosity'];
+        case BlendMode.kBlendModeSourceIn:
+            return [BlendType.Composite, 'in'];
+        case BlendMode.kBlendModeSourceAtop:
+            return [BlendType.Composite, 'atop'];
+        case BlendMode.kBlendModeSourceOut:
+            return [BlendType.Composite, 'out'];
         default:
-            return 'normal';
+            return [BlendType.Blend, 'normal'];
     }
 }

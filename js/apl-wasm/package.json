@@ -1,5 +1,5 @@
 {
-  "name": "apl-wasm",
+  "name": "@amzn/apl-wasm",
   "version": "1.0.0",
   "private": true,
   "license": "SEE LICENSE IN LICENSE.txt",
@@ -58,5 +58,8 @@
     "webpack-bundle-analyzer": "^4.6.1",
     "webpack-cli": "^3.3.12",
     "webpack-merge": "^4.2.1"
+  },
+  "npm-pretty-much": {
+    "legacyPackageNameAlias": "apl-wasm"
   }
 }

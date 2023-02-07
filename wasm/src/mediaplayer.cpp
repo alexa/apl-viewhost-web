@@ -11,6 +11,15 @@
 namespace apl {
 namespace wasm {
 
+static std::string textTrackTypeToKind(TextTrackType type) {
+    switch (type) {
+        case TextTrackType::kTextTrackTypeCaption:
+            return "captions";
+        default:
+            return "unsupported";
+    }
+}
+
 std::shared_ptr<MediaPlayer>
 MediaPlayer::create(apl::MediaPlayerCallback&& playerCallback,
                     emscripten::val MediaPlayerFactory)
@@ -58,16 +67,27 @@ MediaPlayer::setTrackList(std::vector<apl::MediaTrack> tracks)
     
     emscripten::val trackArray = emscripten::val::array();
     
-    int i = 0;
-    for (auto& track : tracks) {
+    for (int i = 0; i < tracks.size(); i++) {
+        auto& track = tracks[i];
         emscripten::val trackObj = emscripten::val::object();
         trackObj.set("url", track.url);
         trackObj.set("offset", track.offset);
         trackObj.set("duration", track.duration);
         trackObj.set("repeatCount", track.repeatCount);
 
+        emscripten::val textTrackArray = emscripten::val::array();
+        for (int j = 0; j < track.textTracks.size(); j++) {
+            auto& textTrack = track.textTracks[j];
+            emscripten::val textTrackObj = emscripten::val::object();
+            textTrackObj.set("kind", textTrackTypeToKind(textTrack.type));
+            textTrackObj.set("url", textTrack.url);
+            textTrackObj.set("description", textTrack.description);
+
+            textTrackArray.set(j, textTrackObj);
+        }
+        trackObj.set("textTracks", textTrackArray);
+
         trackArray.set(i, trackObj);
-        i++;
     }
 
     mPlayer.call<void>("setTrackList", trackArray);
@@ -207,7 +227,8 @@ void
 MediaPlayer::doCallback(int eventType) {
     if (!isActive()) return;
     apl::MediaPlayerEventType mediaPlayerEventType = static_cast<apl::MediaPlayerEventType>(eventType);
-    if (mediaPlayerEventType == apl::MediaPlayerEventType::kMediaPlayerEventEnd) {
+    if (mediaPlayerEventType == apl::MediaPlayerEventType::kMediaPlayerEventEnd
+        || eventType == apl::MediaPlayerEventType::kMediaPlayerEventTrackFail) {
         resolveExistingAction();
     }
     auto callback = mCallback;

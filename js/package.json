@@ -1,5 +1,5 @@
 {
-  "name": "apl-workspace",
+  "name": "@amzn/apl-workspace",
   "version": "1.0.0",
   "private": true,
   "workspaces": [
@@ -25,5 +25,8 @@
     "clean:html": "cd apl-html && yarn clean",
     "clean:wasm": "cd apl-wasm && yarn clean",
     "lint": "yarn workspaces run lint"
+  },
+  "npm-pretty-much": {
+    "legacyPackageNameAlias": "apl-workspace"
   }
 }

@@ -268,10 +268,10 @@ ContextMethods::create(emscripten::val options, emscripten::val text, emscripten
         // get document background, color or gradient
         background.set("color", emscripten::val(Color().asString())); // Transparent
         background.set("gradient", emscripten::val::null());
-        if (contentPtr->getBackground(coreMetrics, rootConfig).isColor()) {
+        if (contentPtr->getBackground(coreMetrics, rootConfig).is<Color>()) {
             background.set("color", emscripten::val(contentPtr->getBackground(coreMetrics, rootConfig).asColor().asString()));
-        } else if (contentPtr->getBackground(coreMetrics, rootConfig).isGradient()) {
-            background.set("gradient", emscripten::getValFromObject(contentPtr->getBackground(coreMetrics, rootConfig).getGradient(), m));
+        } else if (contentPtr->getBackground(coreMetrics, rootConfig).is<Gradient>()) {
+            background.set("gradient", emscripten::getValFromObject(contentPtr->getBackground(coreMetrics, rootConfig).get<Gradient>(), m));
         }
 
         // add metrics to the root context so we can connect our viewport to any events, components,

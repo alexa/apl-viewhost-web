@@ -4,7 +4,7 @@
  */
 
 /**
- * MediaTrack defines the source and playback parameters
+ * IMediaSource defines the source and playback parameters
  * @ignore
  */
 export interface IMediaSource {
@@ -12,11 +12,6 @@ export interface IMediaSource {
      * The actual URL to load the video from
      */
     url: string;
-
-    /**
-     * Optional description of this source
-     */
-    description: string;
 
     /**
      * Duration of the track in milliseconds
@@ -32,4 +27,30 @@ export interface IMediaSource {
      * Milliseconds from the start of the track to play from
      */
     offset: number;
+
+    /**
+     * Text tracks of the media
+     */
+    textTracks: Array<ITextTrackSource>;
+}
+
+/**
+ * ITextTrackSource defines the text track attached to a media source
+ * @ignore
+ */
+export interface ITextTrackSource {
+    /**
+     * The kind of the text track
+     */
+    kind: string;
+    
+    /**
+     * The actual URL to load the text track
+     */
+    url: string;
+
+    /**
+     * Optional description of this source
+     */
+    description: string;
 }

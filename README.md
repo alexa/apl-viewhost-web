@@ -1,10 +1,10 @@
 # Alexa Presentation Language (APL) Viewhost Web
 
 <p>
- <a href="https://github.com/alexa/apl-viewhost-web/tree/v2022.2.0" alt="version">
- <img src="https://img.shields.io/badge/stable%20version-2022.2.0-brightgreen" /></a>
- <a href="https://github.com/alexa/apl-core-library/tree/v2022.2.0" alt="APLCore">
- <img src="https://img.shields.io/badge/apl%20core%20library-2022.2.0-navy" /></a>
+ <a href="https://github.com/alexa/apl-viewhost-web/tree/v2023.1.0" alt="version">
+ <img src="https://img.shields.io/badge/stable%20version-2023.1.0-brightgreen" /></a>
+ <a href="https://github.com/alexa/apl-core-library/tree/v2023.1.0" alt="APLCore">
+ <img src="https://img.shields.io/badge/apl%20core%20library-2023.1.0-navy" /></a>
 </p>
 
 ## Introduction
@@ -16,7 +16,7 @@ platform or framework for which the view host was designed by leveraging the fun
 
 ### Prerequisites
 
-* [NodeJS](https://nodejs.org/en/) - version 10.x or higher
+* [NodeJS](https://nodejs.org/en/) - version 16.x or higher
 * [cmake](https://cmake.org/install/) - the easiest way to install on Mac is using `brew install cmake`
 * [Yarn](https://yarnpkg.com/getting-started/install)
 

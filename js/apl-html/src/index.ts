@@ -100,6 +100,7 @@ export * from './utils/EventUtils';
 export * from './utils/FilterUtils';
 export * from './utils/FontUtils';
 export * from './utils/SoftRandom';
+export * from './utils/TextTrackUtils';
 export * from './utils/LocaleMethods';
 export * from './logging/ILogger';
 export * from './logging/LoggerFactory';

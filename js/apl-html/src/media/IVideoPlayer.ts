@@ -2,6 +2,7 @@
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  */
 
+import { ITextTrackSource } from './IMediaSource';
 import {IPlayer} from './IPlayer';
 
 export interface IVideoPlayer extends IPlayer {
@@ -28,4 +29,6 @@ export interface IVideoPlayer extends IPlayer {
     reset(): void;
 
     destroy(): void;
+
+    loadTextTracks(textTracks: ITextTrackSource[]): void;
 }
