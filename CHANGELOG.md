@@ -1,5 +1,15 @@
 # Changelog for apl-viewhost-web
 
+## [2023.2]
+This release adds support for version 2023.2 of the APL specification. Please also see APL Core Library for changes: [apl-core-library CHANGELOG](https://github.com/alexa/apl-core-library/blob/master/CHANGELOG.md)
+
+### Added
+- Add support for the seekTo ControlMedia command
+
+### Changed
+- Remove usage of APL Core Library's deprecated getTheme API
+- Bug fixes
+
 ## [2023.1]
 This release adds support for version 2023.1 of the APL specification. Please also see APL Core Library for changes: [apl-core-library CHANGELOG](https://github.com/alexa/apl-core-library/blob/master/CHANGELOG.md)
 

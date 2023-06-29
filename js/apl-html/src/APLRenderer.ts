@@ -527,13 +527,7 @@ export default abstract class APLRenderer<Options = any> {
             });
         }
 
-        let docTheme: string = this.context.getTheme();
-        if (docTheme !== 'light' && docTheme !== 'dark') {
-            // treat themes other than dark and light as dark
-            docTheme = 'dark';
-        }
-
-        this.setBackground(docTheme);
+        this.setBackground();
 
         // begin update loop
         this.requestId = requestAnimationFrame(this.update);
@@ -593,15 +587,15 @@ export default abstract class APLRenderer<Options = any> {
         return Object.keys(this.componentMap).length;
     }
 
-    private setBackground(docTheme: string) {
+    private setBackground() {
+        // Setting backgroundColor to black to ensure the correct behaviour
+        // of a gradient containing an alpha channel component
+
+        this.view.style.backgroundColor = 'black';
+
         const background = this.context.getBackground();
-        const backgroundColors = {
-            dark: 'black',
-            light: 'white'
-        };
         // Spec: If the background property is partially transparent
         // the default background color of the device will show through
-        this.view.style.backgroundColor = backgroundColors[docTheme];
         this.view.style.backgroundImage = background.gradient ?
             getCssGradient(background.gradient, this.logger) :
             getCssPureColorGradient(background.color);

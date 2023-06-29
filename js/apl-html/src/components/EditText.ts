@@ -263,10 +263,7 @@ export class EditText extends ActionableComponent<IEditTextProperties> {
     }
 
     private setInputText = async () => {
-        const text = await this.filterText(this.props[PropertyKey.kPropertyText]);
-        if (text.length > 0) {
-            this.inputElement.value = text;
-        }
+        this.inputElement.value = await this.filterText(this.props[PropertyKey.kPropertyText]);
     }
 
     public focus = () => {

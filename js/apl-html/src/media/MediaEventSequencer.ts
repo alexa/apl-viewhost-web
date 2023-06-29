@@ -14,6 +14,7 @@ export enum VideoInterface {
     PAUSE = 'pause',
     STOP = 'stop',
     SEEK = 'seek',
+    SEEKTO = 'seekTo',
     REWIND = 'rewind',
     PREVIOUS = 'previous',
     NEXT = 'next',

@@ -38,8 +38,6 @@ declare namespace APL {
 
         public topComponent(): APL.Component;
 
-        public getTheme(): string;
-
         public getBackground(): APL.IBackground;
 
         public setBackground(background: APL.IBackground): void;

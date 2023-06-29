@@ -33,15 +33,6 @@ ContextMethods::topComponent(const apl::RootContextPtr& context) {
     return top;
 }
 
-std::string
-ContextMethods::getTheme(const apl::RootContextPtr& context) {
-    std::string theme = "";
-    if (context) {
-        theme = context->getTheme();
-    }
-    return theme;
-}
-
 emscripten::val
 ContextMethods::getBackground(const apl::RootContextPtr& context) {
     return background;
@@ -504,7 +495,6 @@ EMSCRIPTEN_BINDINGS(apl_wasm_context) {
     emscripten::class_<apl::RootContext>("Context")
         .smart_ptr<apl::RootContextPtr>("ContextPtr")
         .function("topComponent", &internal::ContextMethods::topComponent)
-        .function("getTheme", &internal::ContextMethods::getTheme)
         .function("getBackground", &internal::ContextMethods::getBackground)
         .function("setBackground", &internal::ContextMethods::setBackground)
         .function("getDataSourceContext", &internal::ContextMethods::getDataSourceContext)

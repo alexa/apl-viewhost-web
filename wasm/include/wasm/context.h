@@ -26,7 +26,6 @@ struct ContextMethods {
     static apl::RootContextPtr create(emscripten::val options, emscripten::val text, emscripten::val metrics, emscripten::val content, emscripten::val config, emscripten::val scalingOptions);
 
     static apl::ComponentPtr topComponent(const apl::RootContextPtr& context);
-    static std::string getTheme(const apl::RootContextPtr& context);
     static emscripten::val getBackground(const apl::RootContextPtr& context);
     static void setBackground(const apl::RootContextPtr& context, emscripten::val background);
     static std::string getDataSourceContext(const apl::RootContextPtr& context);

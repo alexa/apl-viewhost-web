@@ -168,6 +168,15 @@ MediaPlayer::seek(int offset)
 }
 
 void
+MediaPlayer::seekTo(int position)
+{
+    if (!isActive()) return;
+    resolveExistingAction();
+
+    mPlayer.call<void>("seekTo", position);
+} 
+ 
+void
 MediaPlayer::setTrackIndex(int trackIndex)
 {
     if (!isActive()) return;

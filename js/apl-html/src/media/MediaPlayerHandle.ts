@@ -74,6 +74,13 @@ export class MediaPlayerHandle implements IMediaPlayerHandle, IMediaEventListene
         });
     }
 
+    public async seekTo(position: number): Promise<any> {
+        this.eventSequencer.enqueueForProcessing(VideoInterface.SEEKTO, {
+            position,
+            fromEvent: true
+        });
+    }
+
     public async play(waitForFinish: boolean): Promise<any> {
         // Route through video component so can be override
         if (!this.videoComponent) {

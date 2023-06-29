@@ -111,7 +111,10 @@ const parseFirstTXXXFrame = (buffer : Uint8Array, offset : number) : IBaseMarker
   // Slice selects from the start byte, and ends at HEADER_LENGTH + length - 1
   // We need to skip past the header and frame length to get to the end
   const contents = buffer.slice(start, offset + HEADER_LENGTH + length - 1);
-  const data = String.fromCharCode.apply(null, contents);
+
+  // TODO: After we upgrade to Typescript > 2.8.0, this can be changed to: new TextDecoder('utf-8')
+  const textDecoder = new (window as any).TextDecoder('utf-8');
+  const data = textDecoder.decode(contents)
   return JSON.parse(data);
 };
 

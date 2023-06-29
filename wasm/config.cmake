@@ -44,5 +44,14 @@ if(WASM_PROFILING)
 endif()
 
 #set compiler flags
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${WASM_FLAGS} --bind -O1")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WASM_FLAGS} --bind -O1")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${WASM_FLAGS} --bind")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WASM_FLAGS} --bind")
+
+# Set optimization level from build type
+if(CMAKE_BUILD_TYPE MATCHES DEBUG)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O1")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O1")
+else()
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+endif()

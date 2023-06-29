@@ -37,6 +37,7 @@ public:
     void previous() override;
     void rewind() override;
     void seek(int offset) override;
+    void seekTo(int position) override;
     void setTrackIndex(int trackIndex) override;
     void setAudioTrack(apl::AudioTrack audioTrack) override;
     void setMute(bool mute) override;

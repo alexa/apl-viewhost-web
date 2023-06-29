@@ -193,31 +193,15 @@ export function createMediaEventProcessor(mediaEventProcessorArgs: MediaEventPro
         },
         async seek({ seekOffset, fromEvent }): Promise<any> {
             await ensureLoaded.call(this, fromEvent);
-            const mediaResource: IMediaResource = this.playbackManager.getCurrent();
-            const mediaOffsetMs: number = mediaResource.offset;
             const currentPlaybackPositionMs: number = toMillisecondsFromSeconds(
                 this.player.getCurrentPlaybackPositionInSeconds()
             );
-            const desiredPlaybackPositionMs: number = currentPlaybackPositionMs + seekOffset;
-            const videoDurationMs = toMillisecondsFromSeconds(this.player.getDurationInSeconds());
-            const isNonDefaultDuration: boolean = mediaResource.duration > 0;
-            const isCurrentPositionOutOfBounds: boolean =
-                videoDurationMs <= desiredPlaybackPositionMs;
-
-            if (isCurrentPositionOutOfBounds) {
-                // minus unit time otherwise will rollover to start
-                if (isNonDefaultDuration) {
-                    this.player.setCurrentTimeInSeconds(mediaOffsetMs +
-                        toSecondsFromMilliseconds(mediaResource.duration) - 0.001);
-                } else {
-                    this.player.setCurrentTimeInSeconds(toSecondsFromMilliseconds(videoDurationMs) - 0.001);
-                }
-            } else if (desiredPlaybackPositionMs < mediaOffsetMs) {
-                this.player.setCurrentTimeInSeconds(toSecondsFromMilliseconds(mediaOffsetMs));
-            } else {
-                this.player.setCurrentTimeInSeconds(toSecondsFromMilliseconds(desiredPlaybackPositionMs));
-            }
-
+            setPlayerPosition(this.player, this.playbackManager.getCurrent(), currentPlaybackPositionMs + seekOffset);
+            this.updateMediaState(fromEvent);
+        },
+        async seekTo({ position, fromEvent }): Promise<any> {
+            await ensureLoaded.call(this, fromEvent);
+            setPlayerPosition(this.player, this.playbackManager.getCurrent(), position);
             this.updateMediaState(fromEvent);
         },
         async rewind({ fromEvent }): Promise<any> {
@@ -437,4 +421,28 @@ function ensureValidMediaState(mediaState: any): mediaState is APL.IMediaState {
 
 function isValidMediaStateValue(n: any): n is number {
     return !Number.isNaN(n) && n !== undefined;
+}
+
+function setPlayerPosition(player: any, mediaResource: IMediaResource, desiredPlaybackPositionMs: number) {
+    const mediaOffsetMs: number = mediaResource.offset;
+    const videoDurationMs = toMillisecondsFromSeconds(player.getDurationInSeconds());
+    const providedVideoDurationMs = mediaResource.duration;
+    const isDurationProvided: boolean = mediaResource.duration !== 0;
+
+    // minus unit time for EOF otherwise will rollover to start
+    const endOfFileMs = videoDurationMs - 1;
+    const endOfOffsetAndDurationMs = mediaOffsetMs + providedVideoDurationMs - 1;
+
+    // Calculate the range of the clipped track based on `offset` and `duration` values
+    const trueStart = Math.max(0, mediaOffsetMs);
+    const trueEnd = (isDurationProvided)
+            ? Math.min(endOfFileMs, endOfOffsetAndDurationMs)
+            : endOfFileMs;
+
+    player.setCurrentTimeInSeconds(toSecondsFromMilliseconds(
+        Math.min(
+            Math.max(desiredPlaybackPositionMs, trueStart),
+            trueEnd
+        )
+    ));
 }
