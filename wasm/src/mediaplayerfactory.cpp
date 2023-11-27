@@ -35,15 +35,27 @@ MediaPlayerFactory::cleanup()
             // weak pointer is no longer valid, prune it from the array
             it = mActivePlayers.erase(it);
         } else {
-            it++;
+            ++it;
         }
     }
+}
+
+void
+MediaPlayerFactory::destroy()
+{
+    for (auto it = mActivePlayers.begin(); it != mActivePlayers.end(); ++it) {
+        if (auto player = it->lock()) {
+            player->halt();
+        }
+    }
+    mActivePlayers.clear();
 }
 
 EMSCRIPTEN_BINDINGS(wasm_mediaplayer_factory) {
     emscripten::class_<MediaPlayerFactory>("MediaPlayerFactory")
         .smart_ptr<MediaPlayerFactoryPtr>("MediaPlayerFactoryPtr")
-        .class_function("create", &MediaPlayerFactory::create);
+        .class_function("create", &MediaPlayerFactory::create)
+        .function("destroy", &MediaPlayerFactory::destroy);
 }
 
 } // namespace wasm

@@ -59,7 +59,7 @@ export function createMediaEventSequencer(videoEventSequencerArgs: MediaEventSeq
     let currentAnimationFrame: number;
 
     async function processEvent(event: VideoInterface, callArgs: any) {
-        logger.info('processEvent ' + `${event as string}`);
+        logger.debug('processEvent ' + `${event as string}`);
         await mediaEventProcessor[(event as string)](callArgs);
     }
 
@@ -126,7 +126,7 @@ export function createMediaEventSequencer(videoEventSequencerArgs: MediaEventSeq
             });
         },
         enqueueForProcessing(event: VideoInterface, callArgs: any): void {
-            logger.info('enqueueEvent ' + `${event as string}`);
+            logger.debug('enqueueEvent ' + `${event as string}`);
             eventsQueue.push([event, callArgs]);
             ensureProcessing();
         },

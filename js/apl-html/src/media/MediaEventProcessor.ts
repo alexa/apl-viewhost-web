@@ -102,12 +102,12 @@ export function createMediaEventProcessor(mediaEventProcessorArgs: MediaEventPro
                     mediaPlayerEventType = MediaPlayerEventType.kMediaPlayerEventPause;
                     break;
                 case PlaybackState.ENDED:
-                    if (this.playbackManager.repeat()) {
+                    if (!this.stopped && this.playbackManager.repeat()) {
                         this.delegate.rewind().then(() => {
                             this.delegate.play(false);
                         });
                         mediaPlayerEventType = MediaPlayerEventType.kMediaPlayerEventTimeUpdate;
-                    } else if (this.playbackManager.hasNext()) {
+                    } else if (!this.stopped && this.playbackManager.hasNext()) {
                         this.delegate.next().then(() => {
                             this.delegate.play(false);
                         });
@@ -183,7 +183,10 @@ export function createMediaEventProcessor(mediaEventProcessorArgs: MediaEventPro
                 await this.player.pause();
             }
         },
-        async stop(): Promise<any> {
+        async stop({ fromEvent }): Promise<any> {
+            if (fromEvent) {
+                this.stopped = true;
+            }
             await this.player.end();
             const currentMediaResource = this.playbackManager.getCurrent();
             const endTimeMs = this.currentMediaState.duration + currentMediaResource.offset;
@@ -306,7 +309,7 @@ export function createMediaEventProcessor(mediaEventProcessorArgs: MediaEventPro
                 }
                 if (this.currentMediaState.currentTime > this.currentMediaState.duration) {
                     if (!isSettingSource) {
-                        this.stop();
+                        this.stop({fromEvent: false});
                     }
                 }
             } else {

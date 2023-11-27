@@ -206,13 +206,17 @@ ContextMethods::create(emscripten::val options, emscripten::val text, emscripten
         bool shapeOverridesCost = true;
         double k = 0;
 
-        applyScalingOptions(
-            scalingOptions,
-            specs,
-            coreMetrics,
-            shapeOverridesCost,
-            k
-        );
+        bool autosizing = coreMetrics.getMinHeight() != coreMetrics.getMaxHeight() || coreMetrics.getMinWidth() != coreMetrics.getMaxWidth();
+
+        if (!autosizing) {
+            applyScalingOptions(
+                scalingOptions,
+                specs,
+                coreMetrics,
+                shapeOverridesCost,
+                k
+            );
+        }
 
         apl::RootContextPtr root;
         WASMMetrics* m;
@@ -337,16 +341,26 @@ ContextMethods::setLocalTimeAdjustment(const apl::RootContextPtr& context, apl::
     context->setLocalTimeAdjustment(offset);
 }
 
+emscripten::val
+ContextMethods::getViewportPixelSize(const apl::RootContextPtr& context) {
+    auto m = context->getUserData<WASMMetrics>();
+    auto width = m->toViewhost(context->getViewportSize().getWidth());
+    auto height = m->toViewhost(context->getViewportSize().getHeight());
+
+    emscripten::val size = emscripten::val::object();
+    size.set("width", width);
+    size.set("height", height);
+    return size;
+}
+
 int
 ContextMethods::getViewportWidth(const apl::RootContextPtr& context) {
-    auto m = context->getUserData<WASMMetrics>();
-    return m->getViewhostWidth();
+    return context->getViewportSize().getWidth();
 }
 
 int
 ContextMethods::getViewportHeight(const apl::RootContextPtr& context) {
-    auto m = context->getUserData<WASMMetrics>();
-    return m->getViewhostHeight();
+    return context->getViewportSize().getHeight();
 }
 
 double
@@ -515,6 +529,7 @@ EMSCRIPTEN_BINDINGS(apl_wasm_context) {
         .function("nextTime", &internal::ContextMethods::nextTime)
         .function("updateTime", &internal::ContextMethods::updateTime)
         .function("setLocalTimeAdjustment", &internal::ContextMethods::setLocalTimeAdjustment)
+        .function("getViewportPixelSize", &internal::ContextMethods::getViewportPixelSize)
         .function("getViewportWidth", &internal::ContextMethods::getViewportWidth)
         .function("getViewportHeight", &internal::ContextMethods::getViewportHeight)
         .function("getScaleFactor", &internal::ContextMethods::getScaleFactor)

@@ -30,7 +30,10 @@ static std::map<std::string, RootConfig::ScreenMode> screenModeMap = {
 
 struct ConfigurationChangeMethods {
     static ConfigurationChangePtr create();
-    static ConfigurationChangePtr& size(ConfigurationChangePtr& configurationChange, double width, double height);
+    static ConfigurationChangePtr& size(ConfigurationChangePtr& configurationChange, int width, int height);
+    static ConfigurationChangePtr& sizeRange(ConfigurationChangePtr& configurationChange,
+                                             int pixelWidth, int minWidth, int maxWidth,
+                                             int pixelHeight, int minHeight, int maxHeight);
     static ConfigurationChangePtr& theme(ConfigurationChangePtr& configurationChange, const std::string& theme);
     static ConfigurationChangePtr& viewportMode(ConfigurationChangePtr& configurationChange, const std::string& mode);
     static ConfigurationChangePtr& fontScale(ConfigurationChangePtr& configurationChange, double scale);

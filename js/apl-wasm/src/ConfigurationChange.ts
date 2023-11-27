@@ -13,6 +13,10 @@ export class ConfigurationChange {
     public configurationChange: APL.ConfigurationChange;
     public width: number;
     public height: number;
+    public minWidth: number;
+    public maxWidth: number;
+    public minHeight: number;
+    public maxHeight: number;
 
     /**
      * Creates an instance of a ConfigurationChange object.
@@ -21,11 +25,30 @@ export class ConfigurationChange {
     public static create(options?: IConfigurationChangeOptions) {
         const configChange = new ConfigurationChange();
         if (options) {
+            let autoSize = false;
+            let width = 0;
+            let height = 0;
+            let minWidth = 0;
+            let maxWidth = 0;
+            let minHeight = 0;
+            let maxHeight = 0;
             if ('width' in options && 'height' in options) {
-                configChange.size(options.width!, options.height!);
+                width = options.width!;
+                height = options.height!;
+            }
+            if ('minWidth' in options && 'maxWidth' in options &&
+                'minHeight' in options && 'maxHeight' in options) {
+                autoSize = true;
+                minWidth = options.minWidth!;
+                maxWidth = options.maxWidth!;
+                minHeight = options.minHeight!;
+                maxHeight = options.maxHeight!;
             }
             if ('docTheme' in options) {
                 configChange.theme(options.docTheme!);
+            }
+            if ('theme' in options) {
+                configChange.theme(options.theme!);
             }
             if ('mode' in options) {
                 configChange.viewportMode(options.mode!);
@@ -47,6 +70,17 @@ export class ConfigurationChange {
                     configChange.environmentValue(key, options.environmentValues![key])
                 );
             }
+            if (autoSize) {
+                if (width > 0 && height > 0) {
+                    configChange.sizeRange(width, minWidth, maxWidth, height, minHeight, maxHeight);
+                } else {
+                    throw new Error('ConfigurationChange: default width and height must be set for auto sizing');
+                }
+            } else {
+                if (width > 0 && height > 0) {
+                    configChange.size(width, height);
+                }
+            }
         }
         return configChange;
     }
@@ -59,7 +93,7 @@ export class ConfigurationChange {
     }
 
     /**
-     * Add Size information to the ConfigurationChange object.
+     * Add Fixed Size information to the ConfigurationChange object.
      * @param width
      * @param height
      */
@@ -67,6 +101,21 @@ export class ConfigurationChange {
         this.configurationChange.size(width, height);
         this.width = width;
         this.height = height;
+        return this;
+    }
+
+    /**
+     * Add Variable Size information to the ConfigurationChange object.
+     * @param width
+     * @param height
+     */
+    public sizeRange(width: number, minWidth: number, maxWidth: number,
+                     height: number, minHeight: number, maxHeight: number): ConfigurationChange {
+        this.configurationChange.sizeRange(width, minWidth, maxWidth, height, minHeight, maxHeight);
+        this.minWidth = minWidth;
+        this.maxWidth = maxWidth;
+        this.minHeight = minHeight;
+        this.maxHeight = maxHeight;
         return this;
     }
 
@@ -133,6 +182,12 @@ export class ConfigurationChange {
         if (other.width && other.height) {
             this.width = other.width;
             this.height = other.height;
+        }
+        if (other.minWidth && other.maxWidth && other.minHeight && other.maxHeight) {
+            this.minWidth = other.minWidth;
+            this.maxWidth = other.maxWidth;
+            this.minHeight = other.minHeight;
+            this.maxHeight = other.maxHeight;
         }
         this.configurationChange.mergeConfigurationChange(other.getConfigurationChange());
     }

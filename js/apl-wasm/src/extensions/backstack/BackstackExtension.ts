@@ -187,7 +187,7 @@ export class BackstackExtension implements IExtension, GoBackListener {
         if (!settings) {
             return;
         }
-        if (settings.hasOwnProperty('backstackId') && this.activeDocumentId === undefined) {
+        if (settings.hasOwnProperty('backstackId') && settings['backstackId'] && this.activeDocumentId === undefined) {
             /**
              * The backstackId property determines if the document will be added to the backstack.
              * If the backstackId is not present or empty, the document will not be added to the backstack.

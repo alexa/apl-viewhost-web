@@ -617,9 +617,59 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
         let offsetLeft = 0;
         if (this.parent && this.parent.component.getType() === ComponentType.kComponentTypeFrame) {
             const frame = this.parent.component;
+            const drawnBorderWidth = frame.getCalculatedByKey<number>(PropertyKey.kPropertyDrawnBorderWidth);
+            offsetTop -= drawnBorderWidth;
+            offsetLeft -= drawnBorderWidth;
+
+            // Set appropriate clipping path
+            const parentRadii = frame.getCalculatedByKey<APL.Radii>(PropertyKey.kPropertyBorderRadii);
+            const parentBounds = frame.getCalculatedByKey<APL.Rect>(PropertyKey.kPropertyBounds);
             const borderWidth = frame.getCalculatedByKey<number>(PropertyKey.kPropertyBorderWidth);
-            offsetTop -= borderWidth;
-            offsetLeft -= borderWidth;
+
+            const outlineRadii: number[] = [
+                parentRadii.topLeft(),
+                parentRadii.topRight(),
+                parentRadii.bottomRight(),
+                parentRadii.bottomLeft()
+            ];
+
+            if (borderWidth !== 0) {
+                // Inset Radii by border width
+                outlineRadii[0] = Math.max(0, outlineRadii[0] - borderWidth);
+                outlineRadii[1] = Math.max(0, outlineRadii[1] - borderWidth);
+                outlineRadii[2] = Math.max(0, outlineRadii[2] - borderWidth);
+                outlineRadii[3] = Math.max(0, outlineRadii[3] - borderWidth);
+            }
+
+            const relativeInnerParentBounds = {
+                top: borderWidth - this.bounds.top,
+                left: borderWidth - this.bounds.left,
+                height: Math.max(0, parentBounds.height - borderWidth * 2),
+                width: Math.max(0, parentBounds.width - borderWidth * 2)
+            };
+
+            const outlineDimensions: number[] = [
+                relativeInnerParentBounds.width - outlineRadii[0] - outlineRadii[1], // top
+                relativeInnerParentBounds.height - outlineRadii[1] - outlineRadii[2], // right
+                relativeInnerParentBounds.width - outlineRadii[2] - outlineRadii[3], // bottom
+                relativeInnerParentBounds.height - outlineRadii[3] - outlineRadii[0] // left
+            ];
+
+            const startTop = relativeInnerParentBounds.top;
+            const startLeft = relativeInnerParentBounds.left + outlineRadii[0];
+
+            const clippingPath = `path('` +
+                `M${startLeft},${startTop} ` +
+                `h${outlineDimensions[0]} ` +
+                `a${outlineRadii[1]},${outlineRadii[1]} 0 0 1 ${outlineRadii[1]},${outlineRadii[1]} ` +
+                `v${outlineDimensions[1]} ` +
+                `a${outlineRadii[2]},${outlineRadii[2]} 0 0 1 -${outlineRadii[2]},${outlineRadii[2]} ` +
+                `h-${outlineDimensions[2]} ` +
+                `a${outlineRadii[3]},${outlineRadii[3]} 0 0 1 -${outlineRadii[3]},-${outlineRadii[3]} ` +
+                `v-${outlineDimensions[3]} ` +
+                `a${outlineRadii[0]},${outlineRadii[0]} 0 0 1 ${outlineRadii[0]},-${outlineRadii[0]} z')`;
+
+            this.$container.css('clip-path', clippingPath);
         }
 
         this.bounds = {

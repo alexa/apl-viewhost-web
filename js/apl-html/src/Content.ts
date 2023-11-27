@@ -13,8 +13,11 @@ export class Content {
      * can be used with multiple [[APLRenderer]]s.
      * @param doc The main APL document
      */
-    public static create(doc: string) {
-        return new Content(doc);
+    public static create(doc: string, data?: string) {
+        if (data === undefined) {
+            return new Content(doc, '');
+        }
+        return new Content(doc, data);
     }
 
     /**
@@ -41,12 +44,29 @@ export class Content {
      * @ignore
      * @param doc The main APL document
      */
-    private constructor(doc: string) {
-        this.content = Module.Content.create(doc);
+    private constructor(doc: string, private data: string) {
         try {
             this.settings = JSON.parse(doc).settings || {};
         } catch (e) {
             this.settings = {};
+        }
+        this.content = Module.Content.create(doc);
+        if (this.data) {
+            const jsonDoc = JSON.parse(doc);
+            if (jsonDoc.mainTemplate && jsonDoc.mainTemplate.parameters &&
+                Array.isArray(jsonDoc.mainTemplate.parameters) &&
+                jsonDoc.mainTemplate.parameters.length > 0) {
+                const parsedData = JSON.parse(data);
+                jsonDoc.mainTemplate.parameters.forEach((name: string) => {
+                   if (name === 'payload') {
+                        this.content.addData(name, data);
+                    } else if (parsedData[name]) {
+                        this.content.addData(name, JSON.stringify(parsedData[name]));
+                    } else {
+                        this.content.addData(name, '{}');
+                    }
+                });
+            }
         }
     }
 
@@ -97,6 +117,10 @@ export class Content {
      */
     public addData(name: string, data: string): void {
         this.content.addData(name, data);
+    }
+
+    public refresh(metrics: APL.Metrics, config: APL.RootConfig): void {
+        this.content.refresh(metrics, config);
     }
 
     /**

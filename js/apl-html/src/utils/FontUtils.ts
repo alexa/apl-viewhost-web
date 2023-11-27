@@ -68,6 +68,7 @@ const FONT_STYLE_MAPPING: { [alias: number]: string } = {
     [FontStyle.kFontStyleItalic]: 'italic'
 };
 const DEFAULT_FONT_STYLE: string = FONT_STYLE_MAPPING[FontStyle.kFontStyleNormal];
+const DEFAULT_FONT_FAMILY = SANS_SERIF;
 const ARABIC_ENABLED_FONTS: string[] = [
     'amazon ember'
 ];
@@ -192,7 +193,7 @@ function setFontOptions(options: SetFontOptions) {
     return Object.assign(defaultOptions, options);
 }
 
-function findFontFamily(fontFamily: string, defaultFontFamily = undefined): string {
+function findFontFamily(fontFamily: string, defaultFontFamily = DEFAULT_FONT_FAMILY): string {
     function findFont(font: string, defaultFont = undefined) {
         const trimmedFontFamily = font.trim();
         let sanitizedFontFamily = trimmedFontFamily.toLowerCase();

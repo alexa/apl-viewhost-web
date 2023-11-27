@@ -5,16 +5,17 @@
 
 import APLRenderer from '../APLRenderer';
 import { PropertyKey } from '../enums/PropertyKey';
+import { getCssGradient } from '../utils/ImageUtils';
 import { Component, FactoryFunction, IComponentProperties } from './Component';
 
 /**
  * @ignore
  */
 export interface IFrameProperties extends IComponentProperties {
-    [PropertyKey.kPropertyBackgroundColor]: number;
+    [PropertyKey.kPropertyBackground]: any;
     [PropertyKey.kPropertyBorderRadii]: APL.Radii;
     [PropertyKey.kPropertyBorderColor]: number;
-    [PropertyKey.kPropertyBorderWidth]: number;
+    [PropertyKey.kPropertyDrawnBorderWidth]: number;
 }
 
 /**
@@ -25,22 +26,31 @@ export class Frame extends Component<IFrameProperties> {
     constructor(renderer: APLRenderer, component: APL.Component, factory: FactoryFunction, parent?: Component) {
         super(renderer, component, factory, parent);
         this.$container.css({
-            'border-style': 'solid'
+            'border-style': 'solid',
+            'background-clip': 'padding-box'
         });
         this.propExecutor
-            (this.setBackgroundColor, PropertyKey.kPropertyBackgroundColor)
+            (this.setBackground, PropertyKey.kPropertyBackground)
             (this.setBorderRadii, PropertyKey.kPropertyBorderRadii)
             (this.setBorderColor, PropertyKey.kPropertyBorderColor)
-            (this.setBorderWidth, PropertyKey.kPropertyBorderWidth);
+            (this.setBorderWidth, PropertyKey.kPropertyDrawnBorderWidth);
     }
 
     protected isLayout(): boolean {
         return true;
     }
 
-    private setBackgroundColor = () => {
-        this.$container.css('background-color',
-            Component.numberToColor(this.props[PropertyKey.kPropertyBackgroundColor]));
+    private setBackground = () => {
+        const bg = this.props[PropertyKey.kPropertyBackground];
+        if (Number.isFinite(bg)) {
+            this.$container.css('background-image', '');
+            this.$container.css('background-color',
+                Component.numberToColor(this.props[PropertyKey.kPropertyBackground] as number));
+        } else {
+            this.$container.css('background-color', '');
+            this.$container.css('background-image',
+                getCssGradient(this.props[PropertyKey.kPropertyBackground], this.logger));
+        }
     }
 
     private setBorderRadii = () => {
@@ -56,6 +66,6 @@ export class Frame extends Component<IFrameProperties> {
     }
 
     private setBorderWidth = () => {
-        this.$container.css('border-width', this.props[PropertyKey.kPropertyBorderWidth]);
+        this.$container.css('border-width', this.props[PropertyKey.kPropertyDrawnBorderWidth]);
     }
 }

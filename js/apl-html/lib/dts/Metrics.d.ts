@@ -11,5 +11,7 @@ declare namespace APL {
         public theme(theme : string) : Metrics;
         public shape(shape : string) : Metrics;
         public mode(mode : string) : Metrics;
+        public minAndMaxWidth(minWidth : number, maxWidth : number) : Metrics;
+        public minAndMaxHeight(minHeight : number, maxHeight : number) : Metrics;
     }
 }

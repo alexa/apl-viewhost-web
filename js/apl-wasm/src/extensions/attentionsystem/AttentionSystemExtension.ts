@@ -102,12 +102,15 @@ export class AttentionSystemExtension implements IExtension {
         this.logger.debug(`AttentionSystemExtension.applySettings`);
         this.attentionSystemStateName = '';
         if (settings.hasOwnProperty(AttentionSystemExtension.SETTINGS_ATTENTION_SYSTEM_STATE_NAME)) {
-            this.attentionSystemState = LiveMap.create({
-                [AttentionSystemExtension.PROPERTY_ATTENTION_STATE]: 'IDLE'
-            });
-            this.attentionSystemStateName = settings[AttentionSystemExtension.SETTINGS_ATTENTION_SYSTEM_STATE_NAME];
-            this.logger.debug(
-                `binding ${this.attentionSystemStateName} to attentionSystemState ${this.attentionSystemState}`);
+            const stateName = settings[AttentionSystemExtension.SETTINGS_ATTENTION_SYSTEM_STATE_NAME];
+            if (stateName) {
+                this.attentionSystemState = LiveMap.create({
+                    [AttentionSystemExtension.PROPERTY_ATTENTION_STATE]: 'IDLE'
+                });
+                this.attentionSystemStateName = stateName;
+                this.logger.debug(
+                    `binding ${this.attentionSystemStateName} to attentionSystemState ${this.attentionSystemState}`);
+            }
         }
     }
 

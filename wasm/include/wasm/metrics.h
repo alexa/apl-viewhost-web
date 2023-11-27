@@ -30,11 +30,19 @@ static std::map<std::string, ScreenShape> shapeMap = {
 
 struct MetricsMethods {
     static MetricsPtr create();
-    static MetricsPtr& size(MetricsPtr& metrics, double width, double height);
-    static MetricsPtr& dpi(MetricsPtr& metrics, double dpi);
+    static MetricsPtr& size(MetricsPtr& metrics, int width, int height);
+    static MetricsPtr& minAndMaxWidth(MetricsPtr& metrics, int minWidth, int maxWidth);
+    static MetricsPtr& minAndMaxHeight(MetricsPtr& metrics, int minHeight, int maxHeight);
+    static MetricsPtr& dpi(MetricsPtr& metrics, int dpi);
     static MetricsPtr& theme(MetricsPtr& metrics, const std::string& theme);
     static MetricsPtr& shape(MetricsPtr& metrics, const std::string& shape);
     static MetricsPtr& mode(MetricsPtr& metrics, const std::string& mode);
+    static float getHeight(MetricsPtr& metrics);
+    static float getWidth(MetricsPtr& metrics);
+    static float getMinHeight(MetricsPtr& metrics);
+    static float getMinWidth(MetricsPtr& metrics);
+    static float getMaxHeight(MetricsPtr& metrics);
+    static float getMaxWidth(MetricsPtr& metrics);
 };
 
 } // namespace internal

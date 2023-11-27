@@ -20,8 +20,5 @@
     "webpack": "^4.26.1",
     "webpack-cli": "^3.3.12",
     "webpack-merge": "^4.2.1"
-  },
-  "npm-pretty-much": {
-    "legacyPackageNameAlias": "dts-packer"
   }
 }

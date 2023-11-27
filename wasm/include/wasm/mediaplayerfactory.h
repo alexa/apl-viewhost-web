@@ -30,6 +30,8 @@ public:
     /// apl::MediaPlayerFactory
     apl::MediaPlayerPtr createPlayer(apl::MediaPlayerCallback playerCallback) override;
 
+    void destroy();
+
 private:
     /**
      * Removes old inactive players from the list of players, if possible.

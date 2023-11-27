@@ -8,6 +8,8 @@
 // This number is large enough that we don't get too many segments
 const DEFAULT_CHUNK_SZIE = 50;
 
+import { cueControl } from './CueControl';
+
 declare var VTTCue: {
     prototype: TextTrackCue;
     new(startTime: number, endTime: number, text: string): TextTrackCue;
@@ -33,7 +35,11 @@ export function loadDynamicTextTrack(video: HTMLVideoElement, url: string, kind:
     fetch(url, {mode: 'cors'})
         .then((response) => response.text())
         .then((data) => {
-            textTrack.mode = 'showing';
+            if (cueControl.isShowing()) {
+                textTrack.mode = 'showing';
+            } else {
+                textTrack.mode = 'hidden';
+            }
 
             if (getType(data) === 'vtt') {
                 // HTML text track component doesn't like cors, so we need to create a blob inside the memory
@@ -52,8 +58,7 @@ export function loadDynamicTextTrack(video: HTMLVideoElement, url: string, kind:
 function getType(data: string): string {
     // VTT has text WEBVTT as the first line
     if (data.split('\n', 1)[0].toLowerCase() === 'webvtt') {
-        // We just ignore WebVTT for now as other viewhost doesn't support it.
-        return 'unsupported';
+        return 'vtt';
     }
 
     // SRT has no indicator in its file, so we try to match the timestamp line in the first 100 chars
@@ -93,7 +98,7 @@ function toVTTCue(srtCue: string) {
 }
 
 function addDynamicSRTTrack(srt: string, cursor: number, textTrack: TextTrack, chunkSize: number) {
-    if (textTrack.mode !== 'showing') {
+    if (textTrack.mode === 'disabled') {
         return;
     }
     // find digits followed by a single line break and timestamps

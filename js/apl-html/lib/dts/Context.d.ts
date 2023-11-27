@@ -81,6 +81,8 @@ declare namespace APL {
 
         public nextTime(): number;
 
+        public getViewportPixelSize(): object[];
+
         public getViewportWidth(): number;
 
         public getViewportHeight(): number;

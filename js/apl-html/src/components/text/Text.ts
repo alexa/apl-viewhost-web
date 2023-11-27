@@ -449,7 +449,11 @@ export class TextMeasurement extends Text {
             case MeasureMode.AtMost:
             case MeasureMode.Undefined:
             default:
-                ret.width = Math.min(width, this.textContainer.clientWidth + 1);
+                if (isNaN(width)) {
+                    ret.width = this.textContainer.clientWidth + 1;
+                } else {
+                    ret.width = Math.min(width, this.textContainer.clientWidth + 1);
+                }
         }
 
         this.$textContainer.css('width', ret.width);
@@ -469,7 +473,11 @@ export class TextMeasurement extends Text {
         if (heightMode === MeasureMode.Exactly) {
             ret.height = height;
         } else if (heightMode === MeasureMode.AtMost) {
-            ret.height = Math.min(height, lineHeight + 1);
+            if (isNaN(height)) {
+                ret.height = lineHeight + 1;
+            } else {
+                ret.height = Math.min(height, lineHeight + 1);
+            }
         } else if (heightMode === MeasureMode.Undefined) {
             ret.height = lineHeight + 1;
         }

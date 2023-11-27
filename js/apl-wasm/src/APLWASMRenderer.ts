@@ -68,6 +68,7 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
 
     protected documentAplVersion: string;
     protected legacyKaroke: boolean;
+    protected isAutoSizing: boolean;
 
     /// Logger to be used for core engine logs.
     private coreLogger: ILogger;
@@ -97,14 +98,26 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
         LoggerFactory.initialize(options.logLevel || 'debug', options.logTransport);
         super(options);
         this.coreLogger = LoggerFactory.getLogger('Core');
-        this.legacyKaroke = options.content.getAPLVersion() === LEGACY_KARAOKE_APL_VERSION;
-        this.documentAplVersion = options.content.getAPLVersion();
+        this.content = this.options.documentState ?
+            this.options.documentState.content : this.options.content;
+        this.legacyKaroke = this.content.getAPLVersion() === LEGACY_KARAOKE_APL_VERSION;
+        this.documentAplVersion = this.content.getAPLVersion();
         this.metrics = Module.Metrics.create();
         this.metrics.size(this.options.viewport.width, this.options.viewport.height)
             .dpi(this.options.viewport.dpi)
             .theme(this.options.theme)
             .shape(this.options.viewport.shape as string)
             .mode(this.options.mode as string);
+        if (this.options.viewport.minWidth && this.options.viewport.minWidth > 0
+            && this.options.viewport.maxWidth && this.options.viewport.maxWidth > 0) {
+            this.isAutoSizing = true;
+            this.metrics.minAndMaxWidth(this.options.viewport.minWidth, this.options.viewport.maxWidth);
+        }
+        if (this.options.viewport.minHeight && this.options.viewport.minHeight > 0
+            && this.options.viewport.maxHeight && this.options.viewport.maxHeight > 0) {
+            this.isAutoSizing = true;
+            this.metrics.minAndMaxHeight(this.options.viewport.minHeight, this.options.viewport.maxHeight);
+        }
         this.rootConfig = Module.RootConfig.create(this.options.environment);
         this.rootConfig.utcTime(this.options.utcTime).localTimeAdjustment(this.options.localTimeAdjustment);
         this.rootConfig.localeMethods(LocaleMethods);
@@ -215,14 +228,12 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
         };
         Module.Logger.setLogTransport(logTransport);
 
-        const content: Content = this.options.documentState ?
-            this.options.documentState.content : this.options.content;
-
-        this.supportsResizing = content.getAPLSettings('supportsResizing');
+        this.supportsResizing = this.content.getAPLSettings('supportsResizing');
 
         if (!this.options.documentState) {
-            if (!await this.loadPackages() || !this.options.content.isReady()
-                || this.options.content.isError()) {
+            this.content.refresh(this.metrics, this.rootConfig);
+            if (!await this.loadPackages() || !this.content.isReady()
+                || this.content.isError()) {
                 this.logger.warn('Content is not ready or is in an error state');
                 return;
             }
@@ -230,7 +241,7 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
 
         if (this.options.extensionManager) {
             // Extensions requested by the content
-            this.options.extensionManager.registerRequestedExtensions(this.rootConfig, content);
+            this.options.extensionManager.registerRequestedExtensions(this.rootConfig, this.content);
             this.extensionManager = this.options.extensionManager;
         }
 
@@ -246,7 +257,7 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
                 this.options,
                 this,
                 this.metrics,
-                (content as any).content,
+                (this.content as any).content,
                 this.rootConfig,
                 this.options.scaling
             );
@@ -259,7 +270,7 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
 
         super.init();
         if (this.extensionManager) {
-            this.extensionManager.onDocumentRender(this.context, content);
+            this.extensionManager.onDocumentRender(this.context, this.content);
         }
     }
 
@@ -329,22 +340,23 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
     public destroy(preserveContext?: boolean) {
         super.destroy(preserveContext);
         if (!preserveContext) {
+            this.mediaPlayerFactory.destroy();
             if (this.options.extensionManager) {
                 this.options.extensionManager.resetRootContext();
             }
         }
     }
 
-    private async loadPackages(): Promise<boolean> {
+    public async loadPackages(): Promise<boolean> {
         const packageLoader: PackageLoader = new PackageLoader();
-        while (this.options.content.isWaiting()) {
-            const importRequests = this.options.content.getRequestedPackages();
+        while (this.content.isWaiting()) {
+            const importRequests = this.content.getRequestedPackages();
             if (importRequests.size > 0) {
                 const irArr: APL.ImportRequest[] = [];
                 importRequests.forEach((ir) => irArr.push(ir));
                 const loadedPkgs = await packageLoader.load(irArr);
                 for (const loadPkg of loadedPkgs) {
-                    this.options.content.addPackage(loadPkg.importRequest, JSON.stringify(loadPkg.json));
+                    this.content.addPackage(loadPkg.importRequest, JSON.stringify(loadPkg.json));
                     irArr.splice(irArr.indexOf(loadPkg.importRequest));
                 }
                 if (irArr.length > 0) {
@@ -373,7 +385,8 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
     }
 
     private passConfigurationChangeToCore(configurationChange: ConfigurationChange): void {
-        if (configurationChange.width && configurationChange.height) {
+
+        if (configurationChange.width && configurationChange.height && !this.isAutoSizing) {
             this.metrics.size(configurationChange.width, configurationChange.height);
             this.context.configurationChange(configurationChange.getConfigurationChange(),
                 this.metrics, this.options.scaling);

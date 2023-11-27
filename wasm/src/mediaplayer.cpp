@@ -56,7 +56,8 @@ MediaPlayer::halt()
     resolveExistingAction();
 
     mHalted = true;
-    mPlayer.call<void>("stop");
+    mPlayer.call<void>("destroy");
+    mPlayer = emscripten::val::null();
 }
 
 void
@@ -197,6 +198,7 @@ MediaPlayer::setAudioTrack(apl::AudioTrack audioTrack)
 void
 MediaPlayer::setMute(bool mute)
 {
+    if (!mPlayer) return;
     mPlayer.call<void>("setMute", mute);
 }
 
@@ -247,6 +249,13 @@ MediaPlayer::doCallback(int eventType) {
 emscripten::val
 MediaPlayer::getMediaPlayerHandle() {
     return mPlayer;
+}
+
+void
+MediaPlayer::deleteMediaPlayerHandle() {
+    release();
+    mPlayer.call<void>("destroy");
+    mPlayer = emscripten::val::null();
 }
 
 EMSCRIPTEN_BINDINGS(wasm_MediaPlayer) {

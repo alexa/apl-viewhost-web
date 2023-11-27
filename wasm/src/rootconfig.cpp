@@ -9,6 +9,9 @@
 #include "wasm/audioplayerfactory.h"
 #include "wasm/mediaplayerfactory.h"
 
+// Default font
+static const char DEFAULT_FONT[] = "amazon-ember-display";
+
 namespace apl {
 namespace wasm {
 
@@ -31,6 +34,7 @@ RootConfigMethods::create(emscripten::val environment) {
         .set(apl::RootProperty::kDisallowVideo, disallowVideo)
         .set(apl::RootProperty::kDisallowEditText, disallowEditText)
         .set(apl::RootProperty::kDisallowDialog, disallowDialog)
+        .set(apl::RootProperty::kDefaultFontFamily, DEFAULT_FONT)
         .animationQuality(animationQuality)
         .enforceAPLVersion(apl::APLVersion::kAPLVersionIgnore)
         .enableExperimentalFeature(apl::RootConfig::ExperimentalFeature::kExperimentalFeatureManageMediaRequests);

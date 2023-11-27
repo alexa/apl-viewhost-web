@@ -52,8 +52,5 @@
     "webpack-cli": "^3.3.12",
     "webpack-merge": "^4.2.1",
     "xregexp": "4.2.4"
-  },
-  "npm-pretty-much": {
-    "legacyPackageNameAlias": "apl-html"
   }
 }

@@ -4,7 +4,7 @@
 
 import { Video } from '../components/video/Video';
 import { AudioTrack } from '../enums/AudioTrack';
-import { IMediaEventListener } from './IMediaEventListener'
+import { IMediaEventListener } from './IMediaEventListener';
 
 export interface IMediaPlayerHandle extends IMediaEventListener {
     /**

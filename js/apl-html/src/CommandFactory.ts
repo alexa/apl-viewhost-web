@@ -22,7 +22,7 @@ import { SendEvent } from './events/SendEvent';
  * @param renderer A reference to the renderer instance
  * @internal
  */
-export const commandFactory = (event: APL.Event, renderer: APLRenderer) => {
+export const commandFactory = async (event: APL.Event, renderer: APLRenderer) => {
     if (factoryMap[event.getType()]) {
         return factoryMap[event.getType()](event, renderer);
     }
@@ -45,9 +45,9 @@ const factoryMap = {
         command.execute();
         return command;
     },
-    [EventType.kEventTypeReinflate]: (event: APL.Event, renderer: APLRenderer) => {
+    [EventType.kEventTypeReinflate]: async (event: APL.Event, renderer: APLRenderer) => {
         const command = new ReInflate(event, renderer);
-        command.execute();
+        await command.execute();
         return command;
     },
     [EventType.kEventTypeFinish]: (event: APL.Event, renderer: APLRenderer) => {

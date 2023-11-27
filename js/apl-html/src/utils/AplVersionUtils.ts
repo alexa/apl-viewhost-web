@@ -18,6 +18,7 @@ export const APL_2022_1 = 10;
 export const APL_2022_2 = 11;
 export const APL_2023_1 = 12;
 export const APL_2023_2 = 13;
+export const APL_2023_3 = 14;
 export const APL_LATEST = Number.MAX_VALUE;
 
 export interface AplVersionUtils {
@@ -40,7 +41,8 @@ export function createAplVersionUtils(): AplVersionUtils {
         ['2022.1', APL_2022_1],
         ['2022.2', APL_2022_2],
         ['2023.1', APL_2023_1],
-        ['2023.2', APL_2023_2]
+        ['2023.2', APL_2023_2],
+        ['2023.3', APL_2023_3]
     ]);
 
     return {

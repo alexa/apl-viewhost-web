@@ -46,6 +46,7 @@ struct ContextMethods {
     static apl::ActionPtr executeCommands(const apl::RootContextPtr& context, const std::string& commands);
     static apl::ActionPtr invokeExtensionEventHandler(const apl::RootContextPtr& context, const std::string& uri, const std::string& name, const std::string& data, bool fastMode);
     static void cancelExecution(const apl::RootContextPtr& context);
+    static emscripten::val getViewportPixelSize(const apl::RootContextPtr& context);
     static int getViewportWidth(const apl::RootContextPtr& context);
     static int getViewportHeight(const apl::RootContextPtr& context);
     static double getScaleFactor(const apl::RootContextPtr& context);

@@ -47,6 +47,7 @@ public:
     void doCallback(int eventType);
 
     emscripten::val getMediaPlayerHandle();
+    void deleteMediaPlayerHandle();
 
  private:
     void resolveExistingAction();

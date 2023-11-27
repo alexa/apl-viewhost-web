@@ -46,6 +46,7 @@ export class EditText extends ActionableComponent<IEditTextProperties> {
     public formElement: HTMLFormElement;
     public inputElement: HTMLInputElement;
     private localFocused: boolean = false;
+    private lastFilteredValue = '';
     // Current press state
     private enterPressedDown: boolean = false;
     private isEdge: boolean = /msie\s|trident\/|edge\//i.test(window.navigator.userAgent);
@@ -282,8 +283,14 @@ export class EditText extends ActionableComponent<IEditTextProperties> {
     }
 
     private onInput = async () => {
-        this.inputElement.value = await this.filterText(this.inputElement.value);
+        // Store the new input for processing, display the last filtered value
+        const newInputValue = this.inputElement.value;
+        this.inputElement.value = this.lastFilteredValue;
+
+        // Process the new input asynchronously
+        this.inputElement.value = await this.filterText(newInputValue);
         this.update(UpdateType.kUpdateTextChange, this.inputElement.value);
+        this.lastFilteredValue = this.inputElement.value;
     }
 
     private onSubmit = (event) => {

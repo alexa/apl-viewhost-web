@@ -17,8 +17,16 @@ ConfigurationChangeMethods::create() {
 }
 
 ConfigurationChangePtr&
-ConfigurationChangeMethods::size(ConfigurationChangePtr& configurationChange, double width, double height) {
+ConfigurationChangeMethods::size(ConfigurationChangePtr& configurationChange, int width, int height) {
     configurationChange->size(width, height);
+    return configurationChange;
+}
+
+ConfigurationChangePtr&
+ConfigurationChangeMethods::sizeRange(ConfigurationChangePtr& configurationChange,
+                                      int pixelWidth, int minWidth, int maxWidth,
+                                      int pixelHeight, int minHeight, int maxHeight) {
+    configurationChange->sizeRange(pixelWidth, minWidth, maxWidth, pixelHeight, minHeight, maxHeight);
     return configurationChange;
 }
 
@@ -78,6 +86,7 @@ EMSCRIPTEN_BINDINGS(apl_wasm_configurationchange) {
         .smart_ptr<internal::ConfigurationChangePtr>("ConfigurationChangePtr")
         .class_function("create", &internal::ConfigurationChangeMethods::create)
         .function("size", &internal::ConfigurationChangeMethods::size)
+        .function("sizeRange", &internal::ConfigurationChangeMethods::sizeRange)
         .function("theme", &internal::ConfigurationChangeMethods::theme)
         .function("viewportMode", &internal::ConfigurationChangeMethods::viewportMode)
         .function("fontScale", &internal::ConfigurationChangeMethods::fontScale)

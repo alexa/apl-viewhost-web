@@ -17,6 +17,7 @@ declare namespace APL {
 
     export class Content extends Deletable {
         public static create(document: string): Content;
+        public refresh(metrics: Metrics, config: RootConfig): void;
         public getRequestedPackages(): Set<ImportRequest>;
         public addPackage(request: ImportRequest, data: string): void;
         public isError(): boolean;

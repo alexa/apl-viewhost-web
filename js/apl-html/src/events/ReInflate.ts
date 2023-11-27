@@ -10,6 +10,7 @@ import { Event } from './Event';
  */
 export class ReInflate extends Event {
     public async execute() {
+        await this.renderer.loadPackages();
         this.renderer.destroyRenderingComponents();
         await this.renderer.context.reInflate();
         this.renderer.reRenderComponents();

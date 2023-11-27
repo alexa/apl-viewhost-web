@@ -29,7 +29,7 @@
     "@types/chai": "~4.1.7",
     "@types/istanbul": "^0.4.30",
     "@types/jquery": "^3.3.29",
-    "@types/mocha": "^5.2.5",
+    "@types/mocha": "^10.0.1",
     "@types/node": "^12.0.2",
     "apl-html": "link:../apl-html",
     "chai": "^4.2.0",
@@ -43,7 +43,7 @@
     "istanbul": "^0.4.5",
     "istanbul-instrumenter-loader": "^3.0.1",
     "istanbul-threshold-checker": "^0.2.1",
-    "mocha": "^6.2.3",
+    "mocha": "^10.2.0",
     "rimraf": "^2.6.2",
     "sinon": "^7.5.0",
     "source-map-loader": "^0.2.4",
@@ -58,8 +58,5 @@
     "webpack-bundle-analyzer": "^4.6.1",
     "webpack-cli": "^3.3.12",
     "webpack-merge": "^4.2.1"
-  },
-  "npm-pretty-much": {
-    "legacyPackageNameAlias": "apl-wasm"
   }
 }

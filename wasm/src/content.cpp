@@ -16,6 +16,11 @@ ContentMethods::create(const std::string& document) {
     return apl::Content::create(document.c_str());
 }
 
+void
+ContentMethods::refresh(const apl::ContentPtr& content, const Metrics& metrics, const RootConfig& config) {
+    content->refresh(metrics, config);
+}
+
 std::set<apl::ImportRequest>
 ContentMethods::getRequestedPackages(const apl::ContentPtr& content) {
     return content->getRequestedPackages();
@@ -90,6 +95,7 @@ EMSCRIPTEN_BINDINGS(apl_wasm_content) {
     emscripten::class_<apl::Content>("Content")
         .class_function("create", &internal::ContentMethods::create)
         .smart_ptr<apl::ContentPtr>("ContentPtr")
+        .function("refresh", &internal::ContentMethods::refresh)
         .function("getRequestedPackages", &internal::ContentMethods::getRequestedPackages)
         .function("isError", &internal::ContentMethods::isError)
         .function("isReady", &internal::ContentMethods::isReady)

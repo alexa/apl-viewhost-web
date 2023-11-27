@@ -13,6 +13,7 @@ import { MeasureMode } from './components/text/MeasureMode';
 import { TextMeasurement } from './components/text/Text';
 import { IVideoFactory } from './components/video/IVideoFactory';
 import { VideoFactory } from './components/video/VideoFactory';
+import { Content } from './Content';
 import { AnimationQuality } from './enums/AnimationQuality';
 import { DisplayState } from './enums/DisplayState';
 import { FocusDirection } from './enums/FocusDirection';
@@ -67,6 +68,15 @@ export interface IViewportCharacteristics {
     shape?: ViewportShape;
     /** Dots per inch */
     dpi: number;
+    /** Providing the min & max will turn on auto-sizing feature */
+    /** The minimum width of the viewport, in pixels */
+    minWidth?: number;
+    /** The maximum width of the viewport, in pixels */
+    maxWidth?: number;
+    /** The minimum height of the viewport, in pixels */
+    minHeight?: number;
+    /** The maximum height of the viewport, in pixels */
+    maxHeight?: number;
 }
 
 export interface IEnvironmentBase {
@@ -110,8 +120,20 @@ export interface IConfigurationChangeOptions extends IEnvironmentBase {
     width?: number;
     /** Viewport Height in pixels */
     height?: number;
+    /** Providing the min & max will turn on auto-sizing feature. Must provide all of the 6 values:
+     *  minWidth, maxWidth, minHeight, maxHeight, width, height
+     */
+    /** The minimum width of the viewport, in pixels */
+    minWidth?: number;
+    /** The maximum width of the viewport, in pixels */
+    maxWidth?: number;
+    /** The minimum height of the viewport, in pixels */
+    minHeight?: number;
+    /** The maximum height of the viewport, in pixels */
+    maxHeight?: number;
     /** APL theme. Usually 'light' or 'dark' */
     docTheme?: string;
+    theme?: string;
     /** Device mode. If no provided "HUB" is used. */
     mode?: DeviceMode;
     /** Relative size of fonts to display as specified by the OS accessibility settings */
@@ -251,6 +273,12 @@ export interface IAPLOptions {
     onOpenUrl?: (source: string) => Promise<boolean>;
 
     /**
+     * Callback for view size update during auto-resizing. width and height in pixels
+     * Runtime should return quickly as this method blocks the rendering path
+     */
+    onViewportSizeUpdate?: (pixelWidth: number, pixelHeight: number) => void;
+
+    /**
      * Contains developer tool options
      */
     developerToolOptions?: IDeveloperToolOptions;
@@ -314,6 +342,8 @@ export default abstract class APLRenderer<Options = any> {
      * @ignore
      */
     protected abstract getAudioPlayerFactory(): IAudioPlayerFactory;
+
+    public content: Content;
 
     /** A reference to the APL root context */
     public context: APL.Context;
@@ -403,6 +433,24 @@ export default abstract class APLRenderer<Options = any> {
      */
     private isEdge: boolean = browserIsEdge(window.navigator.userAgent);
 
+    /**
+     * @internal
+     * @ignore
+     */
+    private lastKnownViewWidth: number = 0;
+
+    /**
+     * @internal
+     * @ignore
+     */
+    private lastKnownViewHeight: number = 0;
+
+    /**
+     * @internal
+     * @ignore
+     */
+    protected isAutoSizing: boolean = false;
+
     public get options(): Options {
         return this.mOptions as any as Options;
     }
@@ -423,7 +471,9 @@ export default abstract class APLRenderer<Options = any> {
         }
 
         this.view = mOptions.view;
-        this.setViewSize(mOptions.viewport.width, mOptions.viewport.height);
+        this.lastKnownViewWidth = mOptions.viewport.width;
+        this.lastKnownViewHeight = mOptions.viewport.height;
+        this.setViewSize(this.lastKnownViewWidth, this.lastKnownViewHeight);
         if (mOptions.viewport.shape === 'ROUND') {
             this.view.style.clipPath = 'circle(50%)';
         } else {
@@ -507,6 +557,9 @@ export default abstract class APLRenderer<Options = any> {
         if (mOptions.onResizingIgnored) {
             this.onResizingIgnored = mOptions.onResizingIgnored;
         }
+        if (mOptions.onViewportSizeUpdate) {
+            this.onViewportSizeUpdate = mOptions.onViewportSizeUpdate;
+        }
 
         this.maxTimeDeltaBetweenFrames = (1000 * this.TOLERANCE / this.MAXFPS);
     }
@@ -531,6 +584,10 @@ export default abstract class APLRenderer<Options = any> {
 
         // begin update loop
         this.requestId = requestAnimationFrame(this.update);
+    }
+
+    public async loadPackages(): Promise<boolean> {
+        return true;
     }
 
     /**
@@ -560,10 +617,23 @@ export default abstract class APLRenderer<Options = any> {
      * @param configurationChangeOptions The configuration change options to provide to core.
      */
     public onConfigurationChange(configurationChangeOptions: IConfigurationChangeOptions): void {
-        if (!this.supportsResizing && (configurationChangeOptions.width || configurationChangeOptions.height)) {
+        if (configurationChangeOptions.minWidth && configurationChangeOptions.maxWidth &&
+            configurationChangeOptions.maxHeight && configurationChangeOptions.minHeight &&
+            configurationChangeOptions.minWidth > configurationChangeOptions.maxWidth &&
+            configurationChangeOptions.minHeight > configurationChangeOptions.maxHeight) {
+            throw new Error(`Invalid Configuration Change Options. minWidth > maxWidth and minHeight > maxHeight`);
+        }
+
+        if (configurationChangeOptions.minWidth && configurationChangeOptions.maxWidth &&
+            configurationChangeOptions.maxHeight && configurationChangeOptions.minHeight &&
+            configurationChangeOptions.minWidth < configurationChangeOptions.maxWidth &&
+            configurationChangeOptions.minHeight < configurationChangeOptions.maxHeight) {
+            this.isAutoSizing = true;
+        }
+
+        if (!this.supportsResizing && !this.isAutoSizing &&
+            (configurationChangeOptions.width || configurationChangeOptions.height)) {
             this.onResizingIgnored(configurationChangeOptions.width, configurationChangeOptions.height);
-            configurationChangeOptions.width = undefined;
-            configurationChangeOptions.height = undefined;
         }
         this.configurationChangeThrottle(configurationChangeOptions);
     }
@@ -723,6 +793,11 @@ export default abstract class APLRenderer<Options = any> {
         this.logger.warn(`onResizeIgnored: width: ${ignoredWidth}, height: ${ignoredHeight}`);
     }
 
+    public onViewportSizeUpdate(width: number, height: number): void {
+        this.logger.warn(`resize function not provided. Using default size: ${width} x ${height}`);
+        this.setViewSize(width, height);
+    }
+
     /**
      * Called by core when a text measure is required
      * @param component The component to measure
@@ -734,7 +809,13 @@ export default abstract class APLRenderer<Options = any> {
      */
     public onMeasure(component: APL.Component, measureWidth: number, widthMode: MeasureMode,
                      measureHeight: number, heightMode: MeasureMode) {
-        const {width, height} = this.mOptions.viewport;
+        let {width, height} = this.mOptions.viewport;
+        if (this.mOptions.viewport.maxWidth) {
+            width = this.mOptions.viewport.maxWidth;
+        }
+        if (this.mOptions.viewport.maxHeight) {
+            height = this.mOptions.viewport.maxHeight;
+        }
         const comp = new TextMeasurement(component, width, height);
         comp.init();
         return comp.onMeasure(measureWidth, widthMode, measureHeight, heightMode);
@@ -986,8 +1067,13 @@ export default abstract class APLRenderer<Options = any> {
             commandFactory(event, this);
         }
 
+        if (this.content && !this.content.isReady()) {
+            return;
+        }
+
         if (this.context) {
             if (this.context.isDirty()) {
+                this.checkAndUpdateViewportSize();
                 const dirtyComponents = this.context.getDirty();
                 for (const dirtyId of dirtyComponents) {
                     const component = this.componentMap[dirtyId];
@@ -1222,6 +1308,8 @@ export default abstract class APLRenderer<Options = any> {
             // already rendered
             return;
         }
+
+        this.checkAndUpdateViewportSize();
         const top = this.context.topComponent();
         this.top = componentFactory(this, top) as Component;
         this.view.appendChild(this.top.container);
@@ -1304,6 +1392,22 @@ export default abstract class APLRenderer<Options = any> {
             if (component['focus']) {
                 component.focus();
             }
+        }
+    }
+
+    /**
+     * @internal
+     * @ignore
+     */
+    private checkAndUpdateViewportSize(): void {
+        const newSize = this.context.getViewportPixelSize();
+
+        if (this.lastKnownViewWidth !== newSize['width'] ||
+            this.lastKnownViewHeight !== newSize['height']) {
+            this.logger.info('Viewport size updated by APL Core: ' + JSON.stringify(newSize));
+            this.lastKnownViewWidth = newSize['width'];
+            this.lastKnownViewHeight = newSize['height'];
+            this.onViewportSizeUpdate(this.lastKnownViewWidth, this.lastKnownViewHeight);
         }
     }
 }

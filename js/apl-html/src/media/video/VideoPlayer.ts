@@ -220,6 +220,7 @@ export function createVideoPlayer(eventListener: IMediaEventListener): IVideoPla
     };
 
     const videoElement = document.createElement('video');
+    videoElement.classList.add('apl-video');
     const playbackStateHandler = PlaybackStateHandler({
         eventListener,
         initialPlaybackState: PlaybackState.IDLE

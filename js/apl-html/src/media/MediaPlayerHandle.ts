@@ -29,9 +29,9 @@ export class MediaPlayerHandle implements IMediaPlayerHandle, IMediaEventListene
     }
 
     public destroy(): void {
-        this.mediaPlayer.delete();
         this.eventSequencer.destroy();
         this.eventProcessor.destroy();
+        this.mediaPlayer.delete();
     }
 
     public setVideoComponent(video: Video) {
