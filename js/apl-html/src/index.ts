@@ -103,6 +103,7 @@ export * from './utils/SoftRandom';
 export * from './utils/TextTrackUtils';
 export * from './utils/LocaleMethods';
 export * from './logging/ILogger';
+export * from './logging/LogCommand';
 export * from './logging/LoggerFactory';
 export {LogLevel as JSLogLevel} from './logging/LogLevel';
 export * from './logging/LogTransport';

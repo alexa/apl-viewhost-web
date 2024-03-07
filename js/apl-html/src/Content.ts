@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { logLevelToLogCommandLevel, OnLogCommand } from './logging/LogCommand';
+
 /**
  * Holds all of the documents and data necessary to inflate an APL component hierarchy.
  */
@@ -12,12 +14,25 @@ export class Content {
      * Creates an instance of a Content object. a single Content instance
      * can be used with multiple [[APLRenderer]]s.
      * @param doc The main APL document
+     * @param data The data used for the main document
+     * @param onLogCommand The callback to send back the log info
      */
-    public static create(doc: string, data?: string) {
-        if (data === undefined) {
-            return new Content(doc, '');
+    public static create(doc: string, data: string = '', onLogCommand?: OnLogCommand) {
+        return new Content(doc, data, onLogCommand);
+    }
+
+    /**
+     * Creates an instance of a Content object. a single Content instance
+     * can be used with multiple [[APLRenderer]]s.
+     * @param doc The main APL document
+     * @param data The data used for the main document
+     * @param onLogCommand The callback to send back the log info
+     */
+    public static recreate(other: Content, onLogCommand?: OnLogCommand) {
+        if (other.data) {
+            return new Content(other.doc, other.data, onLogCommand);
         }
-        return new Content(doc, data);
+        return new Content(other.doc, JSON.stringify(other.dataMap), onLogCommand);
     }
 
     /**
@@ -43,22 +58,27 @@ export class Content {
      * @internal
      * @ignore
      * @param doc The main APL document
+     * @param data The data used for the main document
      */
-    private constructor(doc: string, private data: string) {
+    private constructor(private doc: string, private data: string, onLogCommand?: OnLogCommand) {
         try {
             this.settings = JSON.parse(doc).settings || {};
         } catch (e) {
             this.settings = {};
         }
-        this.content = Module.Content.create(doc);
+        this.content = Module.Content.create(this.doc, Module.Session.create((level, message, args) => {
+            if (onLogCommand) {
+                onLogCommand(logLevelToLogCommandLevel(level), message, args);
+            }
+        }));
         if (this.data) {
-            const jsonDoc = JSON.parse(doc);
+            const jsonDoc = JSON.parse(this.doc);
             if (jsonDoc.mainTemplate && jsonDoc.mainTemplate.parameters &&
                 Array.isArray(jsonDoc.mainTemplate.parameters) &&
                 jsonDoc.mainTemplate.parameters.length > 0) {
                 const parsedData = JSON.parse(data);
                 jsonDoc.mainTemplate.parameters.forEach((name: string) => {
-                   if (name === 'payload') {
+                    if (name === 'payload') {
                         this.content.addData(name, data);
                     } else if (parsedData[name]) {
                         this.content.addData(name, JSON.stringify(parsedData[name]));
@@ -111,11 +131,20 @@ export class Content {
     }
 
     /**
+     * @deprecated Should use create(doc, data, onLogCommand)
      * Add data
      * @param name The name of the data source
      * @param data The raw data source
      */
     public addData(name: string, data: string): void {
+        if (this.data) {
+            console.warn('Created with datasource already, no-op for addData.');
+            return;
+        }
+        if (name === 'payload') {
+            this.dataMap = {...this.dataMap, ...JSON.parse(data)};
+        }
+        this.dataMap[name] = JSON.parse(data);
         this.content.addData(name, data);
     }
 
@@ -176,4 +205,6 @@ export class Content {
     public getParameterCount(): number {
         return this.content.getParameterCount();
     }
+
+    private dataMap = {};
 }

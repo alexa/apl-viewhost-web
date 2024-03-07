@@ -9,8 +9,6 @@ add_executable(apl-wasm
     src/mediaplayer.cpp
     src/mediaplayerfactory.cpp
     src/main.cpp
-    src/logbridge.cpp
-    src/log.cpp
     src/configurationchange.cpp
     src/content.cpp
     src/rootconfig.cpp

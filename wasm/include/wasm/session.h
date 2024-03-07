@@ -12,12 +12,20 @@
 namespace apl {
 namespace wasm {
 
+using SessionPtr = std::shared_ptr<apl::Session>;
+
 class WasmSession : public apl::Session {
 public:
+    static SessionPtr create(emscripten::val logCommandCallback);
 
-    WasmSession(emscripten::val pegtlCallback);
+    WasmSession(emscripten::val pegtlCallback, emscripten::val logCommandCallback = emscripten::val::null());
     void write(const char *filename, const char *func, const char *value) override;
+    void write(apl::LogCommandMessage&& message) override;
     emscripten::val pegtlCallback;
+
+private:
+    const emscripten::val logCommandCallback;
+    emscripten::val getArgumentsFrom(const apl::LogCommandMessage& message);
 };
 
 } // namespace wasm

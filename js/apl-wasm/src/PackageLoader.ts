@@ -34,13 +34,16 @@ export class PackageLoader {
      */
     private loadPackages: Map<string, ILoadingProcessData>;
 
+    private overridePackageLoader?: (name: string, version: string, url?: string) => Promise<string>;
+
     /**
      * Initialize PackageLoader attributes
      * @memberOf PackageLoader
      */
-    constructor() {
+    constructor(overridePackageLoader?: (name: string, version: string) => Promise<string>) {
         this.logger = LoggerFactory.getLogger('PackageLoader');
         this.loadPackages = new Map<string, ILoadingProcessData>();
+        this.overridePackageLoader = overridePackageLoader;
     }
 
     /**
@@ -105,29 +108,55 @@ export class PackageLoader {
             });
             const pkg: ILoadingProcessData | undefined = this.loadPackages.get(key);
 
-            if (!url) {
-                url = `${PREDEFINED_HOST}/${name}/${version}/${PREDEFINED_FILE_NAME}`;
-            }
-
-            if (url) {
-                return fetch(url, {mode: 'cors'}).then((response) => {
-                    return response.json();
-                }).then(async (jsonResponse) => {
+            if (this.overridePackageLoader) {
+                // The runtime has provided their own package loader implementation
+                return this.overridePackageLoader(name, version, url).then((jsonResponse) => {
                     if (pkg) {
-                        pkg.json = this.deepFreeze(jsonResponse);
+                        pkg.json = JSON.parse(jsonResponse);
                         pkg.state = LoadState.done;
                     }
                     return Promise.resolve();
-                }).catch((error) => {
-                    this.logger.error(error);
-                    if (pkg) {
-                        pkg.json = {};
-                        pkg.state = LoadState.done;
+                }).catch((rejectionResponse) => {
+                    if (rejectionResponse) {
+                        this.logger.info(rejectionResponse);
                     }
-                    return Promise.resolve();
+                    return this.defaultDownloadBehaviour(name, version, pkg, url);
                 });
             }
+
+            return this.defaultDownloadBehaviour(name, version, pkg, url);
         }
+    }
+
+    /**
+     * Default package downloading logic
+     */
+    private defaultDownloadBehaviour(
+        name: string,
+        version: string,
+        pkg: ILoadingProcessData | undefined,
+        url?: string
+    ): Promise<any> {
+        if (!url) {
+            url = `${PREDEFINED_HOST}/${name}/${version}/${PREDEFINED_FILE_NAME}`;
+        }
+
+        return fetch(url, {mode: 'cors'}).then((response) => {
+            return response.json();
+        }).then((jsonResponse) => {
+            if (pkg) {
+                pkg.json = this.deepFreeze(jsonResponse);
+                pkg.state = LoadState.done;
+            }
+            return Promise.resolve();
+        }).catch((error) => {
+            this.logger.error(error);
+            if (pkg) {
+                pkg.json = {};
+                pkg.state = LoadState.done;
+            }
+            return Promise.resolve();
+        });
     }
 
     /*

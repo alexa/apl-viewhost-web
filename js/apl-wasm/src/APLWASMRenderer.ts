@@ -6,8 +6,8 @@
 import APLRenderer, {
     commandFactory, Content, DefaultAudioPlayer, DeviceMode, DisplayState,
     FontUtils, IAPLOptions, IAudioEventListener, IAudioPlayerFactory,
-    IConfigurationChangeOptions, ILogger, JSLogLevel, LiveArray, LiveMap,
-    LocaleMethods, LoggerFactory, LogLevel, LogTransport, MediaPlayerHandle, ViewportShape
+    IConfigurationChangeOptions, JSLogLevel, LiveArray, LiveMap,
+    LocaleMethods, LoggerFactory, LogTransport, MediaPlayerHandle, OnLogCommand, ViewportShape
 } from 'apl-html';
 import {ConfigurationChange} from './ConfigurationChange';
 import {ExtensionManager} from './extensions/ExtensionManager';
@@ -50,6 +50,10 @@ export interface IAPLWASMOptions extends IAPLOptions {
     extensionManager?: ExtensionManager;
     /** Document State to restore */
     documentState?: IDocumentState;
+    /** Override package download. Reject the Promise to fallback to the default logic. */
+    packageLoader?: (name: string, version: string, url?: string) => Promise<string>;
+    /** callback for APL Log Command handling, will overwrite the callback during Content creation */
+    onLogCommand?: OnLogCommand;
 }
 
 const LEGACY_KARAOKE_APL_VERSION = '1.0';
@@ -69,9 +73,6 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
     protected documentAplVersion: string;
     protected legacyKaroke: boolean;
     protected isAutoSizing: boolean;
-
-    /// Logger to be used for core engine logs.
-    private coreLogger: ILogger;
 
     /// Viewport metrics.
     private metrics: APL.Metrics;
@@ -97,9 +98,13 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
     private constructor(options: IAPLWASMOptions) {
         LoggerFactory.initialize(options.logLevel || 'debug', options.logTransport);
         super(options);
-        this.coreLogger = LoggerFactory.getLogger('Core');
-        this.content = this.options.documentState ?
-            this.options.documentState.content : this.options.content;
+        if (this.options.documentState) {
+            this.content = this.options.documentState.content;
+        } else if (this.options.onLogCommand) {
+            this.content = Content.recreate(this.options.content, this.options.onLogCommand);
+        } else {
+            this.content = this.options.content;
+        }
         this.legacyKaroke = this.content.getAPLVersion() === LEGACY_KARAOKE_APL_VERSION;
         this.documentAplVersion = this.content.getAPLVersion();
         this.metrics = Module.Metrics.create();
@@ -198,36 +203,6 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
     }
 
     public async init() {
-        const logTransport: APL.CoreLogTransport = (level: number, log: string) => {
-            const logLevel: LogLevel = level as LogLevel;
-            switch (logLevel) {
-                case LogLevel.TRACE:
-                    this.coreLogger.trace(log);
-                    break;
-                case LogLevel.DEBUG:
-                    this.coreLogger.debug(log);
-                    break;
-                case LogLevel.INFO:
-                    this.coreLogger.info(log);
-                    break;
-                case LogLevel.WARN:
-                    this.coreLogger.warn(log);
-                    break;
-                case LogLevel.ERROR:
-                    this.coreLogger.error(log);
-                    break;
-                case LogLevel.CRITICAL:
-                    this.coreLogger.error(log);
-                    break;
-                case LogLevel.NONE:
-                    break;
-                default:
-                    this.coreLogger.warn(`Log with unknown level: ${level} : ${log}`);
-                    break;
-            }
-        };
-        Module.Logger.setLogTransport(logTransport);
-
         this.supportsResizing = this.content.getAPLSettings('supportsResizing');
 
         if (!this.options.documentState) {
@@ -348,7 +323,7 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
     }
 
     public async loadPackages(): Promise<boolean> {
-        const packageLoader: PackageLoader = new PackageLoader();
+        const packageLoader: PackageLoader = new PackageLoader(this.options.packageLoader);
         while (this.content.isWaiting()) {
             const importRequests = this.content.getRequestedPackages();
             if (importRequests.size > 0) {

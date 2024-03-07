@@ -5,8 +5,6 @@
 
 #include "apl/apl.h"
 #include <emscripten/bind.h>
-#include "wasm/logbridge.h"
-#include "wasm/log.h"
 #include "wasm/importrequest.h"
 #include "wasm/content.h"
 #include "wasm/component.h"

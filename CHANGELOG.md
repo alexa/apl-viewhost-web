@@ -1,38 +1,48 @@
 # Changelog for apl-viewhost-web
 
+## [2024.1]
+This release adds support for version 2024.1 of the APL specification. Please also see APL Core Library for changes: [apl-core-library CHANGELOG](https://github.com/alexa/apl-core-library/blob/master/CHANGELOG.md)
+
+### Added
+- Add support for Log command
+- Add support for runtime to override the package loading method
+
+### Changed
+- Bug fixes
+
 ## [2023.3]
 This release adds support for version 2023.3 of the APL specification. Please also see APL Core Library for changes: [apl-core-library CHANGELOG](https://github.com/alexa/apl-core-library/blob/master/CHANGELOG.md)
- 
+
 ### Added
 - Add support for conditional import
 - Add support for auto sizing
 - Add support gradient as Frame background
 - Exported caption control class `cueControl` for APL videos
- 
+
 ### Changed
 - Changed default font to sans-serif to meet the APL Spec
 - Bug fixes
- 
+
 ## [2023.2]
 This release adds support for version 2023.2 of the APL specification. Please also see APL Core Library for changes: [apl-core-library CHANGELOG](https://github.com/alexa/apl-core-library/blob/master/CHANGELOG.md)
- 
+
 ### Added
 - Add support for the seekTo ControlMedia command
- 
+
 ### Changed
 - Remove usage of APL Core Library's deprecated getTheme API
 - Bug fixes
- 
+
 ## [2023.1]
 This release adds support for version 2023.1 of the APL specification. Please also see APL Core Library for changes: [apl-core-library CHANGELOG](https://github.com/alexa/apl-core-library/blob/master/CHANGELOG.md)
- 
+
 ### Added
 - SRT support for APL Video textTrack
 - Support for new Porter-Duff blend modes
- 
+
 ### Changed
 - Bug fixes
- 
+
 ## [2022.2]
 This release adds support for version 2022.2 of the APL specification. Please also see APL Core Library for changes: [apl-core-library CHANGELOG](https://github.com/alexa/apl-core-library/blob/master/CHANGELOG.md)
 

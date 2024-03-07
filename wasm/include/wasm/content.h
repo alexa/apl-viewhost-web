@@ -16,7 +16,7 @@ namespace wasm {
 
 namespace internal {
 struct ContentMethods {
-    static apl::ContentPtr create(const std::string& document);
+    static apl::ContentPtr create(const std::string& document, const SessionPtr& session);
     static void refresh(const apl::ContentPtr& content, const Metrics& metrics, const RootConfig& config);
     static std::set<apl::ImportRequest> getRequestedPackages(const apl::ContentPtr& content);
     static bool isError(const apl::ContentPtr& content);

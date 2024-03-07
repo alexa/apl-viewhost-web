@@ -12,8 +12,8 @@ namespace wasm {
 namespace internal {
 
 apl::ContentPtr
-ContentMethods::create(const std::string& document) {
-    return apl::Content::create(document.c_str());
+ContentMethods::create(const std::string& document, const SessionPtr& session) {
+    return apl::Content::create(document.c_str(), session);
 }
 
 void

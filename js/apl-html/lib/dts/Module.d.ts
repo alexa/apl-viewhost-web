@@ -95,6 +95,7 @@ declare namespace APL {
         public AudioPlayerFactory: typeof AudioPlayerFactory;
         public MediaPlayer: typeof MediaPlayer;
         public MediaPlayerFactory: typeof MediaPlayerFactory;
+        public Session : typeof Session;
     }
 }
 
