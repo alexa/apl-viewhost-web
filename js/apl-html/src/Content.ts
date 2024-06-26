@@ -17,8 +17,9 @@ export class Content {
      * @param data The data used for the main document
      * @param onLogCommand The callback to send back the log info
      */
-    public static create(doc: string, data: string = '', onLogCommand?: OnLogCommand) {
-        return new Content(doc, data, onLogCommand);
+    public static create(doc: string, data: string = '', onLogCommand?: OnLogCommand,
+                         metrics?: APL.Metrics, config?: APL.RootConfig, fillMissingData = true) {
+        return new Content(doc, data, onLogCommand, metrics, config, fillMissingData);
     }
 
     /**
@@ -60,17 +61,25 @@ export class Content {
      * @param doc The main APL document
      * @param data The data used for the main document
      */
-    private constructor(private doc: string, private data: string, onLogCommand?: OnLogCommand) {
+    private constructor(private doc: string, private data: string, onLogCommand?: OnLogCommand,
+                        metrics?: APL.Metrics, config?: APL.RootConfig, fillMissingData = true) {
         try {
             this.settings = JSON.parse(doc).settings || {};
         } catch (e) {
             this.settings = {};
         }
-        this.content = Module.Content.create(this.doc, Module.Session.create((level, message, args) => {
+        const onLogCommandCallback = (level, message, args) => {
             if (onLogCommand) {
                 onLogCommand(logLevelToLogCommandLevel(level), message, args);
             }
-        }));
+        };
+        if (metrics && config) {
+            this.content = Module.Content.createWithConfig(this.doc, Module.Session.create(onLogCommandCallback),
+                                                 metrics, config);
+        } else {
+            this.content = Module.Content.create(this.doc, Module.Session.create(onLogCommandCallback));
+        }
+
         if (this.data) {
             const jsonDoc = JSON.parse(this.doc);
             if (jsonDoc.mainTemplate && jsonDoc.mainTemplate.parameters &&
@@ -82,7 +91,7 @@ export class Content {
                         this.content.addData(name, data);
                     } else if (parsedData[name]) {
                         this.content.addData(name, JSON.stringify(parsedData[name]));
-                    } else {
+                    } else if (fillMissingData) {
                         this.content.addData(name, '{}');
                     }
                 });
@@ -91,19 +100,16 @@ export class Content {
     }
 
     /**
-     * Retrieve a set of packages that have been requested.  This method only returns an
-     * individual package a single time.  Once it has been called, the "requested" packages
-     * are moved internally into a "pending" list of packages.
-     * @return The set of packages that should be loaded.
+     * @deprecated
+     * Runtime shouldn't need to do this anymore. Please use APLViewhostWASM API
      */
     public getRequestedPackages(): Set<APL.ImportRequest> {
         return this.content.getRequestedPackages();
     }
 
     /**
-     * Add a requested package to the document.
-     * @param request The requested package import structure.
-     * @param data Data for the package.
+     * @deprecated
+     * Runtime shouldn't need to do this anymore. Please use APLViewhostWASM API
      */
     public addPackage(request: APL.ImportRequest, data: string): void {
         this.content.addPackage(request, data);

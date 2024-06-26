@@ -9,10 +9,13 @@ import APLRenderer, {
     IConfigurationChangeOptions, JSLogLevel, LiveArray, LiveMap,
     LocaleMethods, LoggerFactory, LogTransport, MediaPlayerHandle, OnLogCommand, ViewportShape
 } from 'apl-html';
-import {ConfigurationChange} from './ConfigurationChange';
-import {ExtensionManager} from './extensions/ExtensionManager';
-import {IDocumentState} from './extensions/IDocumentState';
-import {PackageLoader} from './PackageLoader';
+import { ConfigurationChange } from './ConfigurationChange';
+import { PackageLoader } from './content/PackageLoader';
+import { PackageManager } from './content/PackageManager';
+import { DocumentState } from './document/DocumentState';
+import { IDocumentState } from './extensions/backstack/IDocumentState';
+import { ExtensionManager } from './extensions/ExtensionManager';
+import { UnifiedBackstackExtension } from './extensions/unifiedBackstack/UnifiedBackstackExtension';
 
 /**
  * This matches the schema sent from the server
@@ -36,6 +39,8 @@ export interface ScalingOptions {
  * Options when creating a new APLWASMRenderer
  */
 export interface IAPLWASMOptions extends IAPLOptions {
+    /** Internal used only */
+    unifiedApi?: boolean;
     /** Contains all the data and docs needed to inflate an APL view */
     content: Content;
     /** information on device scaling */
@@ -54,6 +59,14 @@ export interface IAPLWASMOptions extends IAPLOptions {
     packageLoader?: (name: string, version: string, url?: string) => Promise<string>;
     /** callback for APL Log Command handling, will overwrite the callback during Content creation */
     onLogCommand?: OnLogCommand;
+    /** @internal */
+    metrics?: APL.Metrics;
+    /** @internal */
+    isAutoSizing?: boolean;
+    /** @internal */
+    onDocumentStateUpdate?: (state: DocumentState) => void;
+    /** @internal used for unfied API only */
+    backstackExtension?: UnifiedBackstackExtension;
 }
 
 const LEGACY_KARAOKE_APL_VERSION = '1.0';
@@ -73,6 +86,8 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
     protected documentAplVersion: string;
     protected legacyKaroke: boolean;
     protected isAutoSizing: boolean;
+    private needRefreshing: boolean;
+    private unifiedApi: boolean;
 
     /// Viewport metrics.
     private metrics: APL.Metrics;
@@ -89,6 +104,16 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
     /// MediaPlayer factory wrapper
     private mediaPlayerFactory: APL.MediaPlayerFactory;
 
+    // PackageManager components
+    private packageLoader: PackageLoader;
+    private packageManager: PackageManager;
+
+    private documentState: DocumentState = DocumentState.pending;
+
+    private onDocumentStateUpdate?: (state: DocumentState) => void;
+
+    private coreDocumentContext: APL.DocumentContext;
+
     /**
      * This constructor is private
      * @param options options passed in through `create`
@@ -96,47 +121,41 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
      * @ignore
      */
     private constructor(options: IAPLWASMOptions) {
-        LoggerFactory.initialize(options.logLevel || 'debug', options.logTransport);
         super(options);
+        this.unifiedApi = this.options.unifiedApi ? true : false;
+        LoggerFactory.initialize(options.logLevel || 'debug', options.logTransport);
         if (this.options.documentState) {
             this.content = this.options.documentState.content;
-        } else if (this.options.onLogCommand) {
+        } else if (!this.unifiedApi && this.options.onLogCommand) {
             this.content = Content.recreate(this.options.content, this.options.onLogCommand);
         } else {
             this.content = this.options.content;
         }
         this.legacyKaroke = this.content.getAPLVersion() === LEGACY_KARAOKE_APL_VERSION;
         this.documentAplVersion = this.content.getAPLVersion();
-        this.metrics = Module.Metrics.create();
-        this.metrics.size(this.options.viewport.width, this.options.viewport.height)
-            .dpi(this.options.viewport.dpi)
-            .theme(this.options.theme)
-            .shape(this.options.viewport.shape as string)
-            .mode(this.options.mode as string);
-        if (this.options.viewport.minWidth && this.options.viewport.minWidth > 0
-            && this.options.viewport.maxWidth && this.options.viewport.maxWidth > 0) {
-            this.isAutoSizing = true;
-            this.metrics.minAndMaxWidth(this.options.viewport.minWidth, this.options.viewport.maxWidth);
+        if (this.options.metrics && this.options.isAutoSizing) {
+            this.needRefreshing = false;
+            this.metrics = this.options.metrics;
+            this.isAutoSizing = this.options.isAutoSizing;
+        } else {
+            this.needRefreshing = true;
+            this.metrics = Module.Metrics.create();
+            this.metrics.size(this.options.viewport.width, this.options.viewport.height)
+                .dpi(this.options.viewport.dpi)
+                .theme(this.options.theme)
+                .shape(this.options.viewport.shape as string)
+                .mode(this.options.mode as string);
+            if (this.options.viewport.minWidth && this.options.viewport.minWidth > 0
+                && this.options.viewport.maxWidth && this.options.viewport.maxWidth > 0) {
+                this.isAutoSizing = true;
+                this.metrics.minAndMaxWidth(this.options.viewport.minWidth, this.options.viewport.maxWidth);
+            }
+            if (this.options.viewport.minHeight && this.options.viewport.minHeight > 0
+                && this.options.viewport.maxHeight && this.options.viewport.maxHeight > 0) {
+                this.isAutoSizing = true;
+                this.metrics.minAndMaxHeight(this.options.viewport.minHeight, this.options.viewport.maxHeight);
+            }
         }
-        if (this.options.viewport.minHeight && this.options.viewport.minHeight > 0
-            && this.options.viewport.maxHeight && this.options.viewport.maxHeight > 0) {
-            this.isAutoSizing = true;
-            this.metrics.minAndMaxHeight(this.options.viewport.minHeight, this.options.viewport.maxHeight);
-        }
-        this.rootConfig = Module.RootConfig.create(this.options.environment);
-        this.rootConfig.utcTime(this.options.utcTime).localTimeAdjustment(this.options.localTimeAdjustment);
-        this.rootConfig.localeMethods(LocaleMethods);
-
-        this.audioPlayerFactory = Module.AudioPlayerFactory.create(
-            this.options.audioPlayerFactory ?
-            this.options.audioPlayerFactory :
-            ((eventListener: IAudioEventListener) => new DefaultAudioPlayer(eventListener)));
-        this.rootConfig.audioPlayerFactory(this.audioPlayerFactory);
-
-        this.mediaPlayerFactory = Module.MediaPlayerFactory.create(
-            ((mediaPlayer: APL.MediaPlayer) => new MediaPlayerHandle(mediaPlayer))
-        );
-        this.rootConfig.mediaPlayerFactory(this.mediaPlayerFactory);
 
         this.handleConfigurationChange = (configurationChangeOptions: IConfigurationChangeOptions) => {
             if (this.context) {
@@ -156,6 +175,39 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
             }
         };
 
+        if (!this.unifiedApi) {
+            this.rootConfig = Module.RootConfig.create(this.options.environment);
+            this.rootConfig.utcTime(this.options.utcTime).localTimeAdjustment(this.options.localTimeAdjustment);
+            this.rootConfig.localeMethods(LocaleMethods);
+
+            this.audioPlayerFactory = Module.AudioPlayerFactory.create(
+                this.options.audioPlayerFactory ?
+                this.options.audioPlayerFactory :
+                ((eventListener: IAudioEventListener) => new DefaultAudioPlayer(eventListener)));
+            this.rootConfig.audioPlayerFactory(this.audioPlayerFactory);
+
+            this.mediaPlayerFactory = Module.MediaPlayerFactory.create(
+                ((mediaPlayer: APL.MediaPlayer) => new MediaPlayerHandle(mediaPlayer))
+            );
+            this.rootConfig.mediaPlayerFactory(this.mediaPlayerFactory);
+
+            this.packageLoader = new PackageLoader(this.options.packageLoader);
+            this.packageManager = new PackageManager(this.packageLoader);
+            this.rootConfig.packageManager(this.packageManager.getCppPackageManager());
+        }
+
+        if (this.options.onDocumentStateUpdate) {
+            this.onDocumentStateUpdate = this.options.onDocumentStateUpdate;
+        }
+    }
+
+    /**
+     * For unified API internal only
+     * @internal
+     * @ignore
+     */
+    public setRootConfig(rootConfig: APL.RootConfig) {
+        this.rootConfig = rootConfig;
     }
 
     /**
@@ -163,6 +215,14 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
      */
     public getConfigurationChange() {
         return this.configurationChange;
+    }
+
+    /**
+     * @internal
+     * @ignore
+     */
+    public getDocumentState(): DocumentState {
+        return this.documentState;
     }
 
     /**
@@ -179,6 +239,22 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
      */
     protected getDocumentAplVersion(): string {
         return this.documentAplVersion;
+    }
+
+    /**
+     * @internal
+     * @ignore
+     */
+    public setMediaPlayerFactory(mediaPlayerFactory: APL.MediaPlayerFactory) {
+        this.mediaPlayerFactory = mediaPlayerFactory;
+    }
+
+    /**
+     * @internal
+     * @ignore
+     */
+    public setAudioPlayerFactory(audioPlayerFactory: APL.AudioPlayerFactory) {
+        this.audioPlayerFactory = audioPlayerFactory;
     }
 
     /**
@@ -202,16 +278,47 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
         }
     }
 
-    public async init() {
+    public async prepare() {
+        if (!this.content) {
+            return Promise.reject('No content');
+        }
+        if (!this.rootConfig) {
+            return Promise.reject('No root config');
+        }
+        if (this.documentState !== DocumentState.pending) {
+            return Promise.reject(`Document in invalid state: ${this.documentState}`);
+        }
+
         this.supportsResizing = this.content.getAPLSettings('supportsResizing');
 
         if (!this.options.documentState) {
-            this.content.refresh(this.metrics, this.rootConfig);
-            if (!await this.loadPackages() || !this.content.isReady()
-                || this.content.isError()) {
-                this.logger.warn('Content is not ready or is in an error state');
-                return;
+            if (this.needRefreshing) {
+                this.content.refresh(this.metrics, this.rootConfig);
             }
+            if (!await this.loadPackages() || this.content.isWaiting()
+                || this.content.isError()) {
+                this.updateDocumentState(DocumentState.error);
+                this.logger.warn('Content is still pending or is in an error state');
+                return Promise.reject('Failed to prepare content');
+            }
+        }
+
+        if (!this.options.notLoadFonts) {
+            await FontUtils.initialize();
+        }
+        this.updateDocumentState(DocumentState.prepared);
+        return Promise.resolve();
+    }
+
+    public async init() {
+        if (!this.content) {
+            return Promise.reject('No content');
+        }
+        if (!this.rootConfig) {
+            return Promise.reject('No root config');
+        }
+        if (this.documentState === DocumentState.pending) {
+            await this.prepare();
         }
 
         if (this.options.extensionManager) {
@@ -220,33 +327,37 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
             this.extensionManager = this.options.extensionManager;
         }
 
-        if (!this.options.notLoadFonts) {
-            await FontUtils.initialize();
-        }
-
-        if (this.options.documentState) {
-            await this.restoreDocument(this.options.documentState);
-            this.options.documentState = undefined;
-        } else {
-            this.context = Module.Context.create(
-                this.options,
-                this,
-                this.metrics,
-                (this.content as any).content,
-                this.rootConfig,
-                this.options.scaling
-            );
+        if (!this.context) {
+            if (this.options.documentState) {
+                await this.restoreDocument(this.options.documentState);
+                this.options.documentState = undefined;
+            } else {
+                this.context = Module.Context.create(
+                    this.options,
+                    this,
+                    this.metrics,
+                    (this.content as any).content,
+                    this.rootConfig,
+                    this.options.scaling
+                );
+            }
         }
 
         if (!this.context) {
             this.logger.warn('Template provided is invalid.');
-            return;
+            this.updateDocumentState(DocumentState.error);
+            return Promise.reject('Failed to create context');
         }
 
+        this.coreDocumentContext = this.context.topDocument();
+        this.updateDocumentState(DocumentState.inflated);
+
         super.init();
+        this.updateDocumentState(DocumentState.displayed);
         if (this.extensionManager) {
-            this.extensionManager.onDocumentRender(this.context, this.content);
+            this.extensionManager.onDocumentRender(this.context, this.content.getContent());
         }
+        return Promise.resolve();
     }
 
     /**
@@ -269,7 +380,7 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
      * @param commands JSON string of an array of commands
      */
     public executeCommands(commands: string): APL.Action {
-        return this.context.executeCommands(commands);
+        return this.coreDocumentContext.executeCommands(commands, false);
     }
 
     /**
@@ -312,10 +423,42 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
         return this.context.processDataSourceUpdate(payload, type ? type : 'dynamicIndexList');
     }
 
+    /**
+     * @internal
+     * @ignore
+     */
+    public getVisualContext(): Promise<string> {
+        return Promise.resolve(this.coreDocumentContext.getVisualContext());
+    }
+
+    /**
+     * @internal
+     * @ignore
+     */
+    public getDataSourceContext(): Promise<string> {
+        return Promise.resolve(this.coreDocumentContext.getDataSourceContext());
+    }
+
+    /**
+     * @internal
+     * @ignore
+     */
+    public updateCoreDocumentContext(documentContext: APL.DocumentContext) {
+        this.coreDocumentContext = documentContext;
+    }
+
     public destroy(preserveContext?: boolean) {
         super.destroy(preserveContext);
         if (!preserveContext) {
-            this.mediaPlayerFactory.destroy();
+            if (!this.unifiedApi && this.audioPlayerFactory) {
+                this.audioPlayerFactory.destroy();
+            }
+            if (!this.unifiedApi && this.mediaPlayerFactory) {
+                this.mediaPlayerFactory.destroy();
+            }
+            if (this.packageManager) {
+                this.packageManager.destroy();
+            }
             if (this.options.extensionManager) {
                 this.options.extensionManager.resetRootContext();
             }
@@ -323,23 +466,9 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
     }
 
     public async loadPackages(): Promise<boolean> {
-        const packageLoader: PackageLoader = new PackageLoader(this.options.packageLoader);
-        while (this.content.isWaiting()) {
-            const importRequests = this.content.getRequestedPackages();
-            if (importRequests.size > 0) {
-                const irArr: APL.ImportRequest[] = [];
-                importRequests.forEach((ir) => irArr.push(ir));
-                const loadedPkgs = await packageLoader.load(irArr);
-                for (const loadPkg of loadedPkgs) {
-                    this.content.addPackage(loadPkg.importRequest, JSON.stringify(loadPkg.json));
-                    irArr.splice(irArr.indexOf(loadPkg.importRequest));
-                }
-                if (irArr.length > 0) {
-                    return false;
-                }
-            }
-        }
-        return true;
+        return new Promise<boolean>((resolve) => {
+            this.content.getContent().load(() => resolve(true), () => resolve(false));
+        });
     }
 
     private async restoreDocument(documentState: IDocumentState): Promise<void> {
@@ -368,6 +497,17 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
         } else {
             this.context.configurationChange(configurationChange.getConfigurationChange(),
                 undefined, undefined);
+        }
+    }
+
+    /**
+     * @internal
+     * @ignore
+     */
+    public updateDocumentState(state: DocumentState) {
+        this.documentState = state;
+        if (this.onDocumentStateUpdate) {
+            this.onDocumentStateUpdate(state);
         }
     }
 }

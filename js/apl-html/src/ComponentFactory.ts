@@ -11,6 +11,7 @@ import { Container } from './components/Container';
 import { EditText } from './components/EditText';
 import { Frame } from './components/Frame';
 import { GridSequence } from './components/GridSequence';
+import { Host } from './components/Host';
 import { Image } from './components/Image';
 import { PagerComponent } from './components/pager/PagerComponent';
 import { ScrollView } from './components/ScrollView';
@@ -103,6 +104,9 @@ const factoryMap = {
     [ComponentType.kComponentTypeVectorGraphic]: (renderer: APLRenderer, component: APL.Component,
                                                   parent?: Component) => {
         return new VectorGraphic(renderer, component, componentFactory, new VectorGraphicElementUpdater(), parent);
+    },
+    [ComponentType.kComponentTypeHost]: (renderer: APLRenderer, component: APL.Component, parent?: Component) => {
+        return new Host(renderer, component, componentFactory, parent);
     }
 };
 // tslint:enable:max-line-length

@@ -39,7 +39,8 @@ const COMPONENT_TYPE_MAP = {
     [ComponentType.kComponentTypeText]: 'Text',
     [ComponentType.kComponentTypeTouchWrapper]: 'TouchWrapper',
     [ComponentType.kComponentTypeVideo]: 'Video',
-    [ComponentType.kComponentTypeVectorGraphic]: 'VectorGraphic'
+    [ComponentType.kComponentTypeVectorGraphic]: 'VectorGraphic',
+    [ComponentType.kComponentTypeHost]: 'Host'
 };
 
 const SUPPORTED_LAYOUT_DIRECTIONS = {

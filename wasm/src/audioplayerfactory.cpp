@@ -35,11 +35,20 @@ AudioPlayerFactory::tick()
     }
 }
 
+void
+AudioPlayerFactory::destroy()
+{
+    for (auto& player : mPlayers) {
+        player->release();
+    }
+}
+
 EMSCRIPTEN_BINDINGS(wasm_audioplayer_factory) {
     emscripten::class_<AudioPlayerFactory>("AudioPlayerFactory")
         .smart_ptr<AudioPlayerFactoryPtr>("AudioPlayerFactoryPtr")
         .class_function("create", &AudioPlayerFactory::create)
-        .function("tick", &AudioPlayerFactory::tick);
+        .function("tick", &AudioPlayerFactory::tick)
+        .function("destroy", &AudioPlayerFactory::destroy);
 }
 
 } // namespace wasm

@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { Stack as UnifiedStack } from '../unifiedBackstack/Stack';
 import { Stack } from './Stack';
 
 /**
@@ -20,7 +21,7 @@ export class ClearCommand {
      * Remove all items from the provided backstack.
      * @param backstack the backstack to clear
      */
-    public execute(backstack: Stack) {
+    public execute(backstack: Stack|UnifiedStack) {
         backstack.clear();
     }
 }

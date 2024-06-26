@@ -1,5 +1,17 @@
 # Changelog for apl-viewhost-web
 
+## [2024.2]
+This release adds support for version 2024.2 of the APL specification. Please also see APL Core Library for changes: [apl-core-library CHANGELOG](https://github.com/alexa/apl-core-library/blob/master/CHANGELOG.md)
+
+### Added
+- New interface APLViewhostWASM and DocumentHandle
+- Add support for Host Component
+- Add IEmbeddedDocumentFactory to fetch embedded document from runtime
+
+### Changed
+- Migrate to new core text measurement method
+- Migrate to core PackageManager interface to support ImportPackage command
+
 ## [2024.1]
 This release adds support for version 2024.1 of the APL specification. Please also see APL Core Library for changes: [apl-core-library CHANGELOG](https://github.com/alexa/apl-core-library/blob/master/CHANGELOG.md)
 

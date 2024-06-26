@@ -10,9 +10,15 @@ declare namespace APL {
                   width: number,
                   widthMode: number,
                   height: number,
-                  heightMode: number): { width: number, height: number };
-
-        onBaseline(component: APL.Component, width: number, height: number): number;
+                  heightMode: number): { width: number,
+                                         height: number,
+                                         baseline: number,
+                                         lineCount: number,
+                                         plainText: string,
+                                         laidOutText: string,
+                                         isTruncated: boolean,
+                                         textsByLine: string[],
+                                         rectsByLine: number[][] };
     }
 
     export interface IBackground {
@@ -37,6 +43,8 @@ declare namespace APL {
                              scalingOptions?: any): Context;
 
         public topComponent(): APL.Component;
+
+        public topDocument(): APL.DocumentContext;
 
         public getBackground(): APL.IBackground;
 

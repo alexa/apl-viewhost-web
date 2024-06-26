@@ -12,12 +12,12 @@ import {
 } from 'apl-html';
 import {ILogger, LoggerFactory} from '../..';
 import {createAplExtensionCommandDefinition} from '../ExtensionCreationUtils';
-import {IDocumentState} from '../IDocumentState';
 import {BackstackEnvironment} from './BackstackEnvironment';
 import {BackstackExtensionObserverInterface} from './BackstackExtensionObserverInterface';
 import {ClearCommand} from './ClearCommand';
 import {GoBackCommand} from './GoBackCommand';
 import {GoBackListener} from './GoBackListener';
+import {IDocumentState} from './IDocumentState';
 import {Stack} from './Stack';
 
 /**

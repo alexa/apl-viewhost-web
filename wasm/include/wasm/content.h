@@ -17,7 +17,10 @@ namespace wasm {
 namespace internal {
 struct ContentMethods {
     static apl::ContentPtr create(const std::string& document, const SessionPtr& session);
+    static apl::ContentPtr createWithConfig(const std::string& document, const SessionPtr& session,
+                                            const Metrics& metrics, const RootConfig& config);
     static void refresh(const apl::ContentPtr& content, const Metrics& metrics, const RootConfig& config);
+    static void load(const apl::ContentPtr& content, emscripten::val onSuccess, emscripten::val onFailure);
     static std::set<apl::ImportRequest> getRequestedPackages(const apl::ContentPtr& content);
     static bool isError(const apl::ContentPtr& content);
     static bool isReady(const apl::ContentPtr& content);
@@ -29,7 +32,6 @@ struct ContentMethods {
     static emscripten::val getExtensionSettings(const apl::ContentPtr& content, const std::string& extensionName);
     static std::string getParameterAt(const apl::ContentPtr& content, size_t index);
     static size_t getParameterCount(const apl::ContentPtr& content);
-
 };
 } // namespace internal
 

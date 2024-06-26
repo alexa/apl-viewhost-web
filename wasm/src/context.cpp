@@ -33,6 +33,11 @@ ContextMethods::topComponent(const apl::RootContextPtr& context) {
     return top;
 }
 
+apl::DocumentContextPtr
+ContextMethods::topDocument(const apl::RootContextPtr& context) {
+    return context->topDocument();
+}
+
 emscripten::val
 ContextMethods::getBackground(const apl::RootContextPtr& context) {
     return background;
@@ -232,8 +237,7 @@ ContextMethods::create(emscripten::val options, emscripten::val text, emscripten
             // set apl renderer callbacks
             if (!text.isUndefined()) {
                 auto onMeasure = text["onMeasure"].call<emscripten::val>("bind", text);
-                auto onBaseline = text["onBaseline"].call<emscripten::val>("bind", text);
-                auto textMeasure = std::make_shared<WasmTextMeasurement>(onMeasure, onBaseline, m);
+                auto textMeasure = std::make_shared<WasmTextMeasurement>(onMeasure, m);
                 auto onPEGTLError = text["onPEGTLError"].call<emscripten::val>("bind", text);
                 auto wasmSession = std::make_shared<WasmSession>(onPEGTLError);
                 rootConfig.measure(textMeasure);
@@ -509,6 +513,7 @@ EMSCRIPTEN_BINDINGS(apl_wasm_context) {
     emscripten::class_<apl::RootContext>("Context")
         .smart_ptr<apl::RootContextPtr>("ContextPtr")
         .function("topComponent", &internal::ContextMethods::topComponent)
+        .function("topDocument", &internal::ContextMethods::topDocument)
         .function("getBackground", &internal::ContextMethods::getBackground)
         .function("setBackground", &internal::ContextMethods::setBackground)
         .function("getDataSourceContext", &internal::ContextMethods::getDataSourceContext)

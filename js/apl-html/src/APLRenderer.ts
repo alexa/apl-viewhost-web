@@ -225,7 +225,7 @@ export interface IAPLOptions {
     /** Optional Video player factory. If no player is provided, a default player will be used */
     videoFactory?: IVideoFactory;
     /** The HTMLElement to draw onto */
-    view: HTMLElement;
+    view?: HTMLElement;
     /** Physical viewport characteristics */
     viewport: IViewportCharacteristics;
     /** Device mode. If no provided "HUB" is used. */
@@ -383,7 +383,7 @@ export default abstract class APLRenderer<Options = any> {
      * @internal
      * @ignore
      */
-    private requestId: number = undefined;
+    private requestId: any = undefined;
 
     /**
      * @internal
@@ -469,38 +469,9 @@ export default abstract class APLRenderer<Options = any> {
         if (!mOptions.viewport.shape) {
             mOptions.viewport.shape = mOptions.viewport.isRound ? 'ROUND' : 'RECTANGLE';
         }
-
-        this.view = mOptions.view;
-        this.lastKnownViewWidth = mOptions.viewport.width;
-        this.lastKnownViewHeight = mOptions.viewport.height;
-        this.setViewSize(this.lastKnownViewWidth, this.lastKnownViewHeight);
-        if (mOptions.viewport.shape === 'ROUND') {
-            this.view.style.clipPath = 'circle(50%)';
-        } else {
-            this.view.style.clipPath = '';
+        if (mOptions.view) {
+            this.bindToView(mOptions.view);
         }
-        this.view.style.display = 'flex';
-        this.view.style.overflow = 'hidden';
-        this.view.tabIndex = 0;
-        this.viewEventListeners = {
-            keydown: this.handleKeyDown,
-            keyup: this.handleKeyUp,
-            touchstart: this.onPointerDown,
-            touchmove: this.onPointerMove,
-            touchend: this.onPointerUp,
-            touchcancel: this.onPointerLeave,
-            mousedown: this.onPointerDown,
-            mousemove: this.onPointerMove,
-            mouseup: this.onPointerUp,
-            mouseleave: this.onPointerLeave
-        };
-
-        for (const eventName in this.viewEventListeners) {
-            if (this.viewEventListeners.hasOwnProperty(eventName)) {
-                this.view.addEventListener(eventName, this.viewEventListeners[eventName]);
-            }
-        }
-
         mOptions.environment.agentName = mOptions.environment.agentName ?
             mOptions.environment.agentName : agentName;
         mOptions.environment.agentVersion = mOptions.environment.agentVersion ?
@@ -564,7 +535,69 @@ export default abstract class APLRenderer<Options = any> {
         this.maxTimeDeltaBetweenFrames = (1000 * this.TOLERANCE / this.MAXFPS);
     }
 
+    public isBound(): boolean {
+        return !!this.view;
+    }
+
+    public bindToView(view: HTMLElement) {
+        if (this.view) {
+            this.logger.warn('Already binded to a view, ignored');
+            return;
+        }
+        this.view = view;
+        if (this.mOptions.viewport.shape === 'ROUND') {
+            this.view.style.clipPath = 'circle(50%)';
+        } else {
+            this.view.style.clipPath = '';
+        }
+        this.view.style.display = 'flex';
+        this.view.style.overflow = 'hidden';
+        this.view.tabIndex = 0;
+
+        this.lastKnownViewWidth = this.mOptions.viewport.width;
+        this.lastKnownViewHeight = this.mOptions.viewport.height;
+        this.setViewSize(this.lastKnownViewWidth, this.lastKnownViewHeight);
+
+        this.viewEventListeners = {
+            keydown: this.handleKeyDown,
+            keyup: this.handleKeyUp,
+            touchstart: this.onPointerDown,
+            touchmove: this.onPointerMove,
+            touchend: this.onPointerUp,
+            touchcancel: this.onPointerLeave,
+            mousedown: this.onPointerDown,
+            mousemove: this.onPointerMove,
+            mouseup: this.onPointerUp,
+            mouseleave: this.onPointerLeave
+        };
+
+        for (const eventName in this.viewEventListeners) {
+            if (this.viewEventListeners.hasOwnProperty(eventName)) {
+                this.view.addEventListener(eventName, this.viewEventListeners[eventName]);
+            }
+        }
+    }
+
+    public unbindFromView() {
+        this.destroyRenderingComponents();
+        this.removeRenderingComponents();
+        if (this.view) {
+            for (const eventName in this.viewEventListeners) {
+                if (this.viewEventListeners.hasOwnProperty(eventName)) {
+                    this.view.removeEventListener(eventName, this.viewEventListeners[eventName]);
+                }
+            }
+            this.view = undefined;
+        }
+        window.removeEventListener('keydown', this.passKeyDownToCore);
+        window.removeEventListener('keyup', this.passKeyUpToCore);
+    }
+
     public init(metricRecorder?: (m: APL.DisplayMetric) => void) {
+        if (!this.view) {
+            this.logger.error('not binded to a view');
+            return;
+        }
         const startTime = performance.now();
         if (this.mOptions.mode === 'TV') {
             window.addEventListener('keydown', this.passKeyDownToCore);
@@ -661,12 +694,12 @@ export default abstract class APLRenderer<Options = any> {
         // Setting backgroundColor to black to ensure the correct behaviour
         // of a gradient containing an alpha channel component
 
-        this.view.style.backgroundColor = 'black';
+        this.view!.style.backgroundColor = 'black';
 
         const background = this.context.getBackground();
         // Spec: If the background property is partially transparent
         // the default background color of the device will show through
-        this.view.style.backgroundImage = background.gradient ?
+        this.view!.style.backgroundImage = background.gradient ?
             getCssGradient(background.gradient, this.logger) :
             getCssPureColorGradient(background.color);
     }
@@ -809,27 +842,15 @@ export default abstract class APLRenderer<Options = any> {
      */
     public onMeasure(component: APL.Component, measureWidth: number, widthMode: MeasureMode,
                      measureHeight: number, heightMode: MeasureMode) {
-        let {width, height} = this.mOptions.viewport;
         if (this.mOptions.viewport.maxWidth) {
-            width = this.mOptions.viewport.maxWidth;
+            measureWidth = Math.min(measureWidth, this.mOptions.viewport.maxWidth);
         }
         if (this.mOptions.viewport.maxHeight) {
-            height = this.mOptions.viewport.maxHeight;
+            measureHeight = Math.min(measureHeight, this.mOptions.viewport.maxHeight);
         }
-        const comp = new TextMeasurement(component, width, height);
+        const comp = new TextMeasurement(component, measureWidth, measureHeight);
         comp.init();
         return comp.onMeasure(measureWidth, widthMode, measureHeight, heightMode);
-    }
-
-    /**
-     * Baseline
-     * @param component The component to measure
-     * @param width specified width
-     * @param height specified height
-     * @ignore
-     */
-    public onBaseline(component: APL.Component, width: number, height: number): number {
-        return height * 0.5;
     }
 
     /**
@@ -896,8 +917,22 @@ export default abstract class APLRenderer<Options = any> {
      * Cancel Animation Frame
      */
     public async stopUpdate(): Promise<void> {
+        if (!this.requestId) {
+            this.logger.warn('already stopped');
+        }
         window.cancelAnimationFrame(this.requestId);
         this.requestId = undefined;
+        return Promise.resolve();
+    }
+
+    /**
+     * Resume Animation Frame
+     */
+    public async resumeUpdate(): Promise<void> {
+        if (this.requestId) {
+            this.logger.warn('already running');
+        }
+        this.requestId = requestAnimationFrame(this.update);
         return Promise.resolve();
     }
 
@@ -1141,9 +1176,9 @@ export default abstract class APLRenderer<Options = any> {
         let y: number;
         const delta = 5;
         x = Math.abs(coords.x) < delta ? -delta : Math.abs(coords.x -
-            this.view.getBoundingClientRect().width) < delta ? coords.x + delta : coords.x;
+            this.view!.getBoundingClientRect().width) < delta ? coords.x + delta : coords.x;
         y = Math.abs(coords.y) < delta ? -delta : Math.abs(coords.y -
-            this.view.getBoundingClientRect().height) < delta ? coords.y + delta : coords.y;
+            this.view!.getBoundingClientRect().height) < delta ? coords.y + delta : coords.y;
         return {x, y};
     }
 
@@ -1318,7 +1353,7 @@ export default abstract class APLRenderer<Options = any> {
         this.top.$container.css('position', '');
     }
 
-    private removeRenderingComponents(): void {
+    public removeRenderingComponents(): void {
         if (this.top && this.view &&
             this.top.container &&
             this.view.contains(this.top.container)) {
@@ -1373,11 +1408,11 @@ export default abstract class APLRenderer<Options = any> {
 
     private shouldPassWindowEventToCore(event: IAsyncKeyboardEvent, focusedComponentId: string) {
         const isViewAlreadyFocused = () => {
-            return this.view.contains(document.activeElement);
+            return this.view!.contains(document.activeElement);
         };
 
         const isFocusLost = () => {
-            return !this.view.contains(document.activeElement)
+            return !this.view!.contains(document.activeElement)
                 && !(document.activeElement instanceof HTMLTextAreaElement);
         };
 

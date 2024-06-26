@@ -15,7 +15,15 @@ export { AudioPlayerExtension } from './extensions/audioplayer/AudioPlayerExtens
 export { AudioPlayerExtensionObserverInterface, Lyric} from './extensions/audioplayer/AudioPlayerExtensionObserverInterface';
 export { AttentionSystemExtension } from './extensions/attentionsystem/AttentionSystemExtension';
 export { BackstackExtension } from './extensions/backstack/BackstackExtension';
-export { IDocumentState, createDocumentState } from './extensions/IDocumentState';
+export { UnifiedBackstackExtension } from './extensions/unifiedBackstack/UnifiedBackstackExtension';
+export { IDocumentState, createDocumentState } from './extensions/backstack/IDocumentState';
+export * from './common/ViewhostTypes';
+export * from './document/DocumentState';
+export { DocumentHandle } from './document/DocumentHandle';
+export { PreparedDocument } from './document/PreparedDocument';
+export * from './viewhost/IRequest';
+export { IAPLViewhostConfig } from './viewhost/ViewhostConfig';
+export { APLViewhostWASM } from './viewhost/APLViewhostWASM';
 
 /**
  * Call this first before anything. This function loads any webassembly

@@ -18,5 +18,7 @@ declare namespace APL {
         public liveArray(name : string, obj : any) : RootConfig;
         public audioPlayerFactory(factory: AudioPlayerFactory) : RootConfig;
         public mediaPlayerFactory(factory: MediaPlayerFactory) : RootConfig;
+        public documentManager(documentManager: DocumentManager): RootConfig;
+        public packageManager(packageManager: PackageManager) : RootConfig;
     }
 }

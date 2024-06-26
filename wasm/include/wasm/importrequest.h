@@ -19,8 +19,8 @@ EMSCRIPTEN_BINDINGS(apl_wasm_importrequest) {
         .function("reference", &apl::ImportRequest::reference)
         .function("source", &apl::ImportRequest::source);
 
-
     emscripten::class_<apl::ImportRef>("ImportRef")
+        .function("toString", &apl::ImportRef::toString)
         .function("version", &apl::ImportRef::version)
         .function("name", &apl::ImportRef::name);
 }

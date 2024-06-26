@@ -4,8 +4,10 @@
  */
 
 import { ILogger, LoggerFactory } from '../..';
-import { IDocumentState } from '../IDocumentState';
+import { SavedDocument } from '../unifiedBackstack/SavedDocument';
+import { Stack as UnifiedStack } from '../unifiedBackstack/Stack';
 import { GoBackListener } from './GoBackListener';
+import { IDocumentState } from './IDocumentState';
 import { Stack } from './Stack';
 
 /**
@@ -36,8 +38,8 @@ export class GoBackCommand {
      * Execute this command instance on the current backstack.
      * @param backstack the current backstack.
      */
-    public execute(backstack: Stack): void {
-        let itemToGoBackTo: IDocumentState | undefined;
+    public execute(backstack: Stack|UnifiedStack): void {
+        let itemToGoBackTo: IDocumentState | SavedDocument | undefined;
         switch (this.backType) {
             case GoBackCommand.COUNT_BACK_TYPE:
                 itemToGoBackTo = this.goBackCount(this.backValue as number, backstack);
@@ -61,7 +63,7 @@ export class GoBackCommand {
      * @param count the number of documents to go back
      * @param backstack the current backstack
      */
-    private goBackCount(count: number, backstack: Stack) {
+    private goBackCount(count: number, backstack: Stack|UnifiedStack) {
         if (count > backstack.size() || count <= 0) {
             return undefined;
         }
@@ -75,7 +77,7 @@ export class GoBackCommand {
      * @param index the index in the backstack to go back to
      * @param backstack the current backstack
      */
-    private goBackToIndex(index: number, backstack: Stack) {
+    private goBackToIndex(index: number, backstack: Stack|UnifiedStack) {
         const initialSize = backstack.size();
         // Passing a negative index counts backwards through the array
         if (index < 0) {
@@ -86,9 +88,12 @@ export class GoBackCommand {
         if (index >= initialSize || index < 0) {
             return undefined;
         } else {
-            let documentAtIndex: IDocumentState | undefined;
+            let documentAtIndex: IDocumentState | SavedDocument | undefined;
             do {
                 documentAtIndex = backstack.pop();
+                if (documentAtIndex instanceof SavedDocument && backstack.size() > index) {
+                    documentAtIndex.destroy();
+                }
             } while (backstack.size() > index);
             return documentAtIndex;
         }
@@ -99,7 +104,7 @@ export class GoBackCommand {
      * @param id the backstackId to go back to
      * @param backstack the current backstack
      */
-    private goBackToId(id: string, backstack: Stack) {
+    private goBackToId(id: string, backstack: Stack|UnifiedStack) {
         const index: number = backstack.getIds().lastIndexOf(id);
         // When the if doesn’t match an existing element in the backstack array
         // because of a non-existing string, the GoBack command is ignored

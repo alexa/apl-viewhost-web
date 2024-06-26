@@ -8,6 +8,8 @@
 #include "wasm/localemethods.h"
 #include "wasm/audioplayerfactory.h"
 #include "wasm/mediaplayerfactory.h"
+#include "wasm/packagemanager.h"
+#include "wasm/documentmanager.h"
 
 // Default font
 static const char DEFAULT_FONT[] = "amazon-ember-display";
@@ -134,6 +136,20 @@ RootConfigMethods::mediaPlayerFactory(RootConfigPtr& rootConfig, emscripten::val
     return rootConfig;
 }
 
+RootConfigPtr&
+RootConfigMethods::packageManager(RootConfigPtr& rootConfig, emscripten::val packageManager) {
+    auto manager = packageManager.as<apl::wasm::PackageManagerPtr>();
+    rootConfig->packageManager(manager);
+    return rootConfig;
+}
+
+RootConfigPtr&
+RootConfigMethods::documentManager(RootConfigPtr& rootConfig, emscripten::val documentManager) {
+    auto manager = documentManager.as<apl::wasm::DocumentManagerPtr>();
+    rootConfig->documentManager(manager);
+    return rootConfig;
+}
+
 } // namespace internal
 
 EMSCRIPTEN_BINDINGS(apl_wasm_rootconfig) {
@@ -151,7 +167,9 @@ EMSCRIPTEN_BINDINGS(apl_wasm_rootconfig) {
         .function("liveMap", &internal::RootConfigMethods::liveMap)
         .function("liveArray", &internal::RootConfigMethods::liveArray)
         .function("audioPlayerFactory", &internal::RootConfigMethods::audioPlayerFactory)
-        .function("mediaPlayerFactory", &internal::RootConfigMethods::mediaPlayerFactory);
+        .function("mediaPlayerFactory", &internal::RootConfigMethods::mediaPlayerFactory)
+        .function("packageManager", &internal::RootConfigMethods::packageManager)
+        .function("documentManager", &internal::RootConfigMethods::documentManager);
 }
 
 } // namespace wasm

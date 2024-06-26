@@ -40,6 +40,11 @@ public:
      * Clear existing players.
      */
     void clear() { mPlayers.clear(); }
+
+    /**
+     * Destroy the audio players on the JS side.
+     */
+    void destroy();
                     
 private:
     emscripten::val mPlayerFactory;

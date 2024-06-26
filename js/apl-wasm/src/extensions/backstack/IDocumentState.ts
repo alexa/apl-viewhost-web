@@ -4,7 +4,7 @@
  */
 
 import { Content } from 'apl-html';
-import { ConfigurationChange } from '../ConfigurationChange';
+import { ConfigurationChange } from '../../ConfigurationChange';
 
  /**
   * The IDocumentState is an object designed to cache the state of an active APL document such that it can

@@ -4,3 +4,4 @@ build.sh
 package-lock.json
 /docs
 /lib
+!/lib/dts

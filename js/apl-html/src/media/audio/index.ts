@@ -6,7 +6,7 @@
 'use strict';
 
 export { AudioPlayer } from './AudioPlayer';
-export { AudioPlayerFactory, IAudioPlayerFactory } from './AudioPlayerFactory'
+export { AudioPlayerFactory, IAudioPlayerFactory } from './AudioPlayerFactory';
 export { DefaultAudioContextProvider, IAudioContextProvider } from './AudioContextProvider';
 export { IAudioPlayer } from './IAudioPlayer';
 export { IPlayer } from '../IPlayer';

@@ -16,9 +16,21 @@ ContentMethods::create(const std::string& document, const SessionPtr& session) {
     return apl::Content::create(document.c_str(), session);
 }
 
+apl::ContentPtr
+ContentMethods::createWithConfig(const std::string& document, const SessionPtr& session,
+                                 const Metrics& metrics, const RootConfig& config) {
+    return apl::Content::create(document.c_str(), session, metrics, config);
+}
+
 void
 ContentMethods::refresh(const apl::ContentPtr& content, const Metrics& metrics, const RootConfig& config) {
     content->refresh(metrics, config);
+}
+
+void
+ContentMethods::load(const apl::ContentPtr& content, emscripten::val onSuccess, emscripten::val onFailure) {
+    content->load([=](){ onSuccess(); },
+                  [=](){ onFailure(); });
 }
 
 std::set<apl::ImportRequest>
@@ -94,8 +106,10 @@ EMSCRIPTEN_BINDINGS(apl_wasm_content) {
 
     emscripten::class_<apl::Content>("Content")
         .class_function("create", &internal::ContentMethods::create)
+        .class_function("createWithConfig", &internal::ContentMethods::createWithConfig)
         .smart_ptr<apl::ContentPtr>("ContentPtr")
         .function("refresh", &internal::ContentMethods::refresh)
+        .function("load", &internal::ContentMethods::load)
         .function("getRequestedPackages", &internal::ContentMethods::getRequestedPackages)
         .function("isError", &internal::ContentMethods::isError)
         .function("isReady", &internal::ContentMethods::isReady)

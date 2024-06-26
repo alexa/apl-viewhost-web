@@ -12,12 +12,15 @@ add_executable(apl-wasm
     src/configurationchange.cpp
     src/content.cpp
     src/rootconfig.cpp
+    src/packagemanager.cpp
     src/extension.cpp
     src/extensionclient.cpp
     src/component.cpp
     src/embindutils.cpp
     src/context.cpp
     src/textmeasurement.cpp
+    src/textlayout.cpp
+    src/edittextbox.cpp
     src/dimension.cpp
     src/event.cpp
     src/action.cpp
@@ -30,7 +33,10 @@ add_executable(apl-wasm
     src/wasmmetrics.cpp
     src/metrics.cpp
     src/session.cpp
-    src/utils/jsparser.cpp)
+    src/utils/jsparser.cpp
+    src/documentconfig.cpp
+    src/documentcontext.cpp
+    src/documentmanager.cpp)
 target_link_libraries(apl-wasm apl)
 target_link_libraries(apl-wasm ${YOGA_LIB})
 target_include_directories(apl-wasm PRIVATE include)

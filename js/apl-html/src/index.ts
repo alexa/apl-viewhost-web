@@ -9,7 +9,8 @@ import APLRenderer from './APLRenderer';
 import './assets/css/fonts.css';
 export default APLRenderer;
 export {IAPLOptions, IViewportCharacteristics, IEnvironment, IConfigurationChangeOptions, IDisplayStateOptions,
-    ISendEvent, IDataSourceFetchRequest, DeviceMode, ViewportShape, ScreenMode} from './APLRenderer';
+    ISendEvent, IDataSourceFetchRequest, IDeveloperToolOptions, IExtensionEvent,
+    DeviceMode, ViewportShape, ScreenMode} from './APLRenderer';
 export {Content} from './Content';
 export {commandFactory} from './CommandFactory';
 export {componentFactory} from './ComponentFactory';

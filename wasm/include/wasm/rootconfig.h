@@ -33,6 +33,9 @@ struct RootConfigMethods {
 
     static RootConfigPtr& audioPlayerFactory(RootConfigPtr& rootConfig, emscripten::val factory);
     static RootConfigPtr& mediaPlayerFactory(RootConfigPtr& rootConfig, emscripten::val factory);
+    
+    static RootConfigPtr& packageManager(RootConfigPtr& rootConfig, emscripten::val packageManager);
+    static RootConfigPtr& documentManager(RootConfigPtr& rootConfig, emscripten::val documentManager);
 };
 } // namespace internal
 

@@ -31,7 +31,7 @@ export interface IMediaSource {
     /**
      * Text tracks of the media
      */
-    textTracks: Array<ITextTrackSource>;
+    textTracks: ITextTrackSource[];
 }
 
 /**
@@ -43,7 +43,7 @@ export interface ITextTrackSource {
      * The kind of the text track
      */
     kind: string;
-    
+
     /**
      * The actual URL to load the text track
      */

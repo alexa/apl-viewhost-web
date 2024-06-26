@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { IDocumentState } from '../IDocumentState';
+import { IDocumentState } from './IDocumentState';
 
 /**
  * Defines the callback for when a GoBack command is executed.

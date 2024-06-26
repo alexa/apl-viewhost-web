@@ -323,12 +323,12 @@ export class Text extends Component<ITextProperties> {
         }
     }
 
-    protected clipMaxLines(): boolean {
+    protected clipMaxLines(maxVisibleLines: number): boolean {
         let clipped = false;
-        if (this.maxLines === 0) {
-            return clipped;
+        if (this.maxLines > 0) {
+            maxVisibleLines = Math.min(this.maxLines, maxVisibleLines);
         }
-        for (let i = this.textContainer.childNodes.length - 1; i >= this.maxLines; i--) {
+        for (let i = this.textContainer.childNodes.length - 1; i >= maxVisibleLines; i--) {
             const childNode = this.textContainer.childNodes[i];
             this.textContainer.removeChild(childNode);
             clipped = true;
@@ -434,13 +434,29 @@ export class TextMeasurement extends Text {
         width: number,
         widthMode: MeasureMode,
         height: number,
-        heightMode: MeasureMode): { width: number, height: number } {
+        heightMode: MeasureMode): { width: number,
+                                    height: number,
+                                    baseline: number,
+                                    lineCount: number,
+                                    plainText: string,
+                                    laidOutText: string,
+                                    isTruncated: boolean,
+                                    textsByLine: string[],
+                                    rectsByLine: number[][] } {
         this.$textContainer.css('width', '');
         this.$textContainer.css('height', '');
 
         this.addComponent();
 
-        const ret = {width: 0, height: 0};
+        const ret = {width: 0,
+                     height: 0,
+                     baseline: 0,
+                     lineCount: 0,
+                     plainText: this.getPlainText(),
+                     laidOutText: '',
+                     isTruncated: false,
+                     textsByLine: [] as string[],
+                     rectsByLine: [] as number[][]};
 
         switch (widthMode) {
             case MeasureMode.Exactly:
@@ -455,32 +471,58 @@ export class TextMeasurement extends Text {
                     ret.width = Math.min(width, this.textContainer.clientWidth + 1);
                 }
         }
-
         this.$textContainer.css('width', ret.width);
-        this.doSplit();
 
+        switch (heightMode) {
+            case MeasureMode.Exactly:
+                ret.height = height;
+                break;
+            case MeasureMode.AtMost:
+            case MeasureMode.Undefined:
+            default:
+                if (isNaN(height)) {
+                    ret.height = this.textContainer.clientHeight + 1;
+                } else {
+                    ret.height = Math.min(height, this.textContainer.clientHeight + 1);
+                }
+        }
+
+        this.doSplit();
+        ret.lineCount = this.lineRanges.length;
+
+        // Loop through all the lines to get text and rect of each line.
+        for (const { start, end, top, height: lineHeight } of this.lineRanges) {
+            const lineText = this.getPlainText().substring(start, end + 1);
+            ret.textsByLine.push(lineText);
+
+            const lineRect = [this.textContainer.clientLeft, top, this.textContainer.clientWidth, lineHeight];
+            ret.rectsByLine.push(lineRect);
+        }
+
+        // A line space = line height + padding.
+        const lineSpace = this.props[PropertyKey.kPropertyFontSize] *
+            (this.props[PropertyKey.kPropertyLineHeight] || 1.25);
+        const maxVisibleLines = Math.max(1, Math.floor(ret.height / lineSpace));
         // limit the number of times we can do this, so we dont get stuck in an infinite loop
         let iterations = 100;
-        while (this.clipMaxLines() && --iterations > 0) {
+        while (this.clipMaxLines(maxVisibleLines) && --iterations > 0) {
             this.addEllipsis();
             this.doSplit();
+            ret.isTruncated = true;
         }
 
-        const lineHeight = this.textContainer.clientHeight === 0 ?
-            this.props[PropertyKey.kPropertyFontSize] * (this.props[PropertyKey.kPropertyLineHeight] || 1.25) :
-            this.textContainer.clientHeight;
-
-        if (heightMode === MeasureMode.Exactly) {
-            ret.height = height;
-        } else if (heightMode === MeasureMode.AtMost) {
-            if (isNaN(height)) {
-                ret.height = lineHeight + 1;
-            } else {
-                ret.height = Math.min(height, lineHeight + 1);
+        if (ret.isTruncated) {
+            // Loop through the laid out lines to get text of each line.
+            for (const node of this.textContainer.childNodes) {
+                ret.laidOutText += node.textContent;
             }
-        } else if (heightMode === MeasureMode.Undefined) {
-            ret.height = lineHeight + 1;
+        } else {
+            ret.laidOutText = this.getPlainText();
         }
+
+        // Reset to the final container height after all the splits.
+        ret.height = this.textContainer.clientHeight === 0 ? lineSpace : this.textContainer.clientHeight + 1;
+        ret.baseline = ret.height * 0.5;
         this.$textContainer.css('height', ret.height);
 
         this.removeComponent();

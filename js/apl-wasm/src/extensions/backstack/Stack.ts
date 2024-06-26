@@ -4,7 +4,7 @@
  */
 
 import { LiveArray } from 'apl-html';
-import { IDocumentState } from '../IDocumentState';
+import { IDocumentState } from './IDocumentState';
 
 /**
  * A stack which keeps track of the ids of all constituent items.

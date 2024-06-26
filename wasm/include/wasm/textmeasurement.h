@@ -14,18 +14,40 @@ namespace wasm {
 
 class WASMMetrics;
 
-class WasmTextMeasurement : public apl::TextMeasurement {
+class WasmTextMeasurement : public apl::sg::TextMeasurement {
 public:
     WasmTextMeasurement(emscripten::val measureCallback,
-                        emscripten::val baselineCallback,
                         WASMMetrics *wasmMetrics);
-    LayoutSize measure(apl::Component* component, float width, MeasureMode widthMode,
-                   float height, MeasureMode heightMode) override;
 
-    float baseline(apl::Component* component, float width, float height) override;
-    emscripten::val measureCallback;
-    emscripten::val baselineCallback;
-    WASMMetrics    *wasmMetrics;
+    apl::sg::TextLayoutPtr layout(apl::Component *textComponent,
+                                  const apl::sg::TextChunkPtr& chunk,
+                                  const apl::sg::TextPropertiesPtr& textProperties,
+                                  float width,
+                                  apl::MeasureMode widthMode,
+                                  float height,
+                                  apl::MeasureMode heightMode) override;
+
+    apl::sg::EditTextBoxPtr box(apl::Component *textComponent,
+                                int size,
+                                const apl::sg::TextPropertiesPtr& textProperties,
+                                float width,
+                                apl::MeasureMode widthMode,
+                                float height,
+                                apl::MeasureMode heightMode) override;
+
+private:
+    emscripten::val mMeasureCallback;
+    WASMMetrics *mWasmMetrics;
+
+    emscripten::val measureLayout(apl::Component *component,
+                                  float width,
+                                  apl::MeasureMode widthMode,
+                                  float height,
+                                  apl::MeasureMode heightMode);
+
+    std::vector<std::string> convertToStringVector(const emscripten::val& textsByLine);
+
+    std::vector<apl::Rect> convertToRectVector(const emscripten::val& rectsByLine);
 };
 
 } // namespace wasm

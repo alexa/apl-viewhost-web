@@ -10,6 +10,8 @@
 #include "wasm/component.h"
 #include "wasm/context.h"
 #include "wasm/textmeasurement.h"
+#include "wasm/textlayout.h"
+#include "wasm/edittextbox.h"
 #include "wasm/dimension.h"
 #include "wasm/action.h"
 #include "wasm/event.h"

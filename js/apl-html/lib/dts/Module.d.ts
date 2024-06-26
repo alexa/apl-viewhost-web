@@ -7,9 +7,13 @@
 /// <reference path="./MediaPlayer.d.ts" />
 /// <reference path="./MediaPlayerFactory.d.ts" />
 /// <reference path="./Context.d.ts" />
+/// <reference path="./DocumentConfig.d.ts" />
+/// <reference path="./DocumentContext.d.ts" />
 /// <reference path="./Content.d.ts" />
+/// <reference path="./PackageManager.d.ts" />
 /// <reference path="./Component.d.ts" />
 /// <reference path="./ConfigurationChange.d.ts" />
+/// <reference path="./DocumentManager.d.ts" />
 /// <reference path="./Extension.d.ts" />
 /// <reference path="./ExtensionClient.d.ts" />
 /// <reference path="./Graphic.d.ts" />
@@ -20,16 +24,13 @@
 /// <reference path="./Action.d.ts" />
 /// <reference path="./Event.d.ts" />
 /// <reference path="./RootConfig.d.ts" />
+/// <reference path="./Session.d.ts" />
 /// <reference path="./StyledText.d.ts" />
-/// <reference path="./Logger.d.ts" />
 /// <reference path="./Metrics.d.ts" />
 /// <reference path="./Keyboard.d.ts" />
 /// <reference path="./LiveArray.d.ts" />
 /// <reference path="./LiveMap.d.ts" />
 
-declare class Exclude<U, V> {
-    
-}
 
 declare namespace APL {
 
@@ -81,12 +82,12 @@ declare namespace APL {
         public onRuntimeInitialized : () => void;
         public ConfigurationChange : typeof ConfigurationChange;
         public Content : typeof Content;
+        public DocumentConfig : typeof DocumentConfig;
         public ExtensionCommandDefinition : typeof ExtensionCommandDefinition;
         public ExtensionFilterDefinition : typeof ExtensionFilterDefinition;
         public ExtensionClient : typeof ExtensionClient;
         public ExtensionEventHandler : typeof ExtensionEventHandler;
         public Context : typeof Context;
-        public Logger : typeof Logger;
         public RootConfig : typeof RootConfig;
         public Metrics : typeof Metrics;
         public LiveMap : typeof LiveMap;
@@ -96,6 +97,8 @@ declare namespace APL {
         public MediaPlayer: typeof MediaPlayer;
         public MediaPlayerFactory: typeof MediaPlayerFactory;
         public Session : typeof Session;
+        public DocumentManager : typeof DocumentManager;
+        public PackageManager : typeof PackageManager;
     }
 }
 
