@@ -26,6 +26,18 @@ export class TouchWrapper extends ActionableComponent<ITouchWrapperProperties> {
         // override or add more propExecutors
         this.propExecutor
             (this.updateUponChildrenChange, PropertyKey.kPropertyNotifyChildrenChanged);
+
+        this.$container.css(
+          'cursor',
+          !this.component.getCalculatedByKey<boolean>(PropertyKey.kPropertyDisabled) &&
+          ((this.component.getCalculated()[PropertyKey.kPropertyOnPress]
+          && this.component.getCalculated()[PropertyKey.kPropertyOnPress].length > 0) ||
+          (this.component.getCalculated()[PropertyKey.kPropertyOnDown]
+          && this.component.getCalculated()[PropertyKey.kPropertyOnDown].length > 0) ||
+          (this.component.getCalculated()[PropertyKey.kPropertyOnUp]
+          && this.component.getCalculated()[PropertyKey.kPropertyOnUp].length > 0))
+          ? 'pointer' : 'default'
+        );
     }
 
     protected isLayout(): boolean {

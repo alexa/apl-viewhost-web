@@ -11,8 +11,6 @@ import { LoggerFactory } from '../logging/LoggerFactory';
 
 const EVENT_TYPE_MAP = {
     [EventType.kEventTypeSendEvent]: 'SendEvent',
-    [EventType.kEventTypeControlMedia]: 'ControlMedia',
-    [EventType.kEventTypePlayMedia]: 'PlayMedia',
     [EventType.kEventTypeRequestLineBounds]: 'RequestLineBounds',
     [EventType.kEventTypeLineHighlight]: 'LineHighlight',
     [EventType.kEventTypeFinish]: 'Finish',

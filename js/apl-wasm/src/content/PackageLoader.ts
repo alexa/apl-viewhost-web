@@ -34,13 +34,14 @@ export class PackageLoader {
      */
     private loadPackages: Map<string, ILoadingProcessData>;
 
-    private overridePackageLoader?: (name: string, version: string, url?: string) => Promise<string>;
+    private overridePackageLoader?: (name: string, version: string, url?: string, domain?: string) => Promise<string>;
 
     /**
      * Initialize PackageLoader attributes
      * @memberOf PackageLoader
      */
-    constructor(overridePackageLoader?: (name: string, version: string) => Promise<string>) {
+    constructor(overridePackageLoader?: (name: string, version: string, url?: string, domain?: string)
+        => Promise<string>) {
         this.logger = LoggerFactory.getLogger('PackageLoader');
         this.loadPackages = new Map<string, ILoadingProcessData>();
         this.overridePackageLoader = overridePackageLoader;
@@ -72,14 +73,18 @@ export class PackageLoader {
     /**
      * Walk a list of packages until all of them have been loaded.
      */
-    private async ensureLoaded(importRequests: APL.ImportRequest[]): Promise<any> {
+    private async ensureLoaded(importRequests: APL.ImportRequest[]): Promise<void> {
         return new Promise((resolve, reject) => {
             let count = importRequests.length;
 
             if (count > 0) {
                 importRequests.forEach(async (pkg) => {
-                    await this.loadPackage(pkg.reference().name(), pkg.reference().version(),
-                        pkg.source());
+                    await this.loadPackage(
+                        pkg.reference().name(),
+                        pkg.reference().version(),
+                        pkg.source(),
+                        pkg.reference().domain()
+                    );
                     count -= 1;
                     if (count === 0) {
                         resolve();
@@ -94,7 +99,7 @@ export class PackageLoader {
     /*
      * Execute a package load.
      */
-    private async loadPackage(name: string, version: string, url: string): Promise<any> {
+    private async loadPackage(name: string, version: string, url: string, domain: string): Promise<any> {
         const key = `${name}/${version}`;
         if (this.loadPackages.get(key)) {
             const data: ILoadingProcessData | undefined = this.loadPackages.get(key);
@@ -110,7 +115,7 @@ export class PackageLoader {
 
             if (this.overridePackageLoader) {
                 // The runtime has provided their own package loader implementation
-                return this.overridePackageLoader(name, version, url).then((jsonResponse) => {
+                return this.overridePackageLoader(name, version, url, domain).then((jsonResponse) => {
                     if (pkg) {
                         pkg.json = JSON.parse(jsonResponse);
                         pkg.state = LoadState.done;

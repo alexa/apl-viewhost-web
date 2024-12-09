@@ -29,6 +29,7 @@ struct ContextMethods {
     static apl::DocumentContextPtr topDocument(const apl::RootContextPtr& context);
     static emscripten::val getBackground(const apl::RootContextPtr& context);
     static void setBackground(const apl::RootContextPtr& context, emscripten::val background);
+    static std::string getDocumentState(const apl::RootContextPtr& context);
     static std::string getDataSourceContext(const apl::RootContextPtr& context);
     static std::string getVisualContext(const apl::RootContextPtr& context);
     static void clearPending(const apl::RootContextPtr& context);

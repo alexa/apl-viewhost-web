@@ -82,7 +82,7 @@ WasmTextLayout::getLineRangeFromByteRange(apl::Range byteRange) const {
         const char* utf8Bytes = lineText.c_str();
         auto byteSize = std::strlen(utf8Bytes);
 
-        if (byteSum < byteRange.lowerBound() && byteSum + byteSize > byteRange.lowerBound()) {
+        if (byteSum <= byteRange.lowerBound() && byteSum + byteSize > byteRange.lowerBound()) {
             lineStart = lineIndex;
         }
 

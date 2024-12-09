@@ -49,6 +49,17 @@ ContextMethods::setBackground(const apl::RootContextPtr& context, emscripten::va
 }
 
 std::string
+ContextMethods::getDocumentState(const apl::RootContextPtr& context) {
+    rapidjson::Document document(rapidjson::kObjectType);
+    rapidjson::StringBuffer buffer;
+    rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
+    auto documentState = context->serializeDocumentState(allocator);
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    documentState.Accept(writer);
+    return buffer.GetString();
+}
+
+std::string
 ContextMethods::getDataSourceContext(const apl::RootContextPtr& context) {
     rapidjson::Document document(rapidjson::kObjectType);
     rapidjson::StringBuffer buffer;
@@ -64,7 +75,7 @@ ContextMethods::getVisualContext(const apl::RootContextPtr& context) {
     rapidjson::Document state(rapidjson::kObjectType);
     rapidjson::StringBuffer buffer;
     rapidjson::Document::AllocatorType& allocator = state.GetAllocator();
-    auto visualContext = context->topComponent()->serializeVisualContext(allocator);
+    auto visualContext = context->serializeVisualContext(allocator);
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     visualContext.Accept(writer);
     return buffer.GetString();
@@ -516,6 +527,7 @@ EMSCRIPTEN_BINDINGS(apl_wasm_context) {
         .function("topDocument", &internal::ContextMethods::topDocument)
         .function("getBackground", &internal::ContextMethods::getBackground)
         .function("setBackground", &internal::ContextMethods::setBackground)
+        .function("getDocumentState", &internal::ContextMethods::getDocumentState)
         .function("getDataSourceContext", &internal::ContextMethods::getDataSourceContext)
         .function("getVisualContext", &internal::ContextMethods::getVisualContext)
         .function("clearPending", &internal::ContextMethods::clearPending)

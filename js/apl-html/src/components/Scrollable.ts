@@ -24,7 +24,7 @@ export interface IScollOptions {
 /**
  * @ignore
  */
-export abstract class Scrollable<ScrollableProps = IComponentProperties>
+export abstract class Scrollable<ScrollableProps extends object = IComponentProperties>
     extends ActionableComponent<ScrollableProps> {
 
     public static FOCUS_SCROLL_VELOCITY: number = 5.0;
@@ -40,6 +40,7 @@ export abstract class Scrollable<ScrollableProps = IComponentProperties>
     constructor(renderer: APLRenderer, component: APL.Component, factory: FactoryFunction, parent?: Component) {
         super(renderer, component, factory, parent);
         const onScroll = async (event: WheelEvent) => {
+            event.preventDefault();
             const scrollPosition = this.getScrollPosition();
             function getLargerAbsoluteValue(deltaX: number, deltaY: number) {
                 if (Math.abs(deltaX) > Math.abs(deltaY)) {

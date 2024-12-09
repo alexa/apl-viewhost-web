@@ -34,7 +34,7 @@ export class PagerComponent extends ActionableComponent<IPagerProperties> {
      * @returns {number} The currently displayed page
      */
     public getCoreCurrentPage(): number {
-        const props = this.component.getCalculated() as IPagerProperties;
+        const props = this.component.getCalculated();
         return props[PropertyKey.kPropertyCurrentPage];
     }
 

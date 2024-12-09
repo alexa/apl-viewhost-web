@@ -4,7 +4,8 @@
  */
 
 import * as $ from 'jquery';
-import APLRenderer from '../../APLRenderer';
+import APLRenderer, { IAPLOptions } from '../../APLRenderer';
+import {ComponentType} from '../../enums/ComponentType';
 import {FontStyle} from '../../enums/FontStyle';
 import {PropertyKey} from '../../enums/PropertyKey';
 import {TextAlign} from '../../enums/TextAlign';
@@ -61,12 +62,22 @@ export class Text extends Component<ITextProperties> {
     /** @internal */
     protected textCss: any = {
         'display': 'table-cell',
-        'overflow-wrap': 'break-word',
         'white-space': 'pre-wrap',
         '-webkit-user-select': 'none',
         '-moz-user-select': 'none',
         '-ms-user-select': 'none',
         'user-select': 'none',
+        'hyphens': 'none'
+    };
+
+    /** @internal */
+    protected textCssAllowsSelection: any = {
+        'display': 'table-cell',
+        'white-space': 'pre-wrap',
+        '-webkit-user-select': 'text',
+        '-moz-user-select': 'text',
+        '-ms-user-select': 'text',
+        'user-select': 'text',
         'hyphens': 'none'
     };
 
@@ -80,15 +91,18 @@ export class Text extends Component<ITextProperties> {
     protected lineRanges: ILineRange[];
 
     /** @internal */
-    private cacheKaraokeLineOffset = 0;
+    private enableTextSelection?: boolean;
 
     /** @internal */
-    private cacheKaraokeLine = 0;
+    private currentHighlighted: number = -1;
 
     /** @internal */
     constructor(renderer: APLRenderer, component: APL.Component, factory: FactoryFunction, parent?: Component) {
         super(renderer, component, factory, parent);
         this.richTextParser = new RichTextParser();
+        if (renderer) {
+            this.enableTextSelection = (renderer.options as IAPLOptions).enableTextSelection;
+        }
         this.propExecutor
         (this.setDimensions, PropertyKey.kPropertyBounds, PropertyKey.kPropertyInnerBounds)
         (this.setText, PropertyKey.kPropertyText)
@@ -112,33 +126,26 @@ export class Text extends Component<ITextProperties> {
     }
 
     /** @internal */
-    private resetKaraokeCache(): void {
-        this.cacheKaraokeLineOffset = 0;
-        this.cacheKaraokeLine = 0;
-    }
-
-    /** @internal */
     public getLineByRange(rangeStart: number, rangeEnd: number): number {
-        if (rangeEnd < this.cacheKaraokeLineOffset) {
-            this.resetKaraokeCache();
-        }
+        let lineStart = 0;
+        let byteSum = 0;
 
-        for (; this.cacheKaraokeLine < this.lineRanges.length; this.cacheKaraokeLine++) {
-            const lineRange = this.lineRanges[this.cacheKaraokeLine];
+        for (let lineIndex = 0; lineIndex < this.lineRanges.length; lineIndex++) {
+            const lineRange = this.lineRanges[lineIndex];
             const lineText = this.styledText.text.substring(lineRange.start, lineRange.end + 1);
-            const utf8TextAtLine = utf8.encode(lineText);
+            const byteSize = utf8.encode(lineText).length;
 
-            if (rangeStart >= this.cacheKaraokeLineOffset &&
-                rangeStart <= (this.cacheKaraokeLineOffset + utf8TextAtLine.length)) {
-                return this.cacheKaraokeLine;
+            if (byteSum <= rangeStart && byteSum + byteSize > rangeStart) {
+                lineStart = lineIndex;
             }
 
-            this.cacheKaraokeLineOffset += utf8TextAtLine.length;
+            if (byteSum + byteSize > rangeEnd) {
+                break;
+            }
+
+            byteSum += byteSize;
         }
-
-        this.resetKaraokeCache();
-
-        return -1;
+        return lineStart;
     }
 
     /** @internal */
@@ -152,7 +159,12 @@ export class Text extends Component<ITextProperties> {
      * @param unset on unhighlighting used to determine if the color style should be removed or the color just changed
      * @internal
      */
-    public highlight(lineNumber?: number, unset?: boolean) {
+    public highlight(lineNumber: number, unset?: boolean) {
+        if (!unset) {
+            this.currentHighlighted = lineNumber;
+        } else {
+            this.currentHighlighted = -1;
+        }
         // make sure line ranges is available
         const updateStyleProp = (index: number, addColor: boolean) => {
             const lineElement: HTMLElement = this.textContainer.childNodes[index] as HTMLElement;
@@ -184,11 +196,36 @@ export class Text extends Component<ITextProperties> {
     public setDimensions = () => {
         this.setBoundsAndDisplay();
 
-        this.$textContainer.css(this.textCss);
+        if (this.enableTextSelection && !this.isChildOfAnEnabledTouchWrapper()) {
+            this.$textContainer.css(this.textCssAllowsSelection);
+        } else {
+            this.$textContainer.css(this.textCss);
+        }
 
         this.$textContainer.css('width', this.innerBounds.width);
         this.$textContainer.css('height', this.innerBounds.height);
         this.$textContainer.css('word-break', 'break-word');
+    }
+
+    private isChildOfAnEnabledTouchWrapper(): boolean {
+        let parent = this.parent;
+        while (parent) {
+            if (parent.component.getType() === ComponentType.kComponentTypeTouchWrapper &&
+                this.doesTouchWrapperHaveHandlers(parent)) {
+
+                return true;
+            } else {
+                parent = parent.parent;
+            }
+        }
+        return false;
+    }
+
+    private doesTouchWrapperHaveHandlers(touchwrapper: Component): boolean {
+        return (touchwrapper.component.getCalculated()[PropertyKey.kPropertyOnPress].length > 0 ||
+            touchwrapper.component.getCalculated()[PropertyKey.kPropertyOnDown].length > 0 ||
+            touchwrapper.component.getCalculated()[PropertyKey.kPropertyOnUp].length > 0 ||
+            touchwrapper.component.getCalculated()[PropertyKey.kPropertyGestures].length > 0);
     }
 
     private setTextClamping = () => {
@@ -385,6 +422,9 @@ export class Text extends Component<ITextProperties> {
         }
         this.container.appendChild(this.textContainer);
         this.lineRanges = m.getLineRanges();
+        if (this.currentHighlighted >= 0) {
+            this.highlight(this.currentHighlighted);
+        }
     }
 
     protected applyCssShadow = (shadowParams: string) => {
@@ -415,6 +455,7 @@ export class TextMeasurement extends Text {
         this.$measurementBox.css('isolation', 'isolate');
         this.$measurementBox.css('width', width + 1);
         this.$measurementBox.css('height', height + 1);
+        this.$textContainer.css('overflow-wrap', 'break-word');
     }
 
     /**

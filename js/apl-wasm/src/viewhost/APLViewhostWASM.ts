@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { FontUtils, IConfigurationChangeOptions, ILogger, LoggerFactory } from 'apl-html';
+import { FontUtils, IConfigurationChangeOptions, ILogger, LoggerFactory, MetricsRecorder } from 'apl-html';
 import { AplDisplayState } from '../common/ViewhostTypes';
 import { DocumentContext } from '../document/DocumentContext';
 import { DocumentHandle } from '../document/DocumentHandle';
@@ -17,6 +17,7 @@ export class APLViewhostWASM {
     private logger: ILogger;
     private viewhostContext: ViewhostContext;
     private viewController: ViewController;
+    private metricsRecorder?: MetricsRecorder;
 
     /**
      * @param viewhostConfig IAPLViewhostConfig to initialize the VH
@@ -29,7 +30,11 @@ export class APLViewhostWASM {
     private constructor(viewhostConfig: IAPLViewhostConfig) {
         LoggerFactory.initialize(viewhostConfig.logLevel || 'debug', viewhostConfig.logTransport);
         this.logger = LoggerFactory.getLogger('APLViewhost');
-        this.viewhostContext = ViewhostContext.create(viewhostConfig);
+        if (viewhostConfig.metricSinks) {
+            this.metricsRecorder = new MetricsRecorder();
+            viewhostConfig.metricSinks.forEach((sink) => { this.metricsRecorder!.addSink(sink); });
+        }
+        this.viewhostContext = ViewhostContext.create(viewhostConfig, this.metricsRecorder);
         this.viewController = ViewController.create(this.viewhostContext);
         this.logger.info('APLViewhostWASM created');
     }
@@ -144,5 +149,13 @@ export class APLViewhostWASM {
      */
     public updateDisplayState(state: AplDisplayState) {
         this.viewController.updateDisplayState(state);
+    }
+
+    public pauseDocument() {
+        this.viewController.pauseDocument();
+    }
+
+    public resumeDocument() {
+        this.viewController.resumeDocument();
     }
 }

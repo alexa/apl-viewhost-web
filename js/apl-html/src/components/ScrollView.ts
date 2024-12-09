@@ -5,21 +5,13 @@
 
 import * as $ from 'jquery';
 import APLRenderer from '../APLRenderer';
-import { PropertyKey } from '../enums/PropertyKey';
 import { Component, FactoryFunction, IComponentProperties } from './Component';
 import { Scrollable } from './Scrollable';
 
 /**
  * @ignore
  */
-export interface IScrollViewProperties extends IComponentProperties {
-    [PropertyKey.kPropertyScrollPosition]: number;
-}
-
-/**
- * @ignore
- */
-export class ScrollView extends Scrollable<IScrollViewProperties> {
+export class ScrollView extends Scrollable<IComponentProperties> {
 
     constructor(renderer: APLRenderer, component: APL.Component, factory: FactoryFunction, parent?: Component) {
         super(renderer, component, factory, parent);
@@ -51,21 +43,6 @@ export class ScrollView extends Scrollable<IScrollViewProperties> {
         } while (element && element !== topContainer);
 
         return top;
-    }
-
-    public async setProperties(props: IScrollViewProperties) {
-        super.setProperties(props);
-        // Since we are getting dirty properies from core
-        // We will need to adjust our scroll position to match core's position
-        if (PropertyKey.kPropertyScrollPosition in props) {
-            this.container[this.scrollSide] = this.props[PropertyKey.kPropertyScrollPosition];
-            // Sometimes the scroll does not get applied to Perfect Scroll and can be only applied through setTimeout()
-            if (this.container[this.scrollSide] !== this.props[PropertyKey.kPropertyScrollPosition]) {
-                setTimeout(() => {
-                    this.container[this.scrollSide] = this.props[PropertyKey.kPropertyScrollPosition];
-                }, 0);
-            }
-        }
     }
 
     public destroy() {

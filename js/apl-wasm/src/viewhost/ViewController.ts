@@ -23,6 +23,7 @@ export class ViewController {
     private backstackExtension?: UnifiedBackstackExtension;
     private displayState = AplDisplayState.foreground;
     private viewhostContext: ViewhostContext;
+    private paused: boolean = false;
 
     /**
      * @param viewhostConfig IAPLViewhostConfig to initialize the VH
@@ -98,12 +99,16 @@ export class ViewController {
             }
         }
         this.currentDocument = documentContext;
+        if (this.paused) {
+            this.currentDocument.pause();
+        }
         return this.currentDocument.renderDocument(this.view);
     }
 
     private tryPushToBackstack(documentContext: DocumentContext): boolean {
         if (this.backstackExtension && this.backstackExtension.shouldCacheActiveDocument()) {
             this.logger.info('push to backstack');
+            documentContext.pause();
             documentContext.unbindFromView();
             documentContext.updateDisplayState(AplDisplayState.hidden);
             return this.backstackExtension.addDocumentContextToBackstack(documentContext);
@@ -123,6 +128,9 @@ export class ViewController {
         }
 
         this.currentDocument = documentContext;
+        if (!this.paused) {
+            this.currentDocument.resume();
+        }
         this.currentDocument.renderDocument(this.view);
         this.currentDocument.updateDisplayState(this.displayState);
     }
@@ -132,6 +140,9 @@ export class ViewController {
      * @param config IConfigurationChangeOptions
      */
     public configurationChange(config: IConfigurationChangeOptions) {
+        if (this.backstackExtension) {
+            this.backstackExtension.provideConfigChangeToStackedDocuments(config);
+        }
         if (this.currentDocument) {
             this.currentDocument.configurationChange(config);
         }
@@ -148,4 +159,23 @@ export class ViewController {
         this.displayState = state;
     }
 
+    public resumeDocument() {
+        if (!this.paused) {
+            this.logger.warn('resumeDocument called when not paused');
+        }
+        this.paused = false;
+        if (this.currentDocument) {
+            this.currentDocument.resume();
+        }
+    }
+
+    public pauseDocument() {
+        if (this.paused) {
+            this.logger.warn('pauseDocument called when already paused');
+        }
+        this.paused = true;
+        if (this.currentDocument) {
+            this.currentDocument.pause();
+        }
+    }
 }

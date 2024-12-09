@@ -22,7 +22,8 @@ EMSCRIPTEN_BINDINGS(apl_wasm_importrequest) {
     emscripten::class_<apl::ImportRef>("ImportRef")
         .function("toString", &apl::ImportRef::toString)
         .function("version", &apl::ImportRef::version)
-        .function("name", &apl::ImportRef::name);
+        .function("name", &apl::ImportRef::name)
+        .function("domain", &apl::ImportRef::domain);
 }
 
 } // namespace wasm

@@ -64,4 +64,8 @@ export class Stack {
     public getLiveIds(): LiveArray {
         return this.idStack;
     }
+
+    public getStackedItems(): SavedDocument[] {
+        return this.stackedItems;
+    }
 }

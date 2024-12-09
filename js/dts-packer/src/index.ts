@@ -4,7 +4,7 @@
  */
 
 import * as ts from "typescript";
-import { Compiler, compilation } from "webpack";
+import { Compiler } from "webpack";
 import fs = require('fs');
 import path = require('path');
 import mkdirp = require('mkdirp');
@@ -218,7 +218,7 @@ export default class DtsPackerPlugin {
 
     apply(compiler: Compiler) {
         this.compiler = compiler;
-        compiler.plugin('done', () => {
+        compiler.hooks.done.tap('BuildStatsPlugin', () => {
             const name = path.basename(compiler.context);
             const m = new NodeModules(this.options.require, compiler.outputPath);
             m.addModule('@amzn/'+name, true);

@@ -318,7 +318,7 @@ function isHLSExtension(url: string): boolean {
     const urlObject = new URL(url);
     urlObject.search = '';
 
-    const extension = path.extname(urlObject);
+    const extension = path.extname(urlObject.toString());
     return SupportedHLSExtensionTypes.reduce((accumulator, currentExtensionType) => {
         return accumulator || extension.includes(currentExtensionType);
     }, false);

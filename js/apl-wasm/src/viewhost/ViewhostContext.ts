@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { IConfigurationChangeOptions, JSLogLevel } from 'apl-html';
+import { IConfigurationChangeOptions, JSLogLevel, MetricsRecorder } from 'apl-html';
 import { IAPLViewhostConfig } from './ViewhostConfig';
 
 /**
@@ -14,14 +14,16 @@ import { IAPLViewhostConfig } from './ViewhostConfig';
 export class ViewhostContext {
     private viewhostConfig: IAPLViewhostConfig;
     private logLevel: JSLogLevel;
+    private metricsRecorder?: MetricsRecorder;
 
-    public static create(viewhostConfig: IAPLViewhostConfig): ViewhostContext {
-        return new ViewhostContext(viewhostConfig);
+    public static create(viewhostConfig: IAPLViewhostConfig, metricsRecorder?: MetricsRecorder): ViewhostContext {
+        return new ViewhostContext(viewhostConfig, metricsRecorder);
     }
 
-    private constructor(viewhostConfig: IAPLViewhostConfig) {
+    private constructor(viewhostConfig: IAPLViewhostConfig, metricsRecorder?: MetricsRecorder) {
         this.viewhostConfig = viewhostConfig;
         this.logLevel = viewhostConfig.logLevel || 'debug';
+        this.metricsRecorder = metricsRecorder;
     }
 
     public getConfig(): IAPLViewhostConfig {
@@ -77,5 +79,9 @@ export class ViewhostContext {
 
     public setLogLevel(logLevel: JSLogLevel): void {
         this.logLevel = logLevel;
+    }
+
+    public getMetricsRecorder(): MetricsRecorder|undefined {
+        return this.metricsRecorder;
     }
 }

@@ -80,7 +80,8 @@ export class Image extends Component<IImageProperties> {
         'left': '0px'
     };
     private svgImageElementProperties = {
-        position: 'relative'
+        position: 'relative',
+        display: 'block'
     };
 
     constructor(renderer: APLRenderer, component: APL.Component, factory: FactoryFunction, parent?: Component) {
@@ -246,6 +247,11 @@ export class Image extends Component<IImageProperties> {
 
         // Update Image
         this.imageSVGElement.setAttribute('href', scaledActualURL);
+
+        const label = this.props[PropertyKey.kPropertyAccessibilityLabel] as string;
+        if (label) {
+            this.imageSVGElement.setAttribute('alt', label);
+        }
 
         // Sizing
         createStylesApplier({

@@ -6,6 +6,7 @@
 import {
     ExtensionCommandDefinition,
     ExtensionEventHandler,
+    IConfigurationChangeOptions,
     IExtension,
     IExtensionEventCallbackResult,
     ILiveDataDefinition
@@ -250,4 +251,9 @@ export class UnifiedBackstackExtension implements IExtension, GoBackListener {
         }
     }
 
+    public provideConfigChangeToStackedDocuments(configChange: IConfigurationChangeOptions) {
+        this.backstack.getStackedItems().forEach( (savedDocument) => {
+            savedDocument.storeConfigurationChange(configChange);
+        });
+    }
 }

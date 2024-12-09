@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { AudioPlayerFactory, DeviceMode, IDataSourceFetchRequest,
-    IDeveloperToolOptions, IEnvironment, IExtensionEvent, ISendEvent,
+import { AudioPlayerFactory, DeviceMode, IDataSourceFetchRequest, IDeveloperToolOptions,
+    IEnvironment, IExtensionEvent, IMetricsSink, ISendEvent,
     IVideoFactory, IViewportCharacteristics, JSLogLevel, LogTransport } from 'apl-html';
 import { DocumentHandle } from '../document/DocumentHandle';
 import { DocumentState } from '../document/DocumentState';
@@ -71,7 +71,7 @@ export interface IAPLViewhostConfig {
     /** Extension Manager */
     extensionManager?: ExtensionManager;
     /** Override package download. Reject the Promise to fallback to the default logic. */
-    packageLoader?: (name: string, version: string, url?: string) => Promise<string>;
+    packageLoader?: (name: string, version: string, url?: string, domain?: string) => Promise<string>;
     /** callback for APL Log Command handling, will overwrite the callback used in Content creation */
     onLogCommand?: (level: number, message: string, args: object) => void;
     /** Skip force loading of fonts loading. For tests mainly as electron flacky with it. */
@@ -80,4 +80,14 @@ export interface IAPLViewhostConfig {
     onDocumentStateUpdate?: (handle: DocumentHandle, state: DocumentState) => void;
     /** Backstack extension provider */
     backstackExtension?: UnifiedBackstackExtension;
+    /**
+     * Allow transparent VH background
+     * NOTE: Supplying enableTransparentBackground may cause gradients with alpha
+     *       channels to behave unexpectedly. Only enable if necessary for your use case.
+     */
+    enableTransparentBackground?: boolean;
+    /** Allow selection of text */
+    enableTextSelection?: boolean;
+    /** Metrics sink */
+    metricSinks?: IMetricsSink[];
 }

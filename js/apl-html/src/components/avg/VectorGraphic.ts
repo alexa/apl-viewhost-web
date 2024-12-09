@@ -96,6 +96,9 @@ export class VectorGraphic extends ActionableComponent<IVectorGraphicProperties>
         const layoutDirection = root.getValue<number>(GraphicPropertyKey.kGraphicPropertyLayoutDirection);
 
         this.svg.setAttributeNS('', 'viewBox', `0 0 ${vpw} ${vph}`);
+        this.svg.setAttributeNS('', 'width', `${vpw}`);
+        this.svg.setAttributeNS('', 'height', `${vph}`);
+
         const innerBounds = this.getInnerBounds();
         const scaleX = width / vpw;
         const scaleY = height / vph;

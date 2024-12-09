@@ -3,7 +3,7 @@ get_directory_property(ENUMGEN_BIN DIRECTORY ${APL_CORE_PATH} DEFINITION ENUMGEN
 
 include(config.cmake)
 include_directories(include)
-add_executable(apl-wasm
+add_executable(${CMAKE_PROJECT_NAME}
     src/audioplayer.cpp
     src/audioplayerfactory.cpp
     src/mediaplayer.cpp
@@ -37,29 +37,45 @@ add_executable(apl-wasm
     src/documentconfig.cpp
     src/documentcontext.cpp
     src/documentmanager.cpp)
-target_link_libraries(apl-wasm apl)
-target_link_libraries(apl-wasm ${YOGA_LIB})
-target_include_directories(apl-wasm PRIVATE include)
+target_link_libraries(${CMAKE_PROJECT_NAME} apl)
+target_link_libraries(${CMAKE_PROJECT_NAME} ${YOGA_LIB})
+target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE include)
 
 #install required files
 set(JS_DIR ${CMAKE_SOURCE_DIR}/js)
 set(SANDBOX_DIR ${CMAKE_SOURCE_DIR}/sandbox)
 set(WEB_PUBLIC_DIR ${SANDBOX_DIR}/apl-wasm-sandbox/public)
 set(DIST_DIR ${JS_DIR}/apl-wasm/lib)
-install(FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/apl-wasm.js
+
+install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}.js
     DESTINATION ${WEB_PUBLIC_DIR})
-install(FILES
-        ${CMAKE_CURRENT_BINARY_DIR}/apl-wasm.js
-        DESTINATION ${DIST_DIR})
+install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}.js
+    DESTINATION ${DIST_DIR})
+
 if(WASM_ASMJS)
-    install(FILES
-        ${CMAKE_CURRENT_BINARY_DIR}/apl-wasm.js.mem
+    install(
+        FILES ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}.js.mem
         DESTINATION ${WEB_PUBLIC_DIR})
+else(WASM_ASMJS)
+    if(NOT BUNDLE_MODE)
+        install(
+            FILES ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}.wasm
+            DESTINATION ${WEB_PUBLIC_DIR})
+        install(
+            FILES ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}.wasm
+            DESTINATION ${DIST_DIR})
+    endif()
 endif(WASM_ASMJS)
 
+set_target_properties(
+	${CMAKE_PROJECT_NAME}
+	PROPERTIES LINK_FLAGS ${WASM_FLAGS}
+)
+
 add_custom_target(generate-wasm-enums ALL
-        COMMAND cd ${APL_PROJECT_DIR} && ${ENUMGEN_BIN}
+    COMMAND cd ${APL_PROJECT_DIR} && ${ENUMGEN_BIN}
         -f "AnimationQuality"
         -f "AudioPlayerEventType"
         -f "AudioTrack"
@@ -111,6 +127,7 @@ add_custom_target(generate-wasm-enums ALL
         -f "PointerType"
         -f "Position"
         -f "PropertyKey"
+        -f "Role"
         -f "ScreenShape"
         -f "ScrollDirection"
         -f "Snap"
@@ -127,10 +144,10 @@ add_custom_target(generate-wasm-enums ALL
         -l typescript -o ${JS_DIR}/apl-html/src/enums
         ${APL_CORE_PATH}/aplcore/include/**/*.h
         ${APL_CORE_PATH}/aplcore/include/apl/**/*.h
-        DEPENDS enumgen
-        )
+    DEPENDS enumgen
+)
 
-add_dependencies(apl-wasm generate-wasm-enums)
+add_dependencies(${CMAKE_PROJECT_NAME} generate-wasm-enums)
 
 if(CMAKE_BUILD_TYPE MATCHES Debug)
     set(YARN_BUILD_COMMAND "build:wasm:dev")
@@ -142,15 +159,15 @@ add_custom_target(wasm-build
     COMMAND bash -c "yarn install"
     COMMAND bash -c "yarn ${YARN_BUILD_COMMAND}"
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/js
-    DEPENDS apl-wasm generate-wasm-enums)
+    DEPENDS ${CMAKE_PROJECT_NAME} generate-wasm-enums)
 
 add_custom_target(wasm-build-test
-        COMMAND bash -c "yarn install"
-        COMMAND bash -c "yarn build:wasm:test"
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/js
-        DEPENDS apl-wasm generate-wasm-enums)
+    COMMAND bash -c "yarn install"
+    COMMAND bash -c "yarn build:wasm:test"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/js
+    DEPENDS ${CMAKE_PROJECT_NAME} generate-wasm-enums)
 
 add_custom_target(wasm-test
-        COMMAND bash -c "yarn test"
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/js/apl-wasm
-        DEPENDS wasm-build-test)
+    COMMAND bash -c "yarn test"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/js/apl-wasm
+    DEPENDS wasm-build-test)

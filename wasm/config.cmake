@@ -13,7 +13,7 @@ else(WASM_ASMJS)
 endif(WASM_ASMJS)
 
 # this prevents exporting node specific code
-set(WASM_FLAGS "${WASM_FLAGS} -s ENVIRONMENT='web' -s SINGLE_FILE=1")
+set(WASM_FLAGS "${WASM_FLAGS} -s ENVIRONMENT='web'")
 
 set(WASM_FLAGS "${WASM_FLAGS} -s NO_FILESYSTEM=1")
 

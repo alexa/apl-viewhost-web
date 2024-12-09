@@ -7,7 +7,8 @@ import APLRenderer, {
     commandFactory, Content, DefaultAudioPlayer, DeviceMode, DisplayState,
     FontUtils, IAPLOptions, IAudioEventListener, IAudioPlayerFactory,
     IConfigurationChangeOptions, JSLogLevel, LiveArray, LiveMap,
-    LocaleMethods, LoggerFactory, LogTransport, MediaPlayerHandle, OnLogCommand, ViewportShape
+    LocaleMethods, LoggerFactory, LogTransport, MediaPlayerHandle, OnLogCommand,
+    Segment, ViewportShape
 } from 'apl-html';
 import { ConfigurationChange } from './ConfigurationChange';
 import { PackageLoader } from './content/PackageLoader';
@@ -56,7 +57,7 @@ export interface IAPLWASMOptions extends IAPLOptions {
     /** Document State to restore */
     documentState?: IDocumentState;
     /** Override package download. Reject the Promise to fallback to the default logic. */
-    packageLoader?: (name: string, version: string, url?: string) => Promise<string>;
+    packageLoader?: (name: string, version: string, url?: string, domain?: string) => Promise<string>;
     /** callback for APL Log Command handling, will overwrite the callback during Content creation */
     onLogCommand?: OnLogCommand;
     /** @internal */
@@ -323,10 +324,15 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
 
         if (this.options.extensionManager) {
             // Extensions requested by the content
+            const registerExtensionsSegment =
+                this.metricsRecorder?.startTimer(Segment.kRegisterExtensions, new Map<string, string>());
             this.options.extensionManager.registerRequestedExtensions(this.rootConfig, this.content);
             this.extensionManager = this.options.extensionManager;
+            registerExtensionsSegment?.stop();
         }
 
+        const inflateRootContextSegment =
+            this.metricsRecorder?.startTimer(Segment.kInflateRootContext, new Map<string, string>());
         if (!this.context) {
             if (this.options.documentState) {
                 await this.restoreDocument(this.options.documentState);
@@ -346,14 +352,19 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
         if (!this.context) {
             this.logger.warn('Template provided is invalid.');
             this.updateDocumentState(DocumentState.error);
+            inflateRootContextSegment?.fail();
             return Promise.reject('Failed to create context');
         }
 
         this.coreDocumentContext = this.context.topDocument();
         this.updateDocumentState(DocumentState.inflated);
+        inflateRootContextSegment?.stop();
 
+        const inflateViewsSegment = this.metricsRecorder?.startTimer(Segment.kInflateViews, new Map<string, string>());
         super.init();
         this.updateDocumentState(DocumentState.displayed);
+        inflateViewsSegment?.stop();
+
         if (this.extensionManager) {
             this.extensionManager.onDocumentRender(this.context, this.content.getContent());
         }
@@ -466,8 +477,20 @@ export class APLWASMRenderer extends APLRenderer<IAPLWASMOptions> {
     }
 
     public async loadPackages(): Promise<boolean> {
+        const prepareContentSegment =
+            this.metricsRecorder?.startTimer(Segment.kPrepareContent, new Map<string, string>());
+
         return new Promise<boolean>((resolve) => {
-            this.content.getContent().load(() => resolve(true), () => resolve(false));
+            this.content.getContent().load(
+                () => {
+                    prepareContentSegment?.stop();
+                    resolve(true);
+                },
+                () => {
+                    prepareContentSegment?.fail();
+                    resolve(false);
+                }
+            );
         });
     }
 

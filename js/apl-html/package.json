@@ -37,20 +37,23 @@
     "mp3-parser": "^0.3.0",
     "rimraf": "^2.6.2",
     "style-loader": "^0.23.1",
-    "ts-loader": "^5.3.0",
-    "ts-node": "^8.0.2",
+    "ts-loader": "^9.3.1",
+    "ts-node": "^10.7.0",
     "tslint": "^5.12.1",
     "tslint-loader": "^3.5.4",
     "typedoc": "^0.15.0",
-    "typescript": "2.7.2",
+    "typescript": "4.9.5",
     "uglifyjs-webpack-plugin": "^2.1.2",
     "utf8": "3.0.0",
     "uuid": "^3.3.2",
     "webfontloader": "^1.6.28",
-    "webpack": "^4.26.1",
-    "webpack-bundle-analyzer": "^4.6.1",
-    "webpack-cli": "^3.3.12",
-    "webpack-merge": "^4.2.1",
+    "webpack": "5.75.0",
+    "webpack-bundle-analyzer": "^4.10.2",
+    "webpack-cli": "^5.1.4",
+    "webpack-merge": "^5.10.0",
     "xregexp": "4.2.4"
+  },
+  "dependencies": {
+    "path-browserify": "^1.0.1"
   }
 }

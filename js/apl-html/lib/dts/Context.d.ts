@@ -50,6 +50,8 @@ declare namespace APL {
 
         public setBackground(background: APL.IBackground): void;
 
+        public getDocumentState(): Promise<string>;
+
         public getDataSourceContext(): Promise<string>;
 
         public getVisualContext(): Promise<string>;
@@ -89,7 +91,7 @@ declare namespace APL {
 
         public nextTime(): number;
 
-        public getViewportPixelSize(): object[];
+        public getViewportPixelSize(): object;
 
         public getViewportWidth(): number;
 

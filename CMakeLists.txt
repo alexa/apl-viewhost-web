@@ -1,12 +1,14 @@
 cmake_minimum_required(VERSION 3.6)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-project (apl-wasm VERSION 1.0.0 LANGUAGES C CXX)
+
+project(apl-wasm VERSION 1.0.0 LANGUAGES C CXX)
 
 option(APL_CORE_PATH "Path to APLCoreEngine" OFF)
 
 # Web Assembly
 option(WASM "Build WebAssembly binary" OFF)
+option(BUNDLE_MODE "Bundle the WebAssembly binary to the js" ON)
 option(ASMJS "Build ASM.js" OFF)
 option(WEBSOCKET "Build Websocket Server" OFF)
 option(EMSCRIPTEN_SOURCEMAPS "Builds source maps." OFF)
@@ -16,6 +18,9 @@ if(WASM)
     # make sure we enable exception support when building APL core, since PEGTL
     # relies on it
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexceptions")
+    if(BUNDLE_MODE)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s SINGLE_FILE=1")
+    endif()
 endif()
 
 if(${APL_CORE_PATH} STREQUAL "OFF")
@@ -39,9 +44,4 @@ include_directories(${PEGTL_INCLUDE})
 include_directories(${RAPIDJSON_INCLUDE})
 include_directories(${YOGA_INCLUDE})
 
-# build either the wasm or websocket backend
-if(WASM OR ASMJS)
-    add_subdirectory(wasm)
-elseif(WEBSOCKET)
-    add_subdirectory(websocket)
-endif()
+add_subdirectory(wasm)

@@ -15,9 +15,11 @@ export class DocumentBuilder {
     private static logger: ILogger = LoggerFactory.getLogger('DocumentBuilder');
     private root: ISpannedTextNode;
     private markStyles: IRichTextStyles;
+    private listCount: number;
     constructor(markStyles: IRichTextStyles, end: number) {
         this.root = { type: 'root', start: 0, end, children: [] };
         this.markStyles = markStyles;
+        this.listCount = 0;
     }
     public add(span: ISpannedTextNode) {
         this.addTo(this.root, span);
@@ -28,7 +30,56 @@ export class DocumentBuilder {
                 this.process(child, targetElement);
             }
         }
+        this.groupListItems(targetElement);
     }
+
+    /**
+     * Group consecutive list items into common unordered lists
+     * @private
+     * @param {HTMLElement} rootElement the root node under which elements will be grouped.
+     */
+    private groupListItems(rootElement: HTMLElement) {
+        const rangeList = [] as Range[];
+        let listInProgress = false;
+        for (const child of rootElement.children) {
+            if (!this.elementContainsListItem(child)) {
+                listInProgress = false;
+            } else {
+                if (!listInProgress) {
+                    const cleanupRange = document.createRange();
+                    cleanupRange.setStart(child, 0);
+                    rangeList.push(cleanupRange);
+                    listInProgress = true;
+                }
+                rangeList[rangeList.length - 1].setEndAfter(child);
+            }
+        }
+        if (rangeList.length === 0) {
+            return;
+        }
+        for (const cleanupRange of rangeList) {
+            const ulElement = document.createElement('ul');
+            ulElement.style.marginLeft = '1em';
+            ulElement.style.marginTop = '0px';
+            ulElement.style.marginBottom = '0px';
+            ulElement.style.paddingLeft = '0px';
+            ulElement.style.paddingTop = '0px';
+            ulElement.style.paddingBottom = '0px';
+            ulElement.style.listStyleType = '\' \\2022\\0020\'';
+
+            const extracted = cleanupRange.extractContents();
+            ulElement.appendChild(extracted);
+            cleanupRange.insertNode(ulElement);
+        }
+    }
+
+    private elementContainsListItem(element: Element) {
+        if (element.nodeName === 'LI') {
+            return true;
+        }
+        return element.getElementsByTagName('li').length > 0;
+    }
+
     private addTo(to: ISpannedTextNode, what: ISpannedTextNode): boolean {
         let added = false;
 
@@ -102,6 +153,10 @@ export class DocumentBuilder {
                 break;
             case SpanType.kSpanTypeLineBreak:
                 convertedElement = document.createElement('br');
+                break;
+            case SpanType.kSpanTypeListItem:
+                convertedElement = document.createElement('li');
+                convertedElement.id = 'li_' + Date.now() + '_' + this.listCount++;
                 break;
             case SpanType.kSpanTypeSuperscript:
                 convertedElement.style.fontSize = 'smaller';

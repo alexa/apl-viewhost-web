@@ -23,9 +23,12 @@ import { IExtensionManager } from './extensions/IExtensionManager';
 import { ILogger } from './logging/ILogger';
 import { LoggerFactory } from './logging/LoggerFactory';
 import { AudioPlayerFactory, IAudioPlayerFactory } from './media/audio/AudioPlayerFactory';
+import { FluidityIncidentReporter, FrameStat } from './telemetry/FluidityIncidentReporter';
+import { MetricsRecorder, Segment } from './telemetry/MetricsRecorder';
+import { Timer } from './telemetry/Timer';
 import { createAplVersionUtils } from './utils/AplVersionUtils';
 import { browserIsEdge } from './utils/BrowserUtils';
-import { ARROW_DOWN, ARROW_LEFT, ARROW_RIGHT, ARROW_UP, ENTER_KEY, HttpStatusCodes } from './utils/Constant';
+import { ARROW_DOWN, ARROW_LEFT, ARROW_RIGHT, ARROW_UP, ENTER_KEY, HttpStatusCodes, TAB_KEY } from './utils/Constant';
 import { isDisplayState } from './utils/DisplayStateUtils';
 import { getCssGradient, getCssPureColorGradient } from './utils/ImageUtils';
 import { fetchMediaResource } from './utils/MediaRequestUtils';
@@ -214,6 +217,14 @@ export interface IAsyncKeyboardEvent extends KeyboardEvent {
     asyncChecked: boolean;
 }
 
+/** Provide a fully populated IFluidityIncidentReporterOptions for incident reporting */
+export interface IFluidityIncidentReporterOptions {
+    windowSize: number;
+    thresholdUps: number;
+    displayRefreshTimeMs: number;
+    minimumDurationMs: number;
+}
+
 /**
  * Options when creating a new APLRenderer
  */
@@ -288,6 +299,22 @@ export interface IAPLOptions {
 
     /** Offset of the local time zone from UTC in milliseconds */
     localTimeAdjustment: number;
+
+    /** Disallow moving focus out of APL view by keyboard navigation */
+    focusTrap?: boolean;
+
+    /**
+     * Allow transparent VH background
+     * NOTE: Supplying enableTransparentBackground may cause gradients with alpha
+     *       channels to behave unexpectedly. Only enable if necessary for your use case.
+     */
+    enableTransparentBackground?: boolean;
+    /** Allow selection of text */
+    enableTextSelection?: boolean;
+    /** Metrics recorder */
+    metricsRecorder?: MetricsRecorder;
+    /** Provide a fully populated IFluidityIncidentReporterOptions for incident reporting */
+    fluidityIncidentReporterOptions?: IFluidityIncidentReporterOptions;
 }
 
 /**
@@ -307,16 +334,16 @@ export default abstract class APLRenderer<Options = any> {
      * @internal
      * @ignore
      */
-    public componentMap: { [key: string]: Component } = {};
+    public componentMap: { [key: string]: Component<any> } = {};
 
     /**
      * Map of user assigned IDs to component instance
      * @internal
      * @ignore
      */
-    public componentIdMap: { [id: string]: Component } = {};
+    public componentIdMap: { [id: string]: Component<any> } = {};
 
-    public componentByMappingKey: Map<string, Component> = new Map<string, Component>();
+    public componentByMappingKey: Map<string, Component<any>> = new Map<string, Component<any>>();
 
     /**
      * @internal
@@ -371,13 +398,25 @@ export default abstract class APLRenderer<Options = any> {
      * @internal
      * @ignore
      */
-    private view: HTMLElement | undefined;
+    protected view: HTMLElement | undefined;
 
     /**
      * @internal
      * @ignore
      */
-    private startTime: number = Number.NaN;
+    private paused: boolean = false;
+
+    /**
+     * @internal
+     * @ignore
+     */
+    private previousElapsedTime: number = 0;
+
+    /**
+     * @internal
+     * @ignore
+     */
+    private renderingStartTime: number = Number.NaN;
 
     /**
      * @internal
@@ -449,11 +488,24 @@ export default abstract class APLRenderer<Options = any> {
      * @internal
      * @ignore
      */
+    private isFirstTickAfterRender: boolean;
+
+    /**
+     * @internal
+     * @ignore
+     */
     protected isAutoSizing: boolean = false;
 
     public get options(): Options {
         return this.mOptions as any as Options;
     }
+
+    private focusTrap: boolean = false;
+
+    protected metricsRecorder?: MetricsRecorder;
+    private lastTextMeasurement?: Timer;
+    private lastLayoutViews?: Timer;
+    protected fluidityIncidentReporter: FluidityIncidentReporter;
 
     /**
      * THis constructor is private
@@ -532,11 +584,46 @@ export default abstract class APLRenderer<Options = any> {
             this.onViewportSizeUpdate = mOptions.onViewportSizeUpdate;
         }
 
+        if (mOptions.metricsRecorder) {
+            this.metricsRecorder = mOptions.metricsRecorder;
+
+            if (this.areFluidityIncidentReporterOptionsPresent(mOptions.fluidityIncidentReporterOptions)) {
+              this.fluidityIncidentReporter = new FluidityIncidentReporter(
+                  mOptions.fluidityIncidentReporterOptions.windowSize,
+                  mOptions.fluidityIncidentReporterOptions.thresholdUps,
+                  mOptions.fluidityIncidentReporterOptions.displayRefreshTimeMs,
+                  mOptions.fluidityIncidentReporterOptions.minimumDurationMs,
+                  this.metricsRecorder,
+                  this.reportFluidityEvent
+              );
+            }
+        }
+
+        if (mOptions.focusTrap) {
+            this.focusTrap = mOptions.focusTrap;
+        }
+
         this.maxTimeDeltaBetweenFrames = (1000 * this.TOLERANCE / this.MAXFPS);
+    }
+
+    private areFluidityIncidentReporterOptionsPresent(options?: IFluidityIncidentReporterOptions) {
+      if (options) {
+        if (options.windowSize &&
+            options.thresholdUps &&
+            options.displayRefreshTimeMs &&
+            options.minimumDurationMs) {
+          return true;
+        }
+      }
+      return false;
     }
 
     public isBound(): boolean {
         return !!this.view;
+    }
+
+    public getView(): HTMLElement | undefined {
+        return this.view;
     }
 
     public bindToView(view: HTMLElement) {
@@ -552,7 +639,6 @@ export default abstract class APLRenderer<Options = any> {
         }
         this.view.style.display = 'flex';
         this.view.style.overflow = 'hidden';
-        this.view.tabIndex = 0;
 
         this.lastKnownViewWidth = this.mOptions.viewport.width;
         this.lastKnownViewHeight = this.mOptions.viewport.height;
@@ -589,8 +675,6 @@ export default abstract class APLRenderer<Options = any> {
             }
             this.view = undefined;
         }
-        window.removeEventListener('keydown', this.passKeyDownToCore);
-        window.removeEventListener('keyup', this.passKeyUpToCore);
     }
 
     public init(metricRecorder?: (m: APL.DisplayMetric) => void) {
@@ -598,18 +682,16 @@ export default abstract class APLRenderer<Options = any> {
             this.logger.error('not binded to a view');
             return;
         }
-        const startTime = performance.now();
-        if (this.mOptions.mode === 'TV') {
-            window.addEventListener('keydown', this.passKeyDownToCore);
-            window.addEventListener('keyup', this.passKeyUpToCore);
-        }
+        const renderingStartTime = performance.now();
+        this.reportMetricStart('LayoutViews');
+        this.isFirstTickAfterRender = true;
         this.renderComponents();
         const stopTime = performance.now();
         if (typeof metricRecorder === 'function') {
             metricRecorder({
                 kind: 'timer',
                 name: 'APL-Web.RootContext.inflate',
-                value: stopTime - startTime
+                value: stopTime - renderingStartTime
             });
         }
 
@@ -694,7 +776,7 @@ export default abstract class APLRenderer<Options = any> {
         // Setting backgroundColor to black to ensure the correct behaviour
         // of a gradient containing an alpha channel component
 
-        this.view!.style.backgroundColor = 'black';
+        this.view!.style.backgroundColor = this.mOptions.enableTransparentBackground ? 'transparent' : 'black';
 
         const background = this.context.getBackground();
         // Spec: If the background property is partially transparent
@@ -842,6 +924,7 @@ export default abstract class APLRenderer<Options = any> {
      */
     public onMeasure(component: APL.Component, measureWidth: number, widthMode: MeasureMode,
                      measureHeight: number, heightMode: MeasureMode) {
+        this.reportMetricStart('TextMeasurement');
         if (this.mOptions.viewport.maxWidth) {
             measureWidth = Math.min(measureWidth, this.mOptions.viewport.maxWidth);
         }
@@ -850,7 +933,9 @@ export default abstract class APLRenderer<Options = any> {
         }
         const comp = new TextMeasurement(component, measureWidth, measureHeight);
         comp.init();
-        return comp.onMeasure(measureWidth, widthMode, measureHeight, heightMode);
+        const onMeasureResult = comp.onMeasure(measureWidth, widthMode, measureHeight, heightMode);
+        this.reportMetricEnd('TextMeasurement');
+        return onMeasureResult;
     }
 
     /**
@@ -886,8 +971,12 @@ export default abstract class APLRenderer<Options = any> {
             }
             this.view = undefined;
         }
-        window.removeEventListener('keydown', this.passKeyDownToCore);
-        window.removeEventListener('keyup', this.passKeyUpToCore);
+        if (this.metricsRecorder) {
+            this.metricsRecorder.dumpCounters();
+            if (this.fluidityIncidentReporter) {
+                this.fluidityIncidentReporter.emitFluidityMetrics();
+            }
+        }
     }
 
     /**
@@ -918,10 +1007,12 @@ export default abstract class APLRenderer<Options = any> {
      */
     public async stopUpdate(): Promise<void> {
         if (!this.requestId) {
-            this.logger.warn('already stopped');
+            return;
         }
         window.cancelAnimationFrame(this.requestId);
         this.requestId = undefined;
+        this.stopTime();
+        this.paused = true;
         return Promise.resolve();
     }
 
@@ -929,11 +1020,30 @@ export default abstract class APLRenderer<Options = any> {
      * Resume Animation Frame
      */
     public async resumeUpdate(): Promise<void> {
-        if (this.requestId) {
-            this.logger.warn('already running');
+        if (this.requestId && !this.paused) {
+            return;
         }
+        this.paused = false;
+        this.startTime();
         this.requestId = requestAnimationFrame(this.update);
         return Promise.resolve();
+    }
+
+    private startTime() {
+        if (this.paused) { return; }
+        this.renderingStartTime = Date.now();
+    }
+
+    private stopTime() {
+        if (this.paused) { return; }
+        if (!isNaN(this.renderingStartTime)) {
+            this.previousElapsedTime += Date.now() - this.renderingStartTime;
+            this.renderingStartTime = Number.NaN;
+        }
+    }
+
+    private elapsed() {
+        return this.paused ? this.previousElapsedTime : Date.now() - this.renderingStartTime + this.previousElapsedTime;
     }
 
     /**
@@ -1053,11 +1163,11 @@ export default abstract class APLRenderer<Options = any> {
      */
     private updateTime(): void {
         const now = Date.now();
-        if (isNaN(this.startTime)) {
-            this.startTime = now;
+        if (isNaN(this.renderingStartTime) && !this.paused) {
+            this.renderingStartTime = now;
         }
         // move clock forward
-        this.context.updateTime(now - this.startTime, now);
+        this.context.updateTime(this.elapsed(), now);
 
         // Check once per second for a DST change or any other time-zone change
         if (now > this.lastDSTCheck + 1000) {
@@ -1089,6 +1199,7 @@ export default abstract class APLRenderer<Options = any> {
      * @ignore
      */
     private coreFrameUpdate(): void {
+        const begin = Date.now();
         if (this.getAudioPlayerFactory()) {
             this.getAudioPlayerFactory().tick();
         }
@@ -1120,6 +1231,24 @@ export default abstract class APLRenderer<Options = any> {
             }
             this.setScreenLock(this.context.screenLock());
         }
+
+        const end = Date.now();
+        if (this.metricsRecorder && this.fluidityIncidentReporter) {
+            setTimeout(() => {
+                this.fluidityIncidentReporter.addFrameStat(new FrameStat(begin, end));
+            });
+        }
+
+        if (this.isFirstTickAfterRender) {
+            this.reportMetricEnd('LayoutViews');
+            this.isFirstTickAfterRender = false;
+        }
+    }
+
+    private reportFluidityEvent = (incidentId: number, frameStats: FrameStat[], upsValues: number[]) => {
+        // TODO: Call into DevTools FrameMetrics here
+        this.logger.info(`Reporting FluidityIncident: ${incidentId}, ${frameStats.map((value) => [value.begin, value.end])}, ` +
+            `${upsValues} ${this.context.getDocumentState()}`);
     }
 
     /**
@@ -1280,20 +1409,12 @@ export default abstract class APLRenderer<Options = any> {
         }
     }
 
-    private canPassLocalKeyDown = (event: IAsyncKeyboardEvent) => {
-        return this.mOptions.mode !== 'TV' || !this.isDPadKey(event.code);
-    }
-
     private handleKeyDown = async (evt: IAsyncKeyboardEvent) => {
-        if (this.canPassLocalKeyDown(evt)) {
-            await this.passKeyboardEventToCore(evt, KeyHandlerType.KeyDown);
-        }
+        await this.passKeyboardEventToCore(evt, KeyHandlerType.KeyDown);
     }
 
     private handleKeyUp = async (evt: IAsyncKeyboardEvent) => {
-        if (this.canPassLocalKeyDown(evt)) {
-            await this.passKeyboardEventToCore(evt, KeyHandlerType.KeyUp);
-        }
+        await this.passKeyboardEventToCore(evt, KeyHandlerType.KeyUp);
     }
 
     /**
@@ -1324,15 +1445,49 @@ export default abstract class APLRenderer<Options = any> {
         return evt.code;
     }
 
-    private passKeyboardEventToCore = async (evt: IAsyncKeyboardEvent, keyHandlerType: number) => {
-        if (this.context) {
-            const keyboard: APL.Keyboard = this.getKeyboard(evt);
-            await this.context.handleKeyboard(keyHandlerType, keyboard);
+    private shouldPassKeyboardEventToCore(event: IAsyncKeyboardEvent, focusedComponentId: string): boolean {
+        if (!focusedComponentId) {
+            return false;
+        }
+
+        const isViewAlreadyFocused = () => {
+            return this.view!.contains(document.activeElement);
+        };
+
+        const isFocusLost = () => {
+            return !this.view!.contains(document.activeElement)
+                && !(document.activeElement instanceof HTMLTextAreaElement);
+        };
+
+        return this.isDPadKey(event.code) || isFocusLost() || isViewAlreadyFocused();
+    }
+
+    private async passKeyboardEventToCore(event: IAsyncKeyboardEvent, handlerType: KeyHandlerType): Promise<void> {
+        if (!this.context) {
+            return;
+        }
+
+        const focusedComponentId = await this.context.getFocused();
+
+        if (this.shouldPassKeyboardEventToCore(event, focusedComponentId)) {
+            this.ensureComponentIsFocused(focusedComponentId, event.code);
+            const keyboard: APL.Keyboard = this.getKeyboard(event);
+            const consumed = await this.context.handleKeyboard(handlerType, keyboard);
+            if (consumed) {
+                event.preventDefault();
+            }
+        } else if (!focusedComponentId) {
+            this.focusTopLeft();
         }
     }
 
     private isDPadKey = (key: string): boolean => {
-        return key === ENTER_KEY || key === ARROW_LEFT || key === ARROW_UP || key === ARROW_RIGHT || key === ARROW_DOWN;
+        return key === ENTER_KEY || key === ARROW_LEFT || key === ARROW_UP
+        || key === ARROW_RIGHT || key === ARROW_DOWN || key === TAB_KEY;
+    }
+
+    public focusTrapped(): boolean {
+        return this.focusTrap;
     }
 
     private renderComponents(): void {
@@ -1383,50 +1538,10 @@ export default abstract class APLRenderer<Options = any> {
         }
     }
 
-    private passKeyDownToCore = (event: IAsyncKeyboardEvent) => {
-        this.passWindowEventsToCore(event, KeyHandlerType.KeyDown);
-    }
-
-    private passKeyUpToCore = (event: IAsyncKeyboardEvent) => {
-        this.passWindowEventsToCore(event, KeyHandlerType.KeyUp);
-    }
-
-    private passWindowEventsToCore = async (event: IAsyncKeyboardEvent, handler: KeyHandlerType) => {
-        if (!this.context) {
-            return;
-        }
-
-        const focusedComponentId = await this.context.getFocused();
-
-        if (this.shouldPassWindowEventToCore(event, focusedComponentId)) {
-            this.ensureComponentIsFocused(focusedComponentId, event.code);
-            this.passKeyboardEventToCore(event, handler);
-        } else if (!focusedComponentId) {
-            this.focusTopLeft();
-        }
-    }
-
-    private shouldPassWindowEventToCore(event: IAsyncKeyboardEvent, focusedComponentId: string) {
-        const isViewAlreadyFocused = () => {
-            return this.view!.contains(document.activeElement);
-        };
-
-        const isFocusLost = () => {
-            return !this.view!.contains(document.activeElement)
-                && !(document.activeElement instanceof HTMLTextAreaElement);
-        };
-
-        return this.isDPadKey(event.code)
-            && focusedComponentId
-            && (isFocusLost() || isViewAlreadyFocused());
-    }
-
     private ensureComponentIsFocused(id: string, code: string): void {
-        if (code === ENTER_KEY) {
-            const component = this.componentMap[id] as ActionableComponent;
-            if (component['focus']) {
-                component.focus();
-            }
+        const component = this.componentMap[id] as ActionableComponent;
+        if (component && component['focus']) {
+            component.focus();
         }
     }
 
@@ -1443,6 +1558,68 @@ export default abstract class APLRenderer<Options = any> {
             this.lastKnownViewWidth = newSize['width'];
             this.lastKnownViewHeight = newSize['height'];
             this.onViewportSizeUpdate(this.lastKnownViewWidth, this.lastKnownViewHeight);
+        }
+    }
+
+    /**
+     * @internal
+     * @ignore
+     */
+    protected reportMetricStart(name: string): void {
+        if (!this.metricsRecorder) {
+            // Do nothing if we aren't reporting metrics
+            return;
+        }
+
+        switch (name) {
+            case 'TextMeasurement':
+                if (this.lastTextMeasurement) {
+                    this.logger.warn('Overwriting a kMeasureText segment that was not stopped');
+                }
+                this.lastTextMeasurement =
+                    this.metricsRecorder?.startTimer(Segment.kMeasureText, new Map<string, string>());
+                break;
+            case 'LayoutViews':
+                if (this.lastLayoutViews) {
+                    this.logger.warn('Overwriting a kLayoutViews segment that was not stopped');
+                }
+                this.lastLayoutViews =
+                    this.metricsRecorder?.startTimer(Segment.kLayoutViews, new Map<string, string>());
+                break;
+            default:
+                this.logger.warn('Unknown starting metrics type from APLRenderer');
+        }
+    }
+
+    /**
+     * @internal
+     * @ignore
+     */
+    protected reportMetricEnd(name: string): void {
+        if (!this.metricsRecorder) {
+            // Do nothing if we aren't reporting metrics
+            return;
+        }
+
+        switch (name) {
+            case 'TextMeasurement':
+                if (this.lastTextMeasurement) {
+                    this.lastTextMeasurement.stop();
+                    this.lastTextMeasurement = undefined;
+                } else {
+                    this.logger.warn('Attempting to stop a kMeasureText segment that was not started');
+                }
+                break;
+            case 'LayoutViews':
+                if (this.lastLayoutViews) {
+                    this.lastLayoutViews.stop();
+                    this.lastLayoutViews = undefined;
+                } else {
+                    this.logger.warn('Attempting to stop a kLayoutViews segment that was not started');
+                }
+                break;
+            default:
+                this.logger.warn('Unknown ending metrics type from APLRenderer');
         }
     }
 }

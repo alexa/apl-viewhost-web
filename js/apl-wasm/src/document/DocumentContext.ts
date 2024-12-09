@@ -5,8 +5,8 @@
 
 import { Content, DefaultAudioPlayer, DisplayState as CoreDisplayState, IAudioEventListener,
     IConfigurationChangeOptions, ILogger, LocaleMethods,
-    LoggerFactory,
-    MediaPlayerHandle} from 'apl-html';
+    LoggerFactory, MediaPlayerHandle, MetricsRecorder, Milestone,
+    Segment} from 'apl-html';
 import { v4 as uuidv4 } from 'uuid';
 import { APLWASMRenderer, IAPLWASMOptions } from '../APLWASMRenderer';
 import { Queue } from '../common/Queue';
@@ -66,7 +66,11 @@ export class DocumentContext {
 
     private documentConfig: APL.DocumentConfig;
 
+    private metricsRecorder?: MetricsRecorder;
+
     private saved: boolean = false;
+
+    private paused: boolean = false;
 
     constructor(request: IRenderDocumentRequest, vhContext: ViewhostContext, fillMissingData = true) {
         if (!request.doc) {
@@ -76,6 +80,8 @@ export class DocumentContext {
             request.data = '{}';
         }
         this.logger = LoggerFactory.getLogger('DocumentContext');
+        this.metricsRecorder = vhContext.getMetricsRecorder();
+        this.metricsRecorder?.recordMilestone(Milestone.kDocumentReceived);
 
         if (request.token) {
             this.token = request.token;
@@ -112,8 +118,12 @@ export class DocumentContext {
         this.rootConfig.documentManager(this.documentManager.provideCppDocumentManager());
 
         this.createMetrics(vhConfig);
+
+        const createContentSegment = this.metricsRecorder?.startTimer(Segment.kCreateContent,
+                                                                      new Map<string, string>());
         this.content = Content.create(request.doc, request.data, vhConfig.onLogCommand,
                                       this.metrics, this.rootConfig, fillMissingData);
+        createContentSegment?.stop();
 
         if (vhConfig.onDocumentStateUpdate) {
             this.stateListeners.set(0, {
@@ -130,7 +140,8 @@ export class DocumentContext {
             content: this.content,
             metrics: this.metrics,
             isAutoSizing: this.isAutoSizing,
-            onDocumentStateUpdate: (state) => this.onDocumentStateUpdate(state)
+            onDocumentStateUpdate: (state) => this.onDocumentStateUpdate(state),
+            metricsRecorder: this.metricsRecorder
         };
         this.aplRenderer = APLWASMRenderer.create(options);
         this.aplRenderer.setRootConfig(this.rootConfig);
@@ -191,7 +202,10 @@ export class DocumentContext {
             return this.getHandle();
         }
         return this.aplRenderer!.prepare()
-            .then(() => new DocumentHandle(this))
+            .then(() => {
+                this.metricsRecorder?.recordMilestone(Milestone.kDocumentPrepared);
+                return new DocumentHandle(this);
+            })
             .catch((e) => Promise.reject(e));
     }
 
@@ -206,9 +220,21 @@ export class DocumentContext {
         this.aplRenderer!.bindToView(view);
         this.saved = false;
 
+        const renderDocumentSegment = this.metricsRecorder?.startTimer(Segment.kRenderDocument,
+                                                                       new Map<string, string>());
         return this.aplRenderer!.init()
-            .then(() => new DocumentHandle(this))
-            .catch((e) => Promise.reject(e));
+            .then(() => {
+                this.metricsRecorder?.recordMilestone(Milestone.kDocumentRendered);
+                renderDocumentSegment?.stop();
+                if (this.paused) {
+                    this.aplRenderer!.stopUpdate();
+                }
+                return new DocumentHandle(this);
+            })
+            .catch((e) => {
+                renderDocumentSegment?.fail();
+                return Promise.reject(e);
+            });
     }
 
     public unbindFromView() {
@@ -342,6 +368,7 @@ export class DocumentContext {
      * @ignore
      */
     public async pause(): Promise<void> {
+        this.paused = true;
         if (!this.aplRenderer) {
             return Promise.reject('Context destroyed');
         }
@@ -353,6 +380,7 @@ export class DocumentContext {
      * @ignore
      */
     public async resume(): Promise<void> {
+        this.paused = false;
         if (!this.aplRenderer) {
             return Promise.reject('Context destroyed');
         }

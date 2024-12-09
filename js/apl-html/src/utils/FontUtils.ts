@@ -68,7 +68,6 @@ const FONT_STYLE_MAPPING: { [alias: number]: string } = {
     [FontStyle.kFontStyleItalic]: 'italic'
 };
 const DEFAULT_FONT_STYLE: string = FONT_STYLE_MAPPING[FontStyle.kFontStyleNormal];
-const DEFAULT_FONT_FAMILY = SANS_SERIF;
 const ARABIC_ENABLED_FONTS: string[] = [
     'amazon ember'
 ];
@@ -96,7 +95,7 @@ export class FontUtils {
      */
     public static async initialize() {
         if (!this.initialized) {
-            const initializePromise = new Promise((res) => {
+            const initializePromise = new Promise<void>((res) => {
                 this.initializationCallback = res;
             });
             const customLoader: WebFont.Custom = {
@@ -193,8 +192,8 @@ function setFontOptions(options: SetFontOptions) {
     return Object.assign(defaultOptions, options);
 }
 
-function findFontFamily(fontFamily: string, defaultFontFamily = DEFAULT_FONT_FAMILY): string {
-    function findFont(font: string, defaultFont = undefined) {
+function findFontFamily(fontFamily: string): string {
+    function findFont(font: string) {
         const trimmedFontFamily = font.trim();
         let sanitizedFontFamily = trimmedFontFamily.toLowerCase();
         sanitizedFontFamily = replaceAll(sanitizedFontFamily, '-', ' ');
@@ -203,45 +202,49 @@ function findFontFamily(fontFamily: string, defaultFontFamily = DEFAULT_FONT_FAM
             return FONT_ALIAS_MAPPING[sanitizedFontFamily];
         }
 
-        return defaultFont ? defaultFont : trimmedFontFamily;
+        return trimmedFontFamily;
     }
 
     if (isMultiFontFamily(fontFamily)) {
         const fonts = fontFamily.split(',');
         return fonts.map((font) => {
-            return findFont(font, defaultFontFamily);
+            return findFont(font);
         }).reduce((accumulator, current) => {
             return accumulator ? `${accumulator}, ${current}` : current;
         }, '');
     }
-    return findFont(fontFamily, defaultFontFamily);
+    return findFont(fontFamily);
 }
 
-function findFontStyle(fontStyle: FontStyle, lang: string = undefined, logger: ILogger = undefined): string {
+function findFontStyle(fontStyle: FontStyle, lang?: string, logger?: ILogger): string {
     if (FONT_STYLE_MAPPING.hasOwnProperty(fontStyle)) {
         return langSupportedFontStyle(fontStyle, lang, logger);
     }
     return DEFAULT_FONT_STYLE;
 }
 
-function findFontWeight(fontWeight: FontWeight, lang: string = undefined, logger: ILogger = undefined): FontWeight {
+function findFontWeight(fontWeight: FontWeight, lang?: string, logger?: ILogger): FontWeight {
     if (isArabicLang(lang) && !arrayIncludes(ARABIC_SUPPORTED_FONT_WEIGHTS, fontWeight)) {
         let fontOverride = FontWeights.Regular;
         if (fontWeight >= FontWeights.Medium) {
             fontOverride = FontWeights.Bold;
         }
-        logger.warn(`Font Weight: "${fontWeight}" not supported in "${lang}". Default using "${fontOverride}"`);
+        if (logger) {
+            logger.warn(`Font Weight: "${fontWeight}" not supported in "${lang}". Default using "${fontOverride}"`);
+        }
         return fontOverride;
     }
     return fontWeight;
 }
 
-function langSupportedFontStyle(fontStyle: FontStyle, lang: string, logger: ILogger) {
+function langSupportedFontStyle(fontStyle: FontStyle, lang?: string, logger?: ILogger) {
     if (isArabicLang(lang) && !arrayIncludes(ARABIC_SUPPORTED_FONT_STYLES, fontStyle)) {
         const style = FONT_STYLE_MAPPING.hasOwnProperty(fontStyle) ?
             FONT_STYLE_MAPPING[fontStyle] : 'unsupported style';
         const styleOverride = DEFAULT_FONT_STYLE;
-        logger.warn(`Font Style: "${style}" not supported in "${lang}". Default using "${styleOverride}"`);
+        if (logger) {
+            logger.warn(`Font Style: "${style}" not supported in "${lang}". Default using "${styleOverride}"`);
+        }
         return styleOverride;
     }
     return FONT_STYLE_MAPPING[fontStyle];
@@ -265,7 +268,7 @@ function fontFamilySupportsArabic(fontFamily: string): boolean {
     return supportsArabic(fontFamily);
 }
 
-function isArabicLang(bcp47: string): boolean {
+function isArabicLang(bcp47?: string): boolean {
     // BCP47 String begins with 'ar'
     return bcp47 !== undefined && bcp47.indexOf('ar') === 0;
 }

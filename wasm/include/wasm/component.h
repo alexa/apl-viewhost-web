@@ -25,12 +25,13 @@ struct ComponentMethods {
     static std::string getId(const apl::ComponentPtr& component);
     static apl::ComponentPtr getParent(const apl::ComponentPtr& component);
 
+    static bool isFocusable(const apl::ComponentPtr& component);
+
     static void update(apl::ComponentPtr& component, int type, int val);
     static void updateEditText(apl::ComponentPtr& component, int type, const std::string& val);
     static void pressed(apl::ComponentPtr& component);
     static void updateScrollPosition(apl::ComponentPtr& component, float scrollPosition);
     static void updatePagerPosition(apl::ComponentPtr& component, int pagerPosition);
-    static void updateMediaState(apl::ComponentPtr& component, const emscripten::val& state, bool fromEvent);
     static bool updateGraphic(apl::ComponentPtr& component, const std::string& avg);
 
     static size_t getChildCount(const apl::ComponentPtr& component);

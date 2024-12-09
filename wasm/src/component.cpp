@@ -61,6 +61,11 @@ ComponentMethods::getParent(const apl::ComponentPtr& component) {
     return component->getParent();
 }
 
+bool
+ComponentMethods::isFocusable(const apl::ComponentPtr& component) {
+    return component->isFocusable();
+}
+
 void
 ComponentMethods::update(apl::ComponentPtr& component, int type, int val) {
     component->update(static_cast<UpdateType>(type), val);
@@ -86,28 +91,6 @@ ComponentMethods::updateScrollPosition(apl::ComponentPtr& component, float scrol
 void
 ComponentMethods::updatePagerPosition(apl::ComponentPtr& component, int pagerPosition) {
     component->update(kUpdatePagerPosition, pagerPosition);
-}
-
-void
-ComponentMethods::updateMediaState(apl::ComponentPtr& component, const emscripten::val& state, bool fromEvent) {
-    if (!state.hasOwnProperty("trackIndex") || !state.hasOwnProperty("trackCount") ||
-        !state.hasOwnProperty("currentTime") || !state.hasOwnProperty("duration") ||
-        !state.hasOwnProperty("paused") || !state.hasOwnProperty("ended") ||
-        !state.hasOwnProperty("errorCode") || !state.hasOwnProperty("trackState") ||
-        !state.hasOwnProperty("muted"))
-        {
-        LOG(LogLevel::ERROR) << "Can't update media state. MediaStatus structure is wrong.";
-        return;
-    }
-
-    MediaState mediaState(state["trackIndex"].as<int>(), state["trackCount"].as<int>(),
-                                state["currentTime"].as<int>(), state["duration"].as<int>(),
-                                state["paused"].as<bool>(), state["ended"].as<bool>(),
-                                state["muted"].as<bool>());
-    mediaState.withTrackState(static_cast<apl::TrackState>(state["trackState"].as<int>()));
-    mediaState.withErrorCode(state["errorCode"].as<int>());
-
-    component->updateMediaState(mediaState, fromEvent);
 }
 
 bool
@@ -246,6 +229,7 @@ EMSCRIPTEN_BINDINGS(apl_wasm_component) {
         .function("getParent", &internal::ComponentMethods::getParent)
         .function("getChildCount", &internal::ComponentMethods::getChildCount)
         .function("getChildAt", &internal::ComponentMethods::getChildAt)
+        .function("isFocusable", &internal::ComponentMethods::isFocusable)
         .function("appendChild", &internal::ComponentMethods::appendChild)
         .function("insertChild", &internal::ComponentMethods::insertChild)
         .function("remove", &internal::ComponentMethods::remove)
@@ -255,7 +239,6 @@ EMSCRIPTEN_BINDINGS(apl_wasm_component) {
         .function("pressed", &internal::ComponentMethods::pressed)
         .function("updateScrollPosition", &internal::ComponentMethods::updateScrollPosition)
         .function("updatePagerPosition", &internal::ComponentMethods::updatePagerPosition)
-        .function("updateMediaState", &internal::ComponentMethods::updateMediaState)
         .function("updateGraphic", &internal::ComponentMethods::updateGraphic)
         .function("getBoundsInParent", &internal::ComponentMethods::getBoundsInParent)
         .function("getGlobalBounds", &internal::ComponentMethods::getGlobalBounds)

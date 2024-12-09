@@ -6,25 +6,37 @@
 'use strict';
 
 /**
- * The actual Text inside an Element or Attr
- *
- * https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeType
- */
-const NODE_TYPE_TEXT = 3;
-
-/**
  * Generate text nodes of all descendent of given root
  *
  * @param root Containing node
  */
-export function* textNodes(root: Node) {
+function* textNodes(root: Node) {
   const nodesToVisit = [root];
 
   while (nodesToVisit.length > 0) {
     const n = nodesToVisit.shift();
-    if (n.nodeType === NODE_TYPE_TEXT) {
+    if (n.nodeType === Node.TEXT_NODE) {
       yield n;
     }
+    // tslint:disable-next-line
+    for (let i = n.childNodes.length - 1; i >= 0; i--) {
+      nodesToVisit.unshift(n.childNodes[i]);
+    }
+  }
+}
+
+/**
+ * Get nodes of all descendents of a given root
+ *
+ * @param root Containing node
+ */
+export function *allNodes(root: Node) {
+  const nodesToVisit = [root];
+
+  while (nodesToVisit.length > 0) {
+    const n = nodesToVisit.shift();
+    yield n;
+
     // tslint:disable-next-line
     for (let i = n.childNodes.length - 1; i >= 0; i--) {
       nodesToVisit.unshift(n.childNodes[i]);

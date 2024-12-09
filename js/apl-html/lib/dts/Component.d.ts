@@ -12,12 +12,12 @@
         public getUniqueId() : string;
         public getId() : string;
         public getParent() : Component;
+        public isFocusable() : boolean;
         public update(type : number, value : number) : void;
         public updateEditText(type : number, value : string) : void;
         public pressed() : void;
         public updateScrollPosition(position : number);
         public updatePagerPosition(position : number);
-        public updateMediaState(state : APL.IMediaState, fromEvent : boolean);
         public updateGraphic(json : string);
         public getChildCount() : number;
         public getChildAt(index : number) : Component;

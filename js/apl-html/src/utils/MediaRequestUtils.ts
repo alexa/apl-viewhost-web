@@ -44,8 +44,6 @@ const mediaRequestMap = {
         const {renderer} = args;
         return await renderer.onRequestGraphic(vectorGraphicSource[vectorGraphicSource.length - 1]
             , headers[vectorGraphicSource.length - 1]);
-    },
-    [EventMediaType.kEventMediaTypeVideo]: () => {
     }
 };
 

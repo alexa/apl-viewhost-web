@@ -3,8 +3,7 @@
 const https = require('https');
 const fs = require('fs');
 
-const artifactUrl = 'https://d1gkjrhppbyzyh.cloudfront.net/apl-viewhost-web/c5f16015-4f4a-4450-8e3f-7924429dc443/index.js';
-
+const artifactUrl = 'https://d2o906d8ln7ui1.cloudfront.net/apl-viewhost-web-2024.3.js';
 const outputFilePath = 'index.js';
 const outputFile = fs.createWriteStream(outputFilePath);
 

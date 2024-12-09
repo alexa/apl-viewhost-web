@@ -23,7 +23,7 @@ module.exports = {
             {
                 test: /apl-wasm\.js$/,
                 use: [{
-                    loader: 'wasm-loader',
+                    loader: 'export-module',
                     options: {
                         debug: true
                     }
@@ -44,7 +44,7 @@ module.exports = {
     },
     resolveLoader: {
         alias: {
-            'wasm-loader': path.resolve(__dirname, './wasm-loader.js')
+            'export-module': path.resolve(__dirname, './export-module.js')
         }
     },
     output: {

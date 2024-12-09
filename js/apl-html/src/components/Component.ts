@@ -13,12 +13,15 @@ import {GradientSpreadMethod} from '../enums/GradientSpreadMethod';
 import {GradientUnits} from '../enums/GradientUnits';
 import {LayoutDirection} from '../enums/LayoutDirection';
 import {PropertyKey} from '../enums/PropertyKey';
+import {Role} from '../enums/Role';
+import {ScrollDirection} from '../enums/ScrollDirection';
 import {UpdateType} from '../enums/UpdateType';
 import {ILogger} from '../logging/ILogger';
 import {LoggerFactory} from '../logging/LoggerFactory';
 import {getRectDifference} from '../utils/AplRectUtils';
 import {numberToColor} from '../utils/ColorUtils';
 import {ChildAction} from '../utils/Constant';
+import {processNextTick} from '../utils/EventUtils';
 import {getScaledTransform} from '../utils/TransformUtils';
 import {fillAndStrokeConverter} from './avg/GraphicsUtils';
 import {createBoundsFitter} from './helpers/BoundsFitter';
@@ -86,6 +89,7 @@ export interface IComponentProperties {
     [PropertyKey.kPropertyShadowVerticalOffset]: number;
     [PropertyKey.kPropertyShadowRadius]: number;
     [PropertyKey.kPropertyShadowColor]: number;
+    [PropertyKey.kPropertyScrollPosition]: number;
 }
 
 export interface IValueWithReference {
@@ -97,12 +101,12 @@ export interface IValueWithReference {
  * @ignore
  */
 export type FactoryFunction = (renderer: APLRenderer, component: APL.Component,
-                               parent?: Component, ensureLayout?: boolean,
-                               insertAt?: number) => Component;
+                               parent?: Component<any>, ensureLayout?: boolean,
+                               insertAt?: number) => Component<any>;
 
 export type Executor = () => void;
 
-export abstract class Component<PropsType = IGenericPropType> extends EventEmitter {
+export abstract class Component<PropsType extends object = IGenericPropType> extends EventEmitter {
     /// Logger to be used for this component logs.
     protected logger: ILogger;
 
@@ -114,7 +118,7 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
     /**
      * Array of children components in this hierarchy
      */
-    public children: Component[] = [];
+    public children: Array<Component<any>> = [];
 
     /** Map of every property */
     public props: IGenericPropType = {};
@@ -159,7 +163,7 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
      * @ignore
      */
     constructor(public renderer: APLRenderer, public component: APL.Component,
-                protected factory: FactoryFunction, public parent?: Component) {
+                protected factory: FactoryFunction, public parent?: Component<any>) {
         super();
         this.logger = LoggerFactory.getLogger(COMPONENT_TYPE_MAP[component.getType()] || 'Component');
         this.$container.css({
@@ -201,7 +205,24 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
             PropertyKey.kPropertyShadowHorizontalOffset,
             PropertyKey.kPropertyShadowVerticalOffset,
             PropertyKey.kPropertyShadowRadius,
-            PropertyKey.kPropertyShadowColor);
+            PropertyKey.kPropertyShadowColor)
+        (this.setRole, PropertyKey.kPropertyRole, PropertyKey.kPropertyAccessibilityLabel)
+        (this.setScrollPos, PropertyKey.kPropertyScrollPosition);
+    }
+
+    // Since we are getting dirty properies from core
+    // We will need to adjust our scroll position to match core's position
+    private setScrollPos = () => {
+        const scrollSide = (this.props[PropertyKey.kPropertyScrollDirection]
+            === ScrollDirection.kScrollDirectionHorizontal) ? 'scrollLeft' : 'scrollTop';
+
+        this.container[scrollSide] = this.props[PropertyKey.kPropertyScrollPosition];
+        // Sometimes the scroll can only be applied through processNextTick.
+        if (this.container[scrollSide] !== this.props[PropertyKey.kPropertyScrollPosition]) {
+            processNextTick(() => {
+                this.container[scrollSide] = this.props[PropertyKey.kPropertyScrollPosition];
+            });
+        }
     }
 
     /**
@@ -275,10 +296,19 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
      * @ignore
      */
     public setProperties(props: PropsType) {
-
+        let needUpdate = false;
+        const oldProps = this.props;
         Object.keys(props).forEach((keyString) => {
             const key = parseInt(keyString, 10) as PropertyKey;
-            this.props[key] = props[key];
+            if (key in oldProps) {
+                if (oldProps[key] !== props[key]) {
+                    this.props[key] = props[key];
+                    needUpdate = true;
+                }
+            } else {
+                this.props[key] = props[key];
+                needUpdate = true;
+            }
         });
         Object.keys(props).forEach((keyString) => {
             const key = parseInt(keyString, 10) as PropertyKey;
@@ -289,7 +319,9 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
                 }
             }
         });
-        this.onPropertiesUpdated();
+        if (needUpdate) {
+            this.onPropertiesUpdated();
+        }
     }
 
     /**
@@ -802,5 +834,104 @@ export abstract class Component<PropsType = IGenericPropType> extends EventEmitt
      */
     protected enableClipping() {
         this.$container.css('overflow', 'hidden');
+    }
+
+    protected setRole = () => {
+        const role = this.props[PropertyKey.kPropertyRole] as Role;
+        const label = this.props[PropertyKey.kPropertyAccessibilityLabel] as string;
+        if (label) {
+            this.$container.attr('aria-label', label);
+        }
+
+        switch (role) {
+            case Role.kRoleAdjustable:
+                this.$container.attr('role', 'adjustable');
+                break;
+            case Role.kRoleAlert:
+                this.$container.attr('role', 'alert');
+                break;
+            case Role.kRoleButton:
+                this.$container.attr('role', 'button');
+                break;
+            case Role.kRoleCheckBox:
+                this.$container.attr('role', 'checkbox');
+                break;
+            case Role.kRoleComboBox:
+                this.$container.attr('role', 'combobox');
+                break;
+            case Role.kRoleHeader:
+                this.$container.attr('role', 'heading');
+                break;
+            case Role.kRoleImage:
+                this.$container.attr('role', 'img');
+                break;
+            case Role.kRoleImageButton:
+                this.$container.attr('role', 'button');
+                break;
+            case Role.kRoleKeyboardKey:
+                this.$container.attr('role', 'button');
+                break;
+            case Role.kRoleLink:
+                this.$container.attr('role', 'link');
+                break;
+            case Role.kRoleList:
+                this.$container.attr('role', 'list');
+                break;
+            case Role.kRoleListItem:
+                this.$container.attr('role', 'listitem');
+                break;
+            case Role.kRoleMenu:
+                this.$container.attr('role', 'menu');
+                break;
+            case Role.kRoleMenuBar:
+                this.$container.attr('role', 'menubar');
+                break;
+            case Role.kRoleMenuItem:
+                this.$container.attr('role', 'menuitem');
+                break;
+            case Role.kRoleProgressBar:
+                this.$container.attr('role', 'progressbar');
+                break;
+            case Role.kRoleRadio:
+                this.$container.attr('role', 'radio');
+                break;
+            case Role.kRoleRadioGroup:
+                this.$container.attr('role', 'radiogroup');
+                break;
+            case Role.kRoleScrollBar:
+                this.$container.attr('role', 'scrollbar');
+                break;
+            case Role.kRoleSearch:
+                this.$container.attr('role', 'search');
+                break;
+            case Role.kRoleSpinButton:
+                this.$container.attr('role', 'spinbutton');
+                break;
+            case Role.kRoleSummary:
+                this.$container.attr('role', 'summary');
+                break;
+            case Role.kRoleSwitch:
+                this.$container.attr('role', 'switch');
+                break;
+            case Role.kRoleTab:
+                this.$container.attr('role', 'tab');
+                break;
+            case Role.kRoleTabList:
+                this.$container.attr('role', 'tablist');
+                break;
+            case Role.kRoleText:
+                this.$container.attr('role', 'text');
+                break;
+            case Role.kRoleTimer:
+                this.$container.attr('role', 'timer');
+                break;
+            case Role.kRoleToolBar:
+                this.$container.attr('role', 'toolbar');
+                break;
+            case Role.kRoleNone:
+            default:
+                break;
+        }
+
     }
 }

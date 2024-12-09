@@ -5,7 +5,7 @@
 
 'use strict';
 
-import { allTextNodes, textNodes } from './NodeTraverse';
+import { allNodes, allTextNodes } from './NodeTraverse';
 
 /**
  * Specifies a range of text on a single line
@@ -260,28 +260,47 @@ export class Geometry {
     const lines: Node[] = [];
 
     // tslint:disable-next-line
-    for (let i = 0; i < lineRanges.length; i++) {
-      // for any given lineRange.end, find the that node that encloses it
-      const lineRange = lineRanges[i];
-      let node: Node = undefined;
-      const nodes = textNodes(this.element); // use generator
+    for (const lineRange of lineRanges) {
+      // for any given lineRange, find the nodes that encloses it
+      // https://javascript.info/selection-range
+
+      let endNode: Node = undefined;
+      let startNode: Node = undefined;
+      const nodes = allNodes(this.element); // use generator
+      let nodeCounter = 0;
+      let nodeSelected = -1;
+      let wrap = false;
       for (const n of nodes) {
-        if (lineRange.end < (offset + n.textContent.length)) {
-          node = n;
-          break;
+        if (n.nodeType === Node.TEXT_NODE) {
+          if (nodeSelected >= 0) {
+            break;
+          }
+          if (lineRange.start >= offset && lineRange.start < (offset + n.textContent.length)) {
+            startNode = n;
+          }
+          if (lineRange.end >= offset && lineRange.end < (offset + n.textContent.length)) {
+            endNode = n;
+            nodeSelected = nodeCounter;
+            range.setEnd(endNode, lineRange.end + 1 - offset);
+            if (lineRange.end + 1 !== offset + n.textContent.length) {
+              wrap = true;
+            }
+          }
+          offset += n.textContent.length;
+        } else if (this.isLineBreakElement(n) && nodeCounter === nodeSelected + 1 && !wrap) {
+          endNode = n;
+          nodeSelected = nodeCounter;
+          range.setEndAfter(endNode);
         }
-        offset += n.textContent.length;
+        nodeCounter++;
       }
-      if (node === undefined) {
+      if (endNode === undefined) {
         return;
       }
 
-      range.setStart(this.element, 0);
-      range.setEnd(node, (lineRange.end + 1 - offset));
-
       /*
       extractContents removes content while making the remainder valid
-      i.e. inserts tags at head of reminder
+      i.e. inserts tags at head of remainder
 
       <b>hello world</b>
               ^
@@ -289,9 +308,88 @@ export class Geometry {
 
       extractContents() === "<b>hello </b>"
       remainder === "<b>world</b>"
+
+      For something an element which has children, like a <li> element,
+      this will split the list item into multiple list items and incorrectly
+      add the parent element. This occur where children are broken across lines.
+      <li>hello world</li>
+              ^
+              | cut off point
+
+      extractContents() === "<li>hello </li>"
+      remainder === "<li>world</li>"
+      The code below detects when this occurs, and appends the split lines as
+      children of the appropriate element.
+
+      1. If the item is a list item, use the id to determine if it is a continuation
+         of an existing list item.
+         a. If so, append to the list so it does not create a new bullet.
+         b. If not, and there is an unordered list in progess, add to that list.
+      2. If it is a new list item, or not a list item, just append as-is. The new list
+         item will start a new ordered list.
       */
-      const content = range.extractContents();
-      lines.push(content);
+
+      // Is this text a list item?
+      const liAncestor = this.getAncestorWithName('LI', startNode);
+      let lastDocumentFragment = undefined;
+      if (lines.length > 0) {
+        lastDocumentFragment = lines[lines.length - 1];
+      }
+
+      // Was the last item added to the DOM a list item?
+      let lastListItems = undefined;
+      if (lastDocumentFragment) {
+        lastListItems = lastDocumentFragment.firstElementChild.getElementsByTagName('li');
+      }
+
+      // Check if the item was a list item, and if the IDs match.
+      // Cannot just use an `===` operator because the layout process changes the elements
+      // and would not recognize the same parent.
+      // This will occur if a list item wraps to a new line, or a list item contains multiple
+      // children.
+      let idsMatch = false;
+      if (liAncestor && lastListItems && lastListItems.length > 0) {
+        const lastElementTest = lastListItems[lastListItems.length - 1];
+        if ((lastElementTest as Element).getAttribute('id') === (liAncestor as Element).getAttribute('id')) {
+          idsMatch = true;
+        }
+      }
+
+      if (liAncestor && idsMatch) {
+        // startNode is just a textNode from the previous step. This is
+        // necessary so any styling on this text will be preserved.
+        while (startNode.parentElement.nodeName !== 'LI') {
+            startNode = startNode.parentElement;
+        }
+        range.setStartBefore(startNode);
+        const content = range.extractContents();
+        const dataElement = document.createElement('data');
+        dataElement.appendChild(content);
+        lastListItems[lastListItems.length - 1].appendChild(dataElement);
+      } else if (liAncestor && this.containsChildWithName('UL', lastDocumentFragment)) {
+        // If this is a list item and we can appending to an existing list
+        let listStart = liAncestor;
+        while (listStart.parentElement.nodeName !== 'UL') {
+            listStart = listStart.parentElement;
+        }
+        range.setStartBefore(listStart);
+        const content = range.extractContents();
+        let lastElement = lastDocumentFragment;
+        while (lastElement.nodeName !== 'UL' && lastElement.firstChild) {
+          lastElement = lastElement.firstChild;
+        }
+        lastElement.appendChild(content);
+      } else {
+        // Otherwise delete any styling that may be floating around as it could
+        // lead to unexpected whitespace, then append the line.
+        const cleanupRange = document.createRange();
+        cleanupRange.setStart(this.element, 0);
+        cleanupRange.setEndBefore(startNode);
+        cleanupRange.extractContents();
+        range.setStart(this.element, 0);
+        const content = range.extractContents();
+        lines.push(content);
+      }
 
       offset = lineRange.end + 1;
     }
@@ -305,5 +403,37 @@ export class Geometry {
       dataElement.appendChild(line);
       this.element.appendChild(dataElement);
     });
+  }
+
+  private isLineBreakElement(node: Node) {
+    return node.nodeName === 'BR';
+  }
+
+  private getAncestorWithName(tag: string, node: Node): Node {
+    while (node && node !== this.element && node.nodeName !== 'DIV') {
+      if (node.nodeName === tag) {
+        return node;
+      } else {
+        node = node.parentElement;
+      }
+    }
+
+    if (node.nodeName === tag) {
+        return node;
+    }
+    return undefined;
+  }
+
+  private containsChildWithName(tag: string, node: Node): boolean {
+    if (node.nodeName === tag) {
+      return true;
+    }
+    while (node.firstChild) {
+      if (node.nodeName === tag) {
+        return true;
+      }
+      node = node.firstChild;
+    }
+    return false;
   }
 }

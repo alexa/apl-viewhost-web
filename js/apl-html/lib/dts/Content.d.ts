@@ -7,6 +7,7 @@ declare namespace APL {
     export class ImportRef {
         public version(): string;
         public name(): string;
+        public domain(): string;
         public toString(): string;
     }
 
